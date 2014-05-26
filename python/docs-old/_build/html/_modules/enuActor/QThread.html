@@ -1,0 +1,232 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>enuActor.QThread &mdash; enuActor  documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="enuActor  documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">enuActor  documentation</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for enuActor.QThread</h1><div class="highlight"><pre>
+<span class="c">#!/usr/bin/env python</span>
+<span class="c"># encoding: utf-8</span>
+
+<span class="kn">import</span> <span class="nn">threading</span>
+<span class="kn">import</span> <span class="nn">Queue</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">functools</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">opscore.utility.tback</span> <span class="kn">import</span> <span class="n">tback</span>
+<span class="k">except</span> <span class="ne">Exception</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+    <span class="k">print</span> <span class="n">e</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Description:</span>
+<span class="sd">   tq = self.actor.devices[deviceName]</span>
+<span class="sd">   msg = QMsg(tq.pingMsg, cmd=cmd)</span>
+<span class="sd">   tq.queue.put(msg)</span>
+
+<span class="sd"> or:</span>
+
+<span class="sd">   tq = self.actor.devices[deviceName]</span>
+<span class="sd">   tq.putMsg(tq.pingMsg, cmd=cmd)</span>
+<span class="sd">   tq.callMsgLater(10.0, tq.pingMsg, cmd=cmd)</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+
+<div class="viewcode-block" id="QThread"><a class="viewcode-back" href="../../enuActor.html#enuActor.QThread.QThread">[docs]</a><span class="k">class</span> <span class="nc">QThread</span><span class="p">(</span><span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">actor</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span> <span class="n">isDaemon</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">queueClass</span><span class="o">=</span><span class="n">Queue</span><span class="o">.</span><span class="n">PriorityQueue</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; A thread with a queue. The thread&#39;s .run() method pops items off its public .queue and executes them. &quot;&quot;&quot;</span>
+        <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setDaemon</span><span class="p">(</span><span class="n">isDaemon</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">actor</span> <span class="o">=</span> <span class="n">actor</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">timeout</span> <span class="o">=</span> <span class="n">timeout</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">exitASAP</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">queue</span> <span class="o">=</span> <span class="n">queueClass</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">started</span> <span class="o">=</span> <span class="bp">False</span>
+
+    <span class="k">def</span> <span class="nf">_realCmd</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cmd</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns a callable cmd instance. If the passed in cmd is None, return the actor&#39;s bcast cmd. &quot;&quot;&quot;</span>
+
+        <span class="k">return</span> <span class="n">cmd</span> <span class="k">if</span> <span class="n">cmd</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">bcast</span>
+
+<div class="viewcode-block" id="QThread.putMsg"><a class="viewcode-back" href="../../enuActor.html#enuActor.QThread.QThread.putMsg">[docs]</a>    <span class="k">def</span> <span class="nf">putMsg</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="o">*</span><span class="n">argl</span><span class="p">,</span> <span class="o">**</span><span class="n">argd</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; send ourself a new message.</span>
+
+<span class="sd">        :param method: a function or bound method to call</span>
+<span class="sd">        :param \*argl: the arguments to the method.</span>
+<span class="sd">        :param \*argd: the arguments dict to the method</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">qmsg</span> <span class="o">=</span> <span class="n">QMsg</span><span class="p">(</span><span class="n">method</span><span class="p">,</span> <span class="o">*</span><span class="n">argl</span><span class="p">,</span> <span class="o">**</span><span class="n">argd</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">qmsg</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="QThread.sendLater"><a class="viewcode-back" href="../../enuActor.html#enuActor.QThread.QThread.sendLater">[docs]</a>    <span class="k">def</span> <span class="nf">sendLater</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">,</span> <span class="n">deltaTime</span><span class="p">,</span> <span class="n">priority</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Send ourself a QMsg after deltaTime seconds. &quot;&quot;&quot;</span>
+
+        <span class="k">def</span> <span class="nf">_push</span><span class="p">(</span><span class="n">queue</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">queue</span><span class="p">,</span> <span class="n">msg</span><span class="o">=</span><span class="n">msg</span><span class="p">):</span>
+            <span class="n">queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+        <span class="n">t</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Timer</span><span class="p">(</span><span class="n">deltaTime</span><span class="p">,</span> <span class="n">_push</span><span class="p">)</span>
+        <span class="n">t</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">t</span>
+</div>
+<div class="viewcode-block" id="QThread.handleTimeout"><a class="viewcode-back" href="../../enuActor.html#enuActor.QThread.QThread.handleTimeout">[docs]</a>    <span class="k">def</span> <span class="nf">handleTimeout</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Called when the .get() times out. Intended to be overridden. &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_realCmd</span><span class="p">(</span><span class="bp">None</span><span class="p">)</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="s">&#39;text=&quot;</span><span class="si">%s</span><span class="s"> thread is alive (exiting=</span><span class="si">%s</span><span class="s">)&quot;&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">exitASAP</span><span class="p">))</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">exitASAP</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="QThread.exitMsg"><a class="viewcode-back" href="../../enuActor.html#enuActor.QThread.QThread.exitMsg">[docs]</a>    <span class="k">def</span> <span class="nf">exitMsg</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cmd</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; handler for the &quot;exit&quot; message. Spits out a message and arranges for the .run() method to exit.  &quot;&quot;&quot;</span>
+
+        <span class="k">print</span><span class="p">(</span><span class="s">&#39;in </span><span class="si">%s</span><span class="s"> exitMsg&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">))</span>
+        <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="QThread.pingMsg"><a class="viewcode-back" href="../../enuActor.html#enuActor.QThread.QThread.pingMsg">[docs]</a>    <span class="k">def</span> <span class="nf">pingMsg</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cmd</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; handler for the &#39;ping&#39; message. &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_realCmd</span><span class="p">(</span><span class="n">cmd</span><span class="p">)</span><span class="o">.</span><span class="n">inform</span><span class="p">(</span><span class="s">&#39;text=&quot;thread </span><span class="si">%s</span><span class="s"> is alive!&quot;&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="QThread.run"><a class="viewcode-back" href="../../enuActor.html#enuActor.QThread.QThread.run">[docs]</a>    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Main run loop for this thread. &quot;&quot;&quot;</span>
+
+        <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">queue</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">)</span>
+                <span class="n">qlen</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">queue</span><span class="o">.</span><span class="n">qsize</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">qlen</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_realCmd</span><span class="p">(</span><span class="n">cmd</span><span class="p">)</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%s</span><span class="s"> thread has </span><span class="si">%d</span><span class="s"> items after a .get()&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">qlen</span><span class="p">))</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">method</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="s">&#39;method&#39;</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">AttributeError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="s">&quot;thread </span><span class="si">%s</span><span class="s"> received a message without a method to call: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">msg</span><span class="p">))</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">ret</span> <span class="o">=</span> <span class="n">method</span><span class="p">()</span>
+                <span class="k">except</span> <span class="ne">SystemExit</span><span class="p">:</span>
+                    <span class="k">return</span>
+                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_realCmd</span><span class="p">()</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&#39;text=&quot;</span><span class="si">%s</span><span class="s">: uncaught exception running </span><span class="si">%s</span><span class="s">: </span><span class="si">%s</span><span class="s">&quot;&#39;</span> <span class="o">%</span>
+                                            <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="n">e</span><span class="p">))</span>
+                    <span class="k">print</span> <span class="n">e</span>
+            <span class="k">except</span> <span class="n">Queue</span><span class="o">.</span><span class="n">Empty</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">handleTimeout</span><span class="p">()</span>
+            <span class="k">except</span> <span class="ne">Exception</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">emsg</span> <span class="o">=</span> <span class="s">&#39;text=&quot;</span><span class="si">%s</span><span class="s"> thread got unexpected exception: </span><span class="si">%s</span><span class="s">&quot;&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_realCmd</span><span class="p">()</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">emsg</span><span class="p">)</span>
+                    <span class="n">tback</span><span class="p">(</span><span class="s">&quot;DeviceThread&quot;</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
+                <span class="k">except</span><span class="p">:</span>
+                    <span class="k">print</span> <span class="n">emsg</span>
+                    <span class="n">tback</span><span class="p">(</span><span class="s">&quot;DeviceThread&quot;</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
+
+</div></div>
+<div class="viewcode-block" id="QMsg"><a class="viewcode-back" href="../../enuActor.html#enuActor.QThread.QMsg">[docs]</a><span class="k">class</span> <span class="nc">QMsg</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="n">DEFAULT_PRIORITY</span> <span class="o">=</span> <span class="mi">5</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="o">*</span><span class="n">argl</span><span class="p">,</span> <span class="o">**</span><span class="n">argd</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Create a new QMsg, which will resolve to method(*argl, **argd).</span>
+
+<span class="sd">        d = {}</span>
+<span class="sd">        qm = QMsg(d.__setitem__, &#39;abc&#39;, 42)</span>
+
+<span class="sd">        qt = QThread(....)</span>
+<span class="sd">        qm = QMsg(qt.pingMsg, cmd)</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">priority</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">priority</span> <span class="o">=</span> <span class="n">priority</span> <span class="k">if</span> <span class="p">(</span><span class="n">priority</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">)</span> <span class="k">else</span> <span class="n">QMsg</span><span class="o">.</span><span class="n">DEFAULT_PRIORITY</span>
+        <span class="k">if</span> <span class="n">priority</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">priority</span> <span class="o">=</span> <span class="n">priority</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">method</span> <span class="o">=</span> <span class="n">functools</span><span class="o">.</span><span class="n">partial</span><span class="p">(</span><span class="n">method</span><span class="p">,</span> <span class="o">*</span><span class="n">argl</span><span class="p">,</span> <span class="o">**</span><span class="n">argd</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__lt__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Support sorting of QMsg instances, based on the .priority. Used by PriorityQueue. &quot;&quot;&quot;</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">priority</span> <span class="o">&lt;</span> <span class="n">other</span><span class="o">.</span><span class="n">priority</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">enuActor  documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, Author.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>
