@@ -155,6 +155,60 @@ class Device(QThread):
                 raise Error.CfgFileErr(e)
 
     def start_communication(self, *args, **kwargs):
+        """To be overriden virtual method
+        """
+        return NotImplemented
+
+    def start_serial(self, input_buff=None):
+        """To be overriden virtual method
+        """
+        return NotImplemented
+
+    def start_ttl(self):
+        """To be overriden virtual method
+        """
+        return NotImplemented
+
+    def send(self, input_buff=None):
+        """To be overriden virtual method
+        """
+        return NotImplemented
+
+
+class DeviceSimulator(Device):
+
+    """Device in simulation mode:
+
+         Almost nothing"""
+
+    def __init__(self, actor=None, cfg_path=path):
+        Device.__init__(self, actor, cfg_path)
+
+    def sim_start_communication(self, *args, **kwargs):
+        pass
+
+    def sim_start_serial(self, input_buff=None):
+        pass
+
+    def sim_start_ttl(self):
+        pass
+
+    def sim_send(self, input_buff=None):
+        pass
+
+
+class DeviceOperation(Device):
+
+    """Device in operation mode:
+
+         * Communication is implemented
+         * Starting, sending and receiving message is implemented"""
+
+    def __init__(self, actor=None, cfg_path=path):
+        Device.__init__(self, actor, cfg_path)
+
+
+    def start_communication(self, *args, **kwargs):
         """Docstring for start_communication.
 
         .. note:: Need first to specify config file and device by calling :func:`load_cfg`
@@ -283,6 +337,43 @@ LINK: %s\nCfgFile: %s\n " % (self.link, self._cfg))
             raise NotImplementedError
 
 
+class DualModeDevice(DeviceOperation, DeviceSimulator):
+
+    """Switch between class following the device mode"""
+
+    def __init__(self):
+        """@todo: to be defined1. """
+        #DeviceOperation.__init__(self)
+        #DeviceSimulator.__init__(self)
+        self._start_communication_map = {
+                'simulated': DeviceSimulator.sim_start_communication,
+                'operation': DeviceOperation.start_communication
+                }
+        self._start_serial_map = {
+                'simulated': DeviceSimulator.sim_start_serial,
+                'operation': DeviceOperation.start_serial
+                }
+        self._start_ttl_map = {
+                'simulated': DeviceSimulator.sim_start_ttl,
+            'operation': DeviceOperation.start_ttl
+                }
+
+        self._send_map = {
+                'simulated': DeviceSimulator.sim_send,
+                'operation': DeviceOperation.send
+                }
+
+        def start_communication(self):
+            self._start_communication_map[self.mode]()
+
+        def start_serial(self):
+            self._start_serial_map[self.mode]()
+
+        def start_ttl(self):
+            self._start_ttl_map[self.mode]()
+
+        def send_map(self):
+            self._send_map[self.mode]()
 
 def transition(during_state, after_state=None):
     """Decorator enabling the function to trigger state of the FSM.

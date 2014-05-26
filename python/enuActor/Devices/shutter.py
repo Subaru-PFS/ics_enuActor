@@ -13,7 +13,7 @@ import numpy as np
 import re
 
 
-class Shutter(Device):
+class Shutter(DualModeDevice):
 
     """SW device: Shutter
 

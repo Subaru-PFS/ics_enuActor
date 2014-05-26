@@ -16,7 +16,7 @@ import numpy as np
 import re
 
 
-class Bia(Device):
+class Bia(DualModeDevice):
 
     """SW device: BIA
 
@@ -81,10 +81,10 @@ class Bia(Device):
 
 
         """
-        if self.mode == "simulated":
-            self.currPos = "on" if transition == 'on'\
-                    else 'off'
-        else:
+        #if self.mode == "simulated":
+            #self.currPos = "on" if transition == 'on'\
+                    #else 'off'
+        if 1:
             try:
                 if transition == 'on':
                     self.send('a\r\n')
