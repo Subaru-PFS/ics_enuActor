@@ -69,17 +69,13 @@
 
     <span class="sd">&quot;&quot;&quot;SW device: BIA</span>
 
+<span class="sd">       Attributes:</span>
+<span class="sd">        * currPos : current position of the BIA</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">actor</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
         <span class="n">Device</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">actor</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">currPos</span> <span class="o">=</span> <span class="bp">None</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="bp">None</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span> <span class="o">=</span> <span class="p">{</span>
-                <span class="s">&quot;frequency&quot;</span> <span class="p">:</span> <span class="bp">None</span><span class="p">,</span>
-                <span class="s">&quot;duration&quot;</span> <span class="p">:</span> <span class="bp">None</span><span class="p">,</span>
-                <span class="s">&quot;intensity&quot;</span><span class="p">:</span> <span class="bp">None</span>
-                <span class="p">}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">currPos</span> <span class="o">=</span> <span class="s">&quot;off&quot;</span>
 
     <span class="c">############################</span>
     <span class="c">#  About Device functions  #</span>
@@ -93,7 +89,9 @@
 <span class="sd">        :raises: @todo</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">handleTimeout</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">load_cfg</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s">&#39;operation&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">handleTimeout</span><span class="p">()</span>
         <span class="c">#TODO: to improve</span>
 </div>
 <div class="viewcode-block" id="Bia.setConfig"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.bia.Bia.setConfig">[docs]</a>    <span class="k">def</span> <span class="nf">setConfig</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">freq</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">dur</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">intensity</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
@@ -113,13 +111,15 @@
 
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c">#TODO: check values and types</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s">&quot;frequency&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">freq</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s">&quot;duration&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">dur</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="s">&quot;intensity&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">intensity</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_param</span><span class="p">[</span><span class="s">&quot;frequency&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">freq</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_param</span><span class="p">[</span><span class="s">&quot;duration&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">dur</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_param</span><span class="p">[</span><span class="s">&quot;intensity&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">intensity</span>
 </div>
     <span class="nd">@transition</span><span class="p">(</span><span class="s">&#39;busy&#39;</span><span class="p">,</span> <span class="s">&#39;idle&#39;</span><span class="p">)</span>
 <div class="viewcode-block" id="Bia.bia"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.bia.Bia.bia">[docs]</a>    <span class="k">def</span> <span class="nf">bia</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">transition</span><span class="p">,</span> <span class="n">strobe</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Operation on/off bia</span>
+
+<span class="sd">        .. todo:: code to be changed when ne input received</span>
 
 <span class="sd">        :param transition: ``&#39;on&#39;`` or ``&#39;off&#39;``</span>
 <span class="sd">        :type transition: str.</span>
@@ -141,14 +141,23 @@
                     <span class="bp">self</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s">&#39;p10</span><span class="se">\r\n</span><span class="s">&#39;</span><span class="p">)</span>
                     <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="o">.</span><span class="mi">5</span><span class="p">)</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s">&#39;d1000</span><span class="se">\r\n</span><span class="s">&#39;</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">currPos</span> <span class="o">=</span> <span class="s">&quot;on&quot;</span> <span class="c"># TODO: To be change when got input</span>
                 <span class="k">elif</span> <span class="n">transition</span> <span class="o">==</span> <span class="s">&#39;strobe&#39;</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s">&#39;a</span><span class="se">\r\n</span><span class="s">&#39;</span><span class="p">)</span>
                     <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="o">.</span><span class="mi">5</span><span class="p">)</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s">&#39;p</span><span class="si">%i</span><span class="se">\r\n</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">strobe</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-                    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="o">.</span><span class="mi">5</span><span class="p">)</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s">&#39;d</span><span class="si">%i</span><span class="se">\r\n</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">strobe</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+                    <span class="k">if</span> <span class="n">strobe</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                        <span class="c"># Use default parameters</span>
+                        <span class="n">strobe</span> <span class="o">=</span> <span class="p">[</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">_param</span><span class="p">[</span><span class="s">&quot;frequency&quot;</span><span class="p">],</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">_param</span><span class="p">[</span><span class="s">&quot;duration&quot;</span><span class="p">]</span>
+                                <span class="p">]</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s">&#39;p</span><span class="si">%i</span><span class="se">\r\n</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">int</span><span class="p">(</span><span class="n">strobe</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+                    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s">&#39;d</span><span class="si">%i</span><span class="se">\r\n</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">int</span><span class="p">(</span><span class="n">strobe</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">currPos</span> <span class="o">=</span> <span class="s">&quot;strobe&quot;</span> <span class="c"># TODO: To be change when got input</span>
                 <span class="k">elif</span> <span class="n">transition</span> <span class="o">==</span> <span class="s">&#39;off&#39;</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s">&#39;c</span><span class="se">\r\n</span><span class="s">&#39;</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">currPos</span> <span class="o">=</span> <span class="s">&quot;off&quot;</span> <span class="c"># TODO: To be change when got input</span>
             <span class="k">except</span> <span class="n">socket</span><span class="o">.</span><span class="n">error</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="n">Error</span><span class="o">.</span><span class="n">CommErr</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
         <span class="k">return</span> <span class="mi">0</span>
@@ -156,13 +165,6 @@
     <span class="c">##################</span>
     <span class="c">#  About Thread  #</span>
     <span class="c">##################</span>
-</div>
-<div class="viewcode-block" id="Bia.getStatus"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.bia.Bia.getStatus">[docs]</a>    <span class="k">def</span> <span class="nf">getStatus</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;return status of shutter (FSM)</span>
-
-<span class="sd">        :returns: ``&#39;LOADED&#39;``, ``&#39;IDLE&#39;``, ``&#39;BUSY&#39;``, ...</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="s">&quot;state: </span><span class="si">%s</span><span class="s">, status: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fsm</span><span class="o">.</span><span class="n">current</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">status</span><span class="p">)</span>
 </div>
 <div class="viewcode-block" id="Bia.handleTimeout"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.bia.Bia.handleTimeout">[docs]</a>    <span class="k">def</span> <span class="nf">handleTimeout</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Override method :meth:`.QThread.handleTimeout`.</span>
@@ -172,45 +174,18 @@
 <span class="sd">        :raises: :class:`~.Error.CommErr`</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="ow">is</span> <span class="s">&quot;operation&quot;</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">started</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">check_status</span><span class="p">()</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">started</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">currPos</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">fsm</span><span class="o">.</span><span class="n">current</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&#39;INITIALISING&#39;</span><span class="p">,</span> <span class="s">&#39;BUSY&#39;</span><span class="p">]:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">fsm</span><span class="o">.</span><span class="n">idle</span><span class="p">()</span>
             <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">fsm</span><span class="o">.</span><span class="n">current</span> <span class="o">==</span> <span class="s">&#39;none&#39;</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">fsm</span><span class="o">.</span><span class="n">load</span><span class="p">()</span>
 </div>
 <div class="viewcode-block" id="Bia.check_status"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.bia.Bia.check_status">[docs]</a>    <span class="k">def</span> <span class="nf">check_status</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Check status byte 1, 3, 4, 5 and 6 from Shutter controller\</span>
-<span class="sd">            and return current list of status byte.</span>
-
-<span class="sd">        :returns: [sb1, sb3, sb5, sb6] with sbi\</span>
-<span class="sd">         list of byte from status byte</span>
-<span class="sd">        :raises: :class:`~.Error.CommErr`</span>
-
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">l_sb</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">6</span><span class="p">]</span>
-        <span class="n">mask</span> <span class="o">=</span> <span class="p">[</span><span class="bp">None</span><span class="p">]</span> <span class="o">*</span> <span class="mi">6</span>
-        <span class="n">status</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">sb</span> <span class="ow">in</span> <span class="n">l_sb</span><span class="p">:</span>
-                <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.3</span><span class="p">)</span>
-                <span class="n">mask</span><span class="p">[</span><span class="n">sb</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parseStatusByte</span><span class="p">(</span><span class="n">sb</span><span class="p">)</span>
-                <span class="n">status</span> <span class="o">+=</span> <span class="s">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">Shutter</span><span class="p">,</span>
-                    <span class="s">&#39;STATUS_BYTE_</span><span class="si">%i</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">sb</span><span class="p">))[</span><span class="n">mask</span><span class="p">[</span><span class="n">sb</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">])</span>
-                <span class="k">if</span> <span class="nb">sum</span><span class="p">(</span><span class="n">mask</span><span class="p">[</span><span class="n">sb</span> <span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">Shutter</span><span class="p">,</span>
-                    <span class="s">&#39;MASK_ERROR_SB_</span><span class="si">%i</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">sb</span><span class="p">)))</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-                    <span class="k">print</span> <span class="s">&quot;warn =&#39;</span><span class="si">%s</span><span class="s">&#39;&quot;</span> <span class="o">%</span>\
-                      <span class="s">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">Shutter</span><span class="p">,</span>
-                    <span class="s">&#39;STATUS_BYTE_</span><span class="si">%i</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">sb</span><span class="p">))[</span><span class="n">mask</span><span class="p">[</span><span class="n">sb</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">])</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">fsm</span><span class="o">.</span><span class="n">fail</span><span class="p">()</span>
-                <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">fsm</span><span class="o">.</span><span class="n">current</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&#39;INITIALISING&#39;</span><span class="p">,</span> <span class="s">&#39;BUSY&#39;</span><span class="p">]:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">fsm</span><span class="o">.</span><span class="n">idle</span><span class="p">()</span>
-                <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">fsm</span><span class="o">.</span><span class="n">current</span> <span class="o">==</span> <span class="s">&#39;none&#39;</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">fsm</span><span class="o">.</span><span class="n">load</span><span class="p">()</span>
-            <span class="c">#self.currPos = Shutter.positions[self.send(&#39;ss\r\n&#39;)[0]]</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="n">status</span>
-            <span class="k">return</span> <span class="n">mask</span>
-        <span class="k">except</span> <span class="n">Error</span><span class="o">.</span><span class="n">CommErr</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
-            <span class="k">print</span> <span class="n">e</span>
+        <span class="sd">&quot;&quot;&quot; *Can not check status yet*  &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">currPos</span> <span class="c"># TODO: to be changed whan input received</span>
 </pre></div></div></div>
 
           </div>

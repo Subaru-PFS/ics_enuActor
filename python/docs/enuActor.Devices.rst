@@ -28,14 +28,6 @@ enuActor.Devices.bia module
     :undoc-members:
     :show-inheritance:
 
-enuActor.Devices.rexm module
-----------------------------
-
-.. automodule:: enuActor.Devices.rexm
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 enuActor.Devices.shutter module
 -------------------------------
 

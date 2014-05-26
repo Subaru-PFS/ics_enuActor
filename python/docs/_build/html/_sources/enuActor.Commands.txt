@@ -20,14 +20,6 @@ enuActor.Commands.EnuCmd module
     :undoc-members:
     :show-inheritance:
 
-enuActor.Commands.RexmCmd module
---------------------------------
-
-.. automodule:: enuActor.Commands.RexmCmd
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 enuActor.Commands.ShutterCmd module
 -----------------------------------
 

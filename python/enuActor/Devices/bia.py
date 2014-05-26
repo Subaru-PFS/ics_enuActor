@@ -20,16 +20,13 @@ class Bia(Device):
 
     """SW device: BIA
 
+       Attributes:
+        * currPos : current position of the BIA
     """
 
     def __init__(self, actor=None):
         Device.__init__(self, actor)
         self.currPos = "off"
-        self.parameters = {
-                "frequency" : None,
-                "duration" : None,
-                "intensity": None
-                }
 
     ############################
     #  About Device functions  #
@@ -44,7 +41,6 @@ class Bia(Device):
 
         """
         self.load_cfg(self.device)
-        self.parameters = self._param
         if self.mode == 'operation':
             self.handleTimeout()
         #TODO: to improve
@@ -66,9 +62,9 @@ class Bia(Device):
 
         """
         #TODO: check values and types
-        self.parameters["frequency"] = freq
-        self.parameters["duration"] = dur
-        self.parameters["intensity"] = intensity
+        self._param["frequency"] = freq
+        self._param["duration"] = dur
+        self._param["intensity"] = intensity
 
     @transition('busy', 'idle')
     def bia(self, transition, strobe=None):
@@ -103,8 +99,8 @@ class Bia(Device):
                     if strobe is None:
                         # Use default parameters
                         strobe = [
-                                self.parameters["frequency"],
-                                self.parameters["duration"]
+                                self._param["frequency"],
+                                self._param["duration"]
                                 ]
                     self.send('p%i\r\n' % int(strobe[0]))
                     time.sleep(5)
