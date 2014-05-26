@@ -27,7 +27,9 @@ class RuleError(Exception):
 
 class CfgFileErr(RuleError):
 
-    """Docstring for CommErr. """
+    """Docstring for CommErr.
+    .. todo:: Specify file error
+    """
 
     pass
 

@@ -14,8 +14,10 @@ class BiaCmd(object):
             ('bia', 'start', self.start),
             ('bia', '@(simulated|operation)', self.set_mode),
             ('bia', '@(on|off)', self.bia),
-            ('bia', 'on <freq> <dur>', self.strobe),
+            ('bia', 'on strobe <freq> <dur>', self.strobe),
+            ('bia', 'on strobe', self.strobeByDefault),
             ('bia', '@(off|load|busy|idle|SafeStop|fail|init)', self.set_state),
+            ('bia', 'SetConfig <freq> <dur>', self.setconfig),
             ('bia', 'stop',
              lambda x : self.actor.bia.stop()),
         ]
@@ -49,3 +51,11 @@ class BiaCmd(object):
     def strobe(self, cmd):
         strobe = [cmd.cmd.keywords["freq"].values[0], cmd.cmd.keywords["dur"].values[0]]
         self.actor.bia.putMsg(self.actor.bia.bia, "strobe", strobe)
+
+    def strobeByDefault(self, cmd):
+        self.actor.bia.putMsg(self.actor.bia.bia, "strobe")
+
+    def setconfig(self, cmd):
+        freq = cmd.cmd.keywords["freq"].values[0]
+        dur = cmd.cmd.keywords["dur"].values[0]
+        self.actor.bia.putMsg(self.actor.bia.setConfig, freq=freq, dur=dur)

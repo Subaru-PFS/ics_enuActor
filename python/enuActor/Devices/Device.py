@@ -11,8 +11,9 @@ import time
 import copy
 import socket
 
+# file PWD + cfg
 here = os.path.dirname(os.path.realpath(__file__))
-path = here + '/cfg/devices_communication.cfg'
+path = here + '/cfg/'
 
 # Common device state
 MAP = {
@@ -40,19 +41,29 @@ class Device(QThread):
          * link : ``TTL``, ``SERIAL`` or ``ETHERNET``
          * ser : serial object from serial module @todo: change into link object
          * mode : ``operation`` or ``simulated``
-         * cfg_file : path of the communication config file
+         * cfg_path : path of the communication and parameter config files\
+                 It should contains *devices_communication.cfg* and\
+                 *devices_parameters.cfg* file.
     """
 
+    cfg_files = {
+            'communication': 'devices_communication.cfg',
+            'parameters': 'devices_parameters.cfg'
+            }
     available_link = ['TTL', 'SERIAL', 'ETHERNET']
 
-    def __init__(self, actor=None, cfg_file = None):
+    def __init__(self, actor=None, cfg_path = None):
         QThread.__init__(self, actor, self.__class__)
         # Communication attributes
-        self._cfg_file = path if cfg_file is None else path
+        #self._cfg_file = path + Device.cfg_files['communication'] if cfg_path is None else path
+        self._cfg_files = copy.deepcopy(Device.cfg_files)
+        for it in Device.cfg_files.iterkeys():
+            self._cfg_files[it] = path + Device.cfg_files[it]
+        self._param = None
         self._cfg = None
         self.link = None
         self.ser = None
-        self.connection = 0
+        self.connection = None
         # Device attributes
         self.name = self.__class__.__name__
         self.mode = "operation"
@@ -81,6 +92,16 @@ class Device(QThread):
         """
         print 'state :%s %s' % (self.name, e.dst)
 
+    def initialise(self):
+        """Overriden by subclasses:
+         * (Re)Load parameters from config files
+         * Check communication
+
+        .. todo:: Add load cfg file routine
+
+        """
+        self.load_cfg(self.device)
+        self.handleTimeout()
 
     #callbacks: init, safe_off, shut_down
 
@@ -97,8 +118,18 @@ class Device(QThread):
         :raises: :class:`~.Error.CfgFileErr``
 
         """
+
+        # Parameters section
         config = ConfigParser.ConfigParser()
-        config.readfp(open(self._cfg_file))
+        config.readfp(open(self._cfg_files['parameters']))
+        try:
+            self._param = dict(config.items(device.upper()))
+        except ConfigParser.NoSectionError, e:
+            raise Error.CfgFileErr(e)
+
+        # Communication section
+        config = ConfigParser.ConfigParser()
+        config.readfp(open(self._cfg_files['communication']))
         links = dict(config.items('LINK'))
         if not links.has_key(device.lower()):
             raise Error.CfgFileErr(\
@@ -109,7 +140,10 @@ class Device(QThread):
         else:
             self.device = device.lower()
             self.link = links[device.lower()]
-            self._cfg = dict(config.items(device.upper()))
+            try:
+                self._cfg = dict(config.items(device.upper()))
+            except ConfigParser.NoSectionError, e:
+                raise Error.CfgFileErr(e)
 
     def start_communication(self, *args, **kwargs):
         """Docstring for start_communication.
@@ -133,7 +167,7 @@ class Device(QThread):
         # Load parameter link
         if kwargs.has_key('device'):
             if kwargs.has_key('configFile'):
-                self._cfg_file = kwargs['configFile']
+                self._cfg_files['communication'] = kwargs['configFile']
             self.load_cfg(kwargs['device'])
 
         # Start communication
