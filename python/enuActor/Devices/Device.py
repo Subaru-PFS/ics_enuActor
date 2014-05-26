@@ -54,8 +54,8 @@ class Device(QThread):
 
     def __init__(self, actor=None, cfg_path = None):
         QThread.__init__(self, actor, self.__class__)
+
         # Communication attributes
-        #self._cfg_file = path + Device.cfg_files['communication'] if cfg_path is None else path
         self._cfg_files = copy.deepcopy(Device.cfg_files)
         for it in Device.cfg_files.iterkeys():
             self._cfg_files[it] = path + Device.cfg_files[it]
@@ -64,9 +64,11 @@ class Device(QThread):
         self.link = None
         self.ser = None
         self.connection = None
+
         # Device attributes
         self.name = self.__class__.__name__
         self.mode = "operation"
+        self.status = None
         self.MAP = copy.deepcopy(MAP) # referenced
         self.MAP['callbacks']['oninit'] = lambda e: self.initialise()
         self.start()
@@ -102,6 +104,13 @@ class Device(QThread):
         """
         self.load_cfg(self.device)
         self.handleTimeout()
+
+    def getStatus(self):
+        """return status of shutter (FSM)
+
+        :returns: ``'LOADED'``, ``'IDLE'``, ``'BUSY'``, ...
+        """
+        return "%s status [%s, %s]" % (self.device.upper(), self.fsm.current, self.status)
 
     #callbacks: init, safe_off, shut_down
 

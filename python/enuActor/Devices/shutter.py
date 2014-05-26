@@ -47,8 +47,6 @@ class Shutter(Device):
         Device.__init__(self, actor)
         self.currPos = "closed"     #current position
         self.shutter_id = None      #current id
-        self.status = None
-
 
     @transition('busy', 'idle')
     def shutter(self, transition):
@@ -62,7 +60,6 @@ class Shutter(Device):
         """
         #self.fsm.busy()
         if self.mode == "simulated":
-            #time.sleep(3)
             self.currPos = "opened" if transition == 'open'\
                 else 'closed'
             self.fsm.idle()
@@ -90,6 +87,7 @@ class Shutter(Device):
         :raises: @todo
 
         """
+        self.load_cfg(self.device)
         self.handleTimeout()
         if self.mode == 'operation':
             self.check_status()
@@ -103,13 +101,6 @@ class Shutter(Device):
         """
         return NotImplementedError
 
-    def getStatus(self):
-        """return status of shutter (FSM)
-
-        :returns: ``'LOADED'``, ``'IDLE'``, ``'BUSY'``, ...
-        """
-        return "state: %s, status: %s" % (self.fsm.current, self.status)
-
     def handleTimeout(self):
         """Override method :meth:`.QThread.handleTimeout`.
         Process while device is idling.
@@ -121,6 +112,7 @@ class Shutter(Device):
         if self.mode is "operation" and self.started:
             self.check_status()
         elif self.started:
+            self.status = self.currPos
             if self.fsm.current in ['INITIALISING', 'BUSY']:
                 self.fsm.idle()
             elif self.fsm.current == 'none':

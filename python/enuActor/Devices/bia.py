@@ -24,8 +24,7 @@ class Bia(Device):
 
     def __init__(self, actor=None):
         Device.__init__(self, actor)
-        self.currPos = None
-        self.status = None
+        self.currPos = "off"
         self.parameters = {
                 "frequency" : None,
                 "duration" : None,
@@ -46,7 +45,8 @@ class Bia(Device):
         """
         self.load_cfg(self.device)
         self.parameters = self._param
-        self.handleTimeout()
+        if self.mode == 'operation':
+            self.handleTimeout()
         #TODO: to improve
 
     def setConfig(self, freq=None, dur=None, intensity=None):
@@ -107,7 +107,7 @@ class Bia(Device):
                                 self.parameters["duration"]
                                 ]
                     self.send('p%i\r\n' % int(strobe[0]))
-                    time.sleep(.5)
+                    time.sleep(5)
                     self.send('d%i\r\n' % int(strobe[1]))
                     self.currPos = "strobe" # TODO: To be change when got input
                 elif transition == 'off':
@@ -121,13 +121,6 @@ class Bia(Device):
     #  About Thread  #
     ##################
 
-    def getStatus(self):
-        """return status of shutter (FSM)
-
-        :returns: ``'LOADED'``, ``'IDLE'``, ``'BUSY'``, ...
-        """
-        return "state: %s, status: %s" % (self.fsm.current, self.status)
-
     def handleTimeout(self):
         """Override method :meth:`.QThread.handleTimeout`.
         Process while device is idling.
@@ -136,44 +129,17 @@ class Bia(Device):
         :raises: :class:`~.Error.CommErr`
 
         """
+        if self.mode is "operation" and self.started:
+            self.check_status()
         if self.started:
+            self.status = self.currPos
             if self.fsm.current in ['INITIALISING', 'BUSY']:
                 self.fsm.idle()
             elif self.fsm.current == 'none':
                 self.fsm.load()
 
     def check_status(self):
-        """Check status byte 1, 3, 4, 5 and 6 from Shutter controller\
-            and return current list of status byte.
-
-        :returns: [sb1, sb3, sb5, sb6] with sbi\
-         list of byte from status byte
-        :raises: :class:`~.Error.CommErr`
-
-        """
-        l_sb = [1, 3, 5, 4, 6]
-        mask = [None] * 6
-        status = ''
-        try:
-            for sb in l_sb:
-                time.sleep(0.3)
-                mask[sb - 1] = self.parseStatusByte(sb)
-                status += ', '.join(np.array(getattr(Shutter,
-                    'STATUS_BYTE_%i' % sb))[mask[sb - 1] == 1])
-                if sum(mask[sb -1] * np.asarray(getattr(Shutter,
-                    'MASK_ERROR_SB_%i' % sb))) > 0:
-                    print "warn ='%s'" %\
-                      ', '.join(np.array(getattr(Shutter,
-                    'STATUS_BYTE_%i' % sb))[mask[sb - 1] == 1])
-                    self.fsm.fail()
-                elif self.fsm.current in ['INITIALISING', 'BUSY']:
-                    self.fsm.idle()
-                elif self.fsm.current == 'none':
-                    self.fsm.load()
-            #self.currPos = Shutter.positions[self.send('ss\r\n')[0]]
-            self.status = status
-            return mask
-        except Error.CommErr, e:
-            print e
+        """ *Can not check status yet*  """
+        self.status = self.currPos # TODO: to be changed whan input received
 
 
