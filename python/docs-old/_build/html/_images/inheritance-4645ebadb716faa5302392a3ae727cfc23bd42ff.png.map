@@ -1,5 +1,0 @@
-<map id="inheritancec07e4bc2ff" name="inheritancec07e4bc2ff">
-<area shape="rect" id="node1" href="#enuActor.Devices.Device.Device" title="All device (Shutter, BIA,...) should inherit this class" alt="" coords="427,5,653,30"/>
-<area shape="rect" id="node2" href="enuActor.html#enuActor.QThread.QThread" title="enuActor.QThread.QThread" alt="" coords="184,5,379,30"/>
-<area shape="rect" id="node3" title="A class that represents a thread of control." alt="" coords="5,5,136,30"/>
-</map>

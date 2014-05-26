@@ -1,6 +1,0 @@
-<map id="inheritance7b484024de" name="inheritance7b484024de">
-<area shape="rect" id="node1" href="#enuActor.Devices.Device.Device" title="All device (Shutter, BIA,...) should inherit this class" alt="" coords="348,731,420,756"/>
-<area shape="rect" id="node4" href="#enuActor.Devices.rexm.Rexm" title="SW Device: Red EXchange Mechanism" alt="" coords="348,1068,420,1093"/>
-<area shape="rect" id="node2" href="enuActor.html#enuActor.QThread.QThread" title="QThread" alt="" coords="347,391,421,416"/>
-<area shape="rect" id="node3" title="A class that represents a thread of control." alt="" coords="348,53,420,78"/>
-</map>
