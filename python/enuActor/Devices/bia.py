@@ -66,7 +66,7 @@ class Bia(DualModeDevice):
         self._param["duration"] = dur
         self._param["intensity"] = intensity
 
-    @interlock("on", "open", "shutter")
+    @interlock(["on", "strobe"], "open", "shutter")
     @transition('busy', 'idle')
     def bia(self, transition, strobe=None):
         """Operation on/off bia
@@ -79,7 +79,6 @@ class Bia(DualModeDevice):
         :type strobe: list
         :returns: 0 if OK
         :raises: :class:`~.Error.CommErr`, :class:`~.Error.DeviceErr`
-
 
         """
         if self.mode == "simulated":
@@ -110,6 +109,7 @@ class Bia(DualModeDevice):
                 elif transition == 'off':
                     self.send('c\r\n')
                     self.currPos = "off" # TODO: To be change when got input
+                self.check_status()
             except socket.error as e:
                 raise Error.CommErr(e)
         return 0

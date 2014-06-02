@@ -45,10 +45,10 @@ class Shutter(DualModeDevice):
     def __init__(self, actor=None):
         """Inherit QThread and start the Thread (with FSM)"""
         Device.__init__(self, actor)
-        self.currPos = "open"     #current position
+        self.currPos = "close"     #current position
         self.shutter_id = None      #current id
 
-    @interlock("open", "on", "bia")
+    @interlock("open", ["on", "strobe"], "bia")
     @transition('busy', 'idle')
     def shutter(self, transition):
         """Operation open/close shutter red or blue
@@ -71,6 +71,7 @@ class Shutter(DualModeDevice):
                     self.send('cs\r\n')
                 elif transition == 'reset':
                     self.send('rs\r\n')
+                self.check_status()
             except Error.DeviceErr, e:
                 print e
                 #raise e
@@ -132,6 +133,8 @@ class Shutter(DualModeDevice):
         try:
             self.ss = int(self.send('ss\r\n')[0])
             self.currPos = Shutter.positions[self.ss]
+            if self.currPos == "undef.":
+                self.fsm.fail()
             status += self.currPos
             for sb in l_sb:
                 time.sleep(0.3)
@@ -143,7 +146,7 @@ class Shutter(DualModeDevice):
                     print "warn ='%s'" %\
                       ', '.join(np.array(getattr(Shutter,
                     'STATUS_BYTE_%i' % sb))[mask[sb - 1] == 1])
-                    self.fsm.fail()
+                    #self.fsm.fail()
                 elif self.fsm.current in ['INITIALISING', 'BUSY']:
                     self.fsm.idle()
                 elif self.fsm.current == 'none':

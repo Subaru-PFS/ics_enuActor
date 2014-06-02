@@ -12,7 +12,7 @@ class ShutterCmd(object):
         self.vocab = [
             ('shutter', 'status', self.status),
             ('shutter', 'start', self.start),
-            ('shutter', 'terminal', self.terminal),
+            ('shutter', '<cmd>', self.command),
             ('shutter', '@(simulated|operation)', self.set_mode),
             ('shutter', '@(open|close|reset) @(red|blue)', self.shutter),
             ('shutter', '@(open|close|reset)', self.shutter),
@@ -22,7 +22,8 @@ class ShutterCmd(object):
         ]
 
         # Define typed command arguments for the above commands.
-        self.keys = keys.KeysDictionary("mcs_mcs", (1, 1),
+        self.keys = keys.KeysDictionary("shutter_shutter", (1, 1),
+                keys.Key("cmd", types.String(), help="Command ascii"),
                                         )
 
     def status(self, cmd):
@@ -31,9 +32,10 @@ class ShutterCmd(object):
     def start(self, cmd):
         self.actor.shutter.start_communication(cmd)
 
-    def terminal(self, cmd):
+    def command(self, cmd):
         """Opens a terminal to communicate directly with device"""
-        self.actor.shutter.terminal()
+        self.actor.shutter.send("%s\r\n" %
+        cmd.cmd.keywords["cmd"].values[0])
 
     def set_mode(self, cmd):
         mode = cmd.cmd.keywords[0].name

@@ -14,10 +14,13 @@ class BiaCmd(object):
             ('bia', 'start', self.start),
             ('bia', '@(simulated|operation)', self.set_mode),
             ('bia', '@(on|off)', self.bia),
-            ('bia', 'on strobe <freq> <dur>', self.strobe),
+            ('bia', 'on <int>', self.bia),
+            ('bia', 'on strobe <int>', self.strobe_int),
+            ('bia', 'on strobe <freq> <dur>', self.strobe_freq_dur),
+            ('bia', 'on strobe <freq> <dur> <int>', self.strobe_freq_dur_int),
             ('bia', 'on strobe', self.strobeByDefault),
             ('bia', '@(off|load|busy|idle|SafeStop|fail|init)', self.set_state),
-            ('bia', 'SetConfig <freq> <dur>', self.setconfig),
+            ('bia', 'SetConfig <freq> <dur> <int>', self.setconfig),
             ('bia', 'stop',
              lambda x : self.actor.bia.stop()),
         ]
@@ -25,8 +28,9 @@ class BiaCmd(object):
         # Define typed command arguments for the above commands.
         self.keys = keys.KeysDictionary(
                 "bia_bia", (1, 1),
-                keys.Key("freq", types.Float(), help="Frequency for strobe mode"),
-                keys.Key("dur", types.Float(), help="Duration for strobe mode"),
+                keys.Key("freq", types.Int(), help="Frequency for strobe mode"),
+                keys.Key("dur", types.Int(), help="Duration for strobe mode"),
+                keys.Key("int", types.Int(), help="Intensity of light"),
                                         )
 
     def status(self, cmd):
@@ -48,8 +52,26 @@ class BiaCmd(object):
         transition = cmd.cmd.keywords[0].name
         self.actor.bia.putMsg(self.actor.bia.bia, transition)
 
-    def strobe(self, cmd):
-        strobe = [cmd.cmd.keywords["freq"].values[0], cmd.cmd.keywords["dur"].values[0]]
+    def strobe_int(self, cmd):
+        strobe = [
+                cmd.cmd.keywords["freq"].values[0],
+                cmd.cmd.keywords["dur"].values[0]
+                ]
+        self.actor.bia.putMsg(self.actor.bia.bia, "strobe", strobe)
+
+    def strobe_freq_dur(self, cmd):
+        strobe = [
+                cmd.cmd.keywords["freq"].values[0],
+                cmd.cmd.keywords["dur"].values[0]
+                ]
+        self.actor.bia.putMsg(self.actor.bia.bia, "strobe", strobe)
+
+    def strobe_freq_dur_int(self, cmd):
+        strobe = [
+                cmd.cmd.keywords["freq"].values[0],
+                cmd.cmd.keywords["dur"].values[0],
+                cmd.cmd.keywords["int"].values[0]
+                ]
         self.actor.bia.putMsg(self.actor.bia.bia, "strobe", strobe)
 
     def strobeByDefault(self, cmd):

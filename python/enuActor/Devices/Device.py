@@ -286,8 +286,9 @@ LINK: %s\nCfgFile: %s\n " % (self.link, self._cfg))
         import socket
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(float(self._cfg['timeout']))
             sock.connect((self._cfg['ip_dst'], int(self._cfg['port'])))
-            #sock.setblocking(0)
+            sock.settimeout(None)
         except IOError as e:
             raise Error.CommErr(e)
         return sock
@@ -402,8 +403,13 @@ def transition(during_state, after_state=None):
 def interlock(self_position, target_position, target):
     """Interlock between self device and target device
 
-    :param self_position: position from current device class
+    .. note:: Choice of iterable is exclusive either
+    ``self_position`` or ``target_position``
+
+    :param self_position: position(s) from current device class
+    :type self_position: str, int, float, iterable (list, tuple,...)
     :param target_position: position from target device class
+    :type target_position: str, int, float, iterable.
     :param target: target device class
 
     """
@@ -411,10 +417,24 @@ def interlock(self_position, target_position, target):
         def wrapped_func(self, *args):
             target_currPos = getattr(getattr(self.actor, target), "currPos")
             # TODO: To improve args
-            if self_position in args and\
+            if hasattr(self_position, '__iter__'):
+                #self_position is iterable
+                for position in self_position:
+                    if position in args and\
+                            target_currPos == target_position:
+                                print "Interlock !"
+                                return 0
+            elif hasattr(target_position, '__iter__'):
+                #target_position is iterable
+                for position in target_position:
+                    if self_position in args and\
+                            target_currPos == position:
+                                print "Interlock !"
+                                return 0
+            elif self_position in args and\
                     target_currPos == target_position:
                 print "Interlock !"
-            else:
-                return func(self, *args)
+                return 0
+            return func(self, *args)
         return wrapped_func
     return wrapper
