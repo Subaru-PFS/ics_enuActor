@@ -345,22 +345,23 @@ class DualModeDevice(DeviceOperation, DeviceSimulator):
         """@todo: to be defined1. """
         #DeviceOperation.__init__(self)
         #DeviceSimulator.__init__(self)
+        super(DualModeDevice, self).__init__()
         self._start_communication_map = {
                 'simulated': DeviceSimulator.sim_start_communication,
                 'operation': DeviceOperation.start_communication
                 }
         self._start_serial_map = {
-                'simulated': DeviceSimulator.sim_start_serial,
-                'operation': DeviceOperation.start_serial
+                'simulated': self.sim_start_serial,
+                'operation': self.start_serial
                 }
         self._start_ttl_map = {
-                'simulated': DeviceSimulator.sim_start_ttl,
-            'operation': DeviceOperation.start_ttl
+                'simulated': self.sim_start_ttl,
+                'operation': self.start_ttl
                 }
 
         self._send_map = {
-                'simulated': DeviceSimulator.sim_send,
-                'operation': DeviceOperation.send
+                'simulated': self.sim_send,
+                'operation': self.send
                 }
 
         def start_communication(self):
@@ -398,3 +399,22 @@ def transition(during_state, after_state=None):
         return wrapped_func
     return wrapper
 
+def interlock(self_position, target_position, target):
+    """Interlock between self device and target device
+
+    :param self_position: position from current device class
+    :param target_position: position from target device class
+    :param target: target device class
+
+    """
+    def wrapper(func):
+        def wrapped_func(self, *args):
+            target_currPos = getattr(getattr(self.actor, target), "currPos")
+            # TODO: To improve args
+            if self_position in args and\
+                    target_currPos == target_position:
+                print "Interlock !"
+            else:
+                return func(self, *args)
+        return wrapped_func
+    return wrapper

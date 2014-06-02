@@ -45,9 +45,10 @@ class Shutter(DualModeDevice):
     def __init__(self, actor=None):
         """Inherit QThread and start the Thread (with FSM)"""
         Device.__init__(self, actor)
-        self.currPos = "closed"     #current position
+        self.currPos = "open"     #current position
         self.shutter_id = None      #current id
 
+    @interlock("open", "on", "bia")
     @transition('busy', 'idle')
     def shutter(self, transition):
         """Operation open/close shutter red or blue
@@ -58,9 +59,8 @@ class Shutter(DualModeDevice):
         :raises: :class:`~.Error.CommErr`, :class:`~.Error.DeviceErr`
 
         """
-        #self.fsm.busy()
         if self.mode == "simulated":
-            self.currPos = "opened" if transition == 'open'\
+            self.currPos = "open" if transition == 'open'\
                 else 'closed'
             self.fsm.idle()
         else: #if mode operation
@@ -76,7 +76,6 @@ class Shutter(DualModeDevice):
                 #raise e
             except Error.CommErr, e:
                 print e
-        #self.fsm.idle()
         return 0
 
     #@transition('init', 'idle')
@@ -131,11 +130,14 @@ class Shutter(DualModeDevice):
         mask = [None] * 6
         status = ''
         try:
+            self.ss = int(self.send('ss\r\n')[0])
+            self.currPos = Shutter.positions[self.ss]
+            status += self.currPos
             for sb in l_sb:
                 time.sleep(0.3)
                 mask[sb - 1] = self.parseStatusByte(sb)
-                status += ', '.join(np.array(getattr(Shutter,
-                    'STATUS_BYTE_%i' % sb))[mask[sb - 1] == 1])
+                #status += ', '.join(np.array(getattr(Shutter,
+                    #'STATUS_BYTE_%i' % sb))[mask[sb - 1] == 1])
                 if sum(mask[sb -1] * np.asarray(getattr(Shutter,
                     'MASK_ERROR_SB_%i' % sb))) > 0:
                     print "warn ='%s'" %\
@@ -146,7 +148,6 @@ class Shutter(DualModeDevice):
                     self.fsm.idle()
                 elif self.fsm.current == 'none':
                     self.fsm.load()
-            #self.currPos = Shutter.positions[self.send('ss\r\n')[0]]
             self.status = status
             return mask
         except Error.CommErr, e:

@@ -66,6 +66,7 @@ class Bia(DualModeDevice):
         self._param["duration"] = dur
         self._param["intensity"] = intensity
 
+    @interlock("on", "open", "shutter")
     @transition('busy', 'idle')
     def bia(self, transition, strobe=None):
         """Operation on/off bia
@@ -81,9 +82,9 @@ class Bia(DualModeDevice):
 
 
         """
-        #if self.mode == "simulated":
-            #self.currPos = "on" if transition == 'on'\
-                    #else 'off'
+        if self.mode == "simulated":
+            self.currPos = "on" if transition == 'on'\
+                    else 'off'
         if 1:
             try:
                 if transition == 'on':
