@@ -182,14 +182,14 @@ class Device(QThread):
         return NotImplemented
 
 
-class DeviceSimulator(Device):
+class SimulationDevice(Device):
 
     """Device in simulation mode:
 
          Almost nothing"""
 
     def __init__(self, actor=None, cfg_path=path):
-        super(DeviceSimulator, self).__init__(actor, cfg_path)
+        super(SimulationDevice, self).__init__(actor, cfg_path)
 
     def sim_start_communication(self, *args, **kwargs):
         print "Simulation: start comm"
@@ -208,7 +208,7 @@ class DeviceSimulator(Device):
         print "Simulation: send"
 
 
-class DeviceOperation(Device):
+class OperationDevice(Device):
 
     """Device in operation mode:
 
@@ -216,7 +216,7 @@ class DeviceOperation(Device):
          * Starting, sending and receiving message is implemented"""
 
     def __init__(self, actor=None, cfg_path=path):
-        super(DeviceOperation, self).__init__(actor, cfg_path)
+        super(OperationDevice, self).__init__(actor, cfg_path)
 
 
     def op_start_communication(self, *args, **kwargs):
@@ -349,7 +349,7 @@ LINK: %s\nCfgFile: %s\n " % (self.link, self._cfg))
             raise NotImplementedError
 
 
-class DualModeDevice(DeviceOperation, DeviceSimulator):
+class DualModeDevice(OperationDevice, SimulationDevice):
 
     """Switch between class following the device mode"""
 
@@ -377,7 +377,6 @@ class DualModeDevice(DeviceOperation, DeviceSimulator):
                 'operation': self.op_send
                 }
     def start_communication(self, *args, **kwargs):
-        print self._start_communication_map
         self._start_communication_map[self.mode]()
         #self.startFSM()
 
