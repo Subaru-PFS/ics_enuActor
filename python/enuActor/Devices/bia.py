@@ -25,7 +25,7 @@ class Bia(DualModeDevice):
     """
 
     def __init__(self, actor=None):
-        Device.__init__(self, actor)
+        super(Bia, self).__init__(actor)
         self.currPos = "off"
 
     ############################
@@ -40,7 +40,7 @@ class Bia(DualModeDevice):
         :raises: @todo
 
         """
-        self.load_cfg(self.device)
+        #self.load_cfg(self.device)
         if self.mode == 'operation':
             self.handleTimeout()
         #TODO: to improve

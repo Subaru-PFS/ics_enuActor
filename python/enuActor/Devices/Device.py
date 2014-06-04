@@ -66,11 +66,13 @@ class Device(QThread):
         self.connection = None
 
         # Device attributes
-        self.name = self.__class__.__name__
+        self.device = self.__class__.__name__
         self.mode = "operation"
         self.status = None
         self.MAP = copy.deepcopy(MAP) # referenced
         self.MAP['callbacks']['oninit'] = lambda e: self.initialise()
+        self.MAP['callbacks']['onload'] = lambda e:\
+            self.load_cfg(self.__class__.__name__)
         self.start()
 
     ###################
@@ -92,7 +94,7 @@ class Device(QThread):
         :param e: event
 
         """
-        print 'state :%s %s' % (self.name, e.dst)
+        print 'state :%s %s' % (self.device, e.dst)
 
     def initialise(self):
         """Overriden by subclasses:
@@ -166,6 +168,11 @@ class Device(QThread):
 
     def start_ttl(self):
         """To be overriden virtual method
+      """
+        return NotImplemented
+
+    def start_ethernet(self):
+        """To be overriden virtual method
         """
         return NotImplemented
 
@@ -182,19 +189,23 @@ class DeviceSimulator(Device):
          Almost nothing"""
 
     def __init__(self, actor=None, cfg_path=path):
-        Device.__init__(self, actor, cfg_path)
+        super(DeviceSimulator, self).__init__(actor, cfg_path)
 
     def sim_start_communication(self, *args, **kwargs):
-        pass
+        print "Simulation: start comm"
+        self.startFSM()
 
     def sim_start_serial(self, input_buff=None):
-        pass
+        print "Simulation: start serial"
+
+    def sim_start_ethernet(self):
+        print "Simulation: start ethernet"
 
     def sim_start_ttl(self):
         pass
 
     def sim_send(self, input_buff=None):
-        pass
+        print "Simulation: send"
 
 
 class DeviceOperation(Device):
@@ -205,10 +216,10 @@ class DeviceOperation(Device):
          * Starting, sending and receiving message is implemented"""
 
     def __init__(self, actor=None, cfg_path=path):
-        Device.__init__(self, actor, cfg_path)
+        super(DeviceOperation, self).__init__(actor, cfg_path)
 
 
-    def start_communication(self, *args, **kwargs):
+    def op_start_communication(self, *args, **kwargs):
         """Docstring for start_communication.
 
         .. note:: Need first to specify config file and device by calling :func:`load_cfg`
@@ -223,7 +234,7 @@ class DeviceOperation(Device):
         :raises: :class:`~.Error.CfgFileErr`
 
         """
-        self.load_cfg(self.__class__.__name__)
+        self.load_cfg(self.device)
         if self.mode == "simulated":
             self.startFSM()
             print "[simulated]"
@@ -249,7 +260,7 @@ class DeviceOperation(Device):
 LINK: %s\nCfgFile: %s\n " % (self.link, self._cfg))
         self.startFSM()
 
-    def start_serial(self, input_buff=None):
+    def op_start_serial(self, input_buff=None):
         """Start a serial communication
 
         :param input_buff: Send at start to check communication
@@ -275,7 +286,7 @@ LINK: %s\nCfgFile: %s\n " % (self.link, self._cfg))
             self.ser.flushOutput()
         return self.ser
 
-    def start_ethernet(self):
+    def op_start_ethernet(self):
         """@todo: Docstring for start_ethernet.
 
         :returns: @todo
@@ -293,7 +304,7 @@ LINK: %s\nCfgFile: %s\n " % (self.link, self._cfg))
             raise Error.CommErr(e)
         return sock
 
-    def start_ttl(self):
+    def op_start_ttl(self):
         """@todo: Docstring for start_ttl.
 
         :returns: @todo
@@ -302,7 +313,7 @@ LINK: %s\nCfgFile: %s\n " % (self.link, self._cfg))
         """
         raise NotImplementedError
 
-    def send(self, input_buff=None):
+    def op_send(self, input_buff=None):
         """Send string to interface
 
         :param input_buff: string to send to check com.
@@ -342,40 +353,51 @@ class DualModeDevice(DeviceOperation, DeviceSimulator):
 
     """Switch between class following the device mode"""
 
-    def __init__(self):
+    def __init__(self, actor=None):
         """@todo: to be defined1. """
-        #DeviceOperation.__init__(self)
-        #DeviceSimulator.__init__(self)
-        super(DualModeDevice, self).__init__()
+        super(DualModeDevice, self).__init__(actor)
         self._start_communication_map = {
-                'simulated': DeviceSimulator.sim_start_communication,
-                'operation': DeviceOperation.start_communication
+                'simulated': self.sim_start_communication,
+                'operation': self.op_start_communication
                 }
         self._start_serial_map = {
                 'simulated': self.sim_start_serial,
-                'operation': self.start_serial
+                'operation': self.op_start_serial
+                }
+        self._start_ethernet_map = {
+                'simulated': self.sim_start_ethernet,
+                'operation': self.op_start_ethernet
                 }
         self._start_ttl_map = {
                 'simulated': self.sim_start_ttl,
-                'operation': self.start_ttl
+                'operation': self.op_start_ttl
                 }
-
         self._send_map = {
                 'simulated': self.sim_send,
-                'operation': self.send
+                'operation': self.op_send
                 }
+    def start_communication(self, *args, **kwargs):
+        print self._start_communication_map
+        self._start_communication_map[self.mode]()
+        #self.startFSM()
 
-        def start_communication(self):
-            self._start_communication_map[self.mode]()
+    def start_serial(self, *args, **kwargs):
+        #self.startFSM()
+        return self._start_serial_map[self.mode](*args, **kwargs)
 
-        def start_serial(self):
-            self._start_serial_map[self.mode]()
+    def start_ethernet(self, *args, **kwargs):
+        print "in DualModeDevice start_ethernet"
+        return self._start_ethernet_map[self.mode](*args, **kwargs)
 
-        def start_ttl(self):
-            self._start_ttl_map[self.mode]()
+    def start_ttl(self, *args, **kwargs):
+        return self._start_ttl_map[self.mode](*args, **kwargs)
 
-        def send_map(self):
-            self._send_map[self.mode]()
+    def send(self, *args, **kwargs):
+        return self._send_map[self.mode](*args, **kwargs)
+
+
+
+
 
 def transition(during_state, after_state=None):
     """Decorator enabling the function to trigger state of the FSM.
