@@ -376,6 +376,7 @@ class DualModeDevice(OperationDevice, SimulationDevice):
                 'simulated': self.sim_send,
                 'operation': self.op_send
                 }
+
     def start_communication(self, *args, **kwargs):
         self._start_communication_map[self.mode]()
         #self.startFSM()

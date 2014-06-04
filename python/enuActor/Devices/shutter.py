@@ -44,7 +44,7 @@ class Shutter(DualModeDevice):
 
     def __init__(self, actor=None):
         """Inherit QThread and start the Thread (with FSM)"""
-        Device.__init__(self, actor)
+        super(Shutter, self).__init__(actor)
         self.currPos = "close"     #current position
         self.shutter_id = None      #current id
 
@@ -80,6 +80,7 @@ class Shutter(DualModeDevice):
         return 0
 
     #@transition('init', 'idle')
+    @interlock("[open, close]", "on", "bia")
     def initialise(self):
         """ Initialise shutter.
         Here just trigger the FSM to INITIALISING and IDLE
