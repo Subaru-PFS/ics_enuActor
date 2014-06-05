@@ -447,6 +447,7 @@ def interlock(self_position, target_position, target):
                 for position in self_position:
                     if position in args and condition2:
                         print "Interlock !"
+                        self.fsm.fail()
                         return 0
             elif hasattr(target_position, '__iter__'):
                 #target_position is iterable
@@ -455,9 +456,11 @@ def interlock(self_position, target_position, target):
                 for position in target_position:
                     if condition1 and target_currPos == position:
                                 print "Interlock !"
+                                self.fsm.fail()
                                 return 0
             elif condition1 and target_currPos == target_position:
                 print "Interlock !"
+                self.fsm.fail()
                 return 0
             return func(self, *args)
         return wrapped_func

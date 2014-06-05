@@ -26,7 +26,7 @@ Description:
 
 
 class QThread(threading.Thread):
-    def __init__(self, actor, name, timeout=2.0, isDaemon=True, queueClass=Queue.PriorityQueue):
+    def __init__(self, actor, name, timeout=2, isDaemon=True, queueClass=Queue.PriorityQueue):
         """ A thread with a queue. The thread's .run() method pops items off its public .queue and executes them. """
         threading.Thread.__init__(self, name=name)
         self.setDaemon(isDaemon)

@@ -93,7 +93,6 @@ class Shutter(DualModeDevice):
         if self.mode == 'operation':
             self.check_status()
 
-
     def terminal(self):
         """launch terminal connection to shutter device
 
@@ -157,7 +156,6 @@ class Shutter(DualModeDevice):
         except Error.CommErr, e:
             print e
 
-
     def parseStatusByte(self, sb):
         """Send status byte command and parse reply of device
 
@@ -181,5 +179,3 @@ class Shutter(DualModeDevice):
         mask.reverse()
         arr_mask = np.array(mask[0: len(getattr(Shutter, 'STATUS_BYTE_%i' % sb))])
         return arr_mask
-
-
