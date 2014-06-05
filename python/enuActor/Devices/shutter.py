@@ -79,7 +79,6 @@ class Shutter(DualModeDevice):
                 print e
         return 0
 
-    #@transition('init', 'idle')
     @interlock("*", ["on", "strobe"], "bia")
     def initialise(self):
         """ Initialise shutter.

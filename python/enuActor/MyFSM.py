@@ -227,31 +227,32 @@ class Fysom(object):
         return getattr(self, event)()
 
 
-#State table
-#MAP = {
-    #'initial': 'OFF',
-    #'final': 'OFF',
-    #'events': [
-        #{'name': 'on', 'src': ['OFF', 'IDLE', 'FAIL'], 'dst': 'ON'},
-        #{'name': 'off',  'src': ['ON', 'IDLE', 'FAIL'],   'dst': 'OFF'},
-        #{'name': 'idle', 'src': ['ON', 'BUSY'], 'dst': 'IDLE'},
-        #{'name': 'busy', 'src': 'IDLE', 'dst': 'BUSY'},
-        #{'name': 'fail', 'src': ['ON', 'OFF', 'IDLE', 'BUSY'], 'dst': 'FAIL'},
-                #]
-        #}
+#######################################################################
+#                        Simple call decorator                        #
+#######################################################################
 
 
+def transition(during_state, after_state=None):
+    """Decorator enabling the function to trigger state of the FSM.
 
+    :param during_state: event at beginning of the function
+    :param after_state: event after the function is performed if specified
+    :returns: function return
+    :raises: :class:`~.Error.DeviceErr`
 
+    """
+    def wrapper(func):
+        def wrapped_func(self, *args):
+            self.fsm.trigger(during_state)
+            try:
+                res = func(self, *args)
+                if after_state is not None:
+                    self.fsm.trigger(after_state)
+                return res
+            except Error.DeviceErr, e:
+                self.fsm.fail()
+                raise e
+        return wrapped_func
+    return wrapper
 
-
-#s = Shutter()
-#print "state after instanciation: %s" % s.current
-#s.init()
-#print "state after init %s" % s.current
-#s.call_open()
-#print "state while opening: %s" % s.current
-#import time
-#time.sleep(3)
-#print s.current
 

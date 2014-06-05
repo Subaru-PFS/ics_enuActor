@@ -115,6 +115,9 @@ class Device(QThread):
         return "%s status [%s, %s]" % (self.device.upper(), self.fsm.current, self.status)
 
     #callbacks: init, safe_off, shut_down
+    @transition('fail')
+    def fail(self, reason):
+        print "%s_FAIL : %s" % (self.device, reason)
 
     ############################
     #  COMMUNICATION HANDLING  #
@@ -395,31 +398,8 @@ class DualModeDevice(OperationDevice, SimulationDevice):
 
 
 #######################################################################
-#            Decorators Interlock & transition simple call            #
+#                          Interlock routine                          #
 #######################################################################
-
-def transition(during_state, after_state=None):
-    """Decorator enabling the function to trigger state of the FSM.
-
-    :param during_state: event at beginning of the function
-    :param after_state: event after the function is performed if specified
-    :returns: function return
-    :raises: :class:`~.Error.DeviceErr`
-
-    """
-    def wrapper(func):
-        def wrapped_func(self, *args):
-            self.fsm.trigger(during_state)
-            try:
-                res = func(self, *args)
-                if after_state is not None:
-                    self.fsm.trigger(after_state)
-                return res
-            except Error.DeviceErr, e:
-                self.fsm.fail()
-                raise e
-        return wrapped_func
-    return wrapper
 
 def interlock(self_position, target_position, target):
     """Interlock between self device and target device
@@ -446,21 +426,18 @@ def interlock(self_position, target_position, target):
                     condition2 = target_currPos == target_position
                 for position in self_position:
                     if position in args and condition2:
-                        print "Interlock !"
-                        self.fsm.fail()
-                        return 0
+                        self.fail("WTF !!!!")
+                        return
             elif hasattr(target_position, '__iter__'):
                 #target_position is iterable
                 if condition1 is False:
                     condition1 = self_position in args
                 for position in target_position:
                     if condition1 and target_currPos == position:
-                                print "Interlock !"
-                                self.fsm.fail()
+                                self.fail("WTF !!!!")
                                 return 0
             elif condition1 and target_currPos == target_position:
-                print "Interlock !"
-                self.fsm.fail()
+                self.fail("WTF !!!!")
                 return 0
             return func(self, *args)
         return wrapped_func

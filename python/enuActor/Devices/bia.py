@@ -40,10 +40,9 @@ class Bia(DualModeDevice):
         :raises: @todo
 
         """
-        #self.load_cfg(self.device)
+        #TODO: to improve
         if self.mode == 'operation':
             self.handleTimeout()
-        #TODO: to improve
 
     def setConfig(self, freq=None, dur=None, intensity=None):
         """It specifies parameters for light and strobe mode.
