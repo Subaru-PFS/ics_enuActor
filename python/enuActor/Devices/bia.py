@@ -41,8 +41,8 @@ class Bia(DualModeDevice):
 
         """
         #TODO: to improve
-        if self.mode == 'operation':
-            self.handleTimeout()
+        self.load_cfg(self.device)
+        self.check_status()
 
     def setConfig(self, freq=None, dur=None, intensity=None):
         """It specifies parameters for light and strobe mode.
@@ -80,62 +80,40 @@ class Bia(DualModeDevice):
         :raises: :class:`~.Error.CommErr`, :class:`~.Error.DeviceErr`
 
         """
-        if self.mode == "simulated":
-            self.currPos = "on" if transition == 'on'\
-                    else 'off'
-        if 1:
-            try:
-                if transition == 'on':
-                    self.send('a\r\n')
-                    time.sleep(.5)
-                    self.send('p10\r\n')
-                    time.sleep(.5)
-                    self.send('d1000\r\n')
-                    self.currPos = "on" # TODO: To be change when got input
-                elif transition == 'strobe':
-                    self.send('a\r\n')
-                    time.sleep(.5)
-                    if strobe is None:
-                        # Use default parameters
-                        strobe = [
-                                self._param["frequency"],
-                                self._param["duration"]
-                                ]
-                    self.send('p%i\r\n' % int(strobe[0]))
-                    time.sleep(5)
-                    self.send('d%i\r\n' % int(strobe[1]))
-                    self.currPos = "strobe" # TODO: To be change when got input
-                elif transition == 'off':
-                    self.send('c\r\n')
-                    self.currPos = "off" # TODO: To be change when got input
-                self.check_status()
-            except socket.error as e:
-                raise Error.CommErr(e)
-        return 0
+        self.lastActionCmd = transition
+        try:
+            if transition == 'on':
+                self.send('a\r\n')
+                time.sleep(.5)
+                self.send('p10\r\n')
+                time.sleep(.5)
+                self.send('d1000\r\n')
+                self.currPos = "on" # TODO: To be change when got input
+            elif transition == 'strobe':
+                self.send('a\r\n')
+                time.sleep(.5)
+                if strobe is None:
+                    # Use default parameters
+                    strobe = [
+                            self._param["frequency"],
+                            self._param["duration"]
+                            ]
+                self.send('p%i\r\n' % int(strobe[0]))
+                time.sleep(5)
+                self.send('d%i\r\n' % int(strobe[1]))
+                self.currPos = "strobe" # TODO: To be change when got input
+            elif transition == 'off':
+                self.send('c\r\n')
+                self.currPos = "off" # TODO: To be change when got input
+        except socket.error as e:
+            raise Error.CommErr(e)
+        self.check_status()
 
-    ##################
-    #  About Thread  #
-    ##################
-
-    def handleTimeout(self):
-        """Override method :meth:`.QThread.handleTimeout`.
-        Process while device is idling.
-
-        :returns: @todo
-        :raises: :class:`~.Error.CommErr`
-
-        """
-        if self.mode is "operation" and self.started:
-            self.check_status()
-        if self.started:
-            self.status = self.currPos
-            if self.fsm.current in ['INITIALISING', 'BUSY']:
-                self.fsm.idle()
-            elif self.fsm.current == 'none':
-                self.fsm.load()
-
-    def check_status(self):
+    def op_check_status(self):
         """ *Can not check status yet*  """
-        self.status = self.currPos # TODO: to be changed whan input received
+        # TODO: to be changed whan input received
+        # Same as sim_check_status
+        if self.lastActionCmd is not None:
+            self.currPos = self.lastActionCmd
 
 

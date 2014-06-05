@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -8,8 +10,9 @@
     
     <title>enuActor.MyFSM &mdash; enuActor  documentation</title>
     
-    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/cloud.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Noticia+Text|Open+Sans|Droid+Sans+Mono" type="text/css" />
     
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
@@ -23,10 +26,15 @@
     <script type="text/javascript" src="../../_static/jquery.js"></script>
     <script type="text/javascript" src="../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.cookie.js"></script>
+    <script type="text/javascript" src="../../_static/cloud.js"></script>
     <link rel="top" title="enuActor  documentation" href="../../index.html" />
     <link rel="up" title="Module code" href="../index.html" /> 
+        <meta name="viewport" content="width=device-width, initial-scale=1">
   </head>
   <body>
+    <div class="relbar-top">
+        
     <div class="related">
       <h3>Navigation</h3>
       <ul>
@@ -35,11 +43,14 @@
              accesskey="I">index</a></li>
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
-             >modules</a> |</li>
-        <li><a href="../../index.html">enuActor  documentation</a> &raquo;</li>
+             >modules</a> &nbsp; &nbsp;</li>
+    <li><a href="../../index.html">enuActor  documentation</a> &raquo;</li>
+
           <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
       </ul>
-    </div>  
+    </div>
+    </div>
+  
 
     <div class="document">
       <div class="documentwrapper">
@@ -276,34 +287,34 @@
         <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">)()</span>
 
 
-<span class="c">#State table</span>
-<span class="c">#MAP = {</span>
-    <span class="c">#&#39;initial&#39;: &#39;OFF&#39;,</span>
-    <span class="c">#&#39;final&#39;: &#39;OFF&#39;,</span>
-    <span class="c">#&#39;events&#39;: [</span>
-        <span class="c">#{&#39;name&#39;: &#39;on&#39;, &#39;src&#39;: [&#39;OFF&#39;, &#39;IDLE&#39;, &#39;FAIL&#39;], &#39;dst&#39;: &#39;ON&#39;},</span>
-        <span class="c">#{&#39;name&#39;: &#39;off&#39;,  &#39;src&#39;: [&#39;ON&#39;, &#39;IDLE&#39;, &#39;FAIL&#39;],   &#39;dst&#39;: &#39;OFF&#39;},</span>
-        <span class="c">#{&#39;name&#39;: &#39;idle&#39;, &#39;src&#39;: [&#39;ON&#39;, &#39;BUSY&#39;], &#39;dst&#39;: &#39;IDLE&#39;},</span>
-        <span class="c">#{&#39;name&#39;: &#39;busy&#39;, &#39;src&#39;: &#39;IDLE&#39;, &#39;dst&#39;: &#39;BUSY&#39;},</span>
-        <span class="c">#{&#39;name&#39;: &#39;fail&#39;, &#39;src&#39;: [&#39;ON&#39;, &#39;OFF&#39;, &#39;IDLE&#39;, &#39;BUSY&#39;], &#39;dst&#39;: &#39;FAIL&#39;},</span>
-                <span class="c">#]</span>
-        <span class="c">#}</span>
+<span class="c">#######################################################################</span>
+<span class="c">#                        Simple call decorator                        #</span>
+<span class="c">#######################################################################</span>
 
+</div></div>
+<div class="viewcode-block" id="transition"><a class="viewcode-back" href="../../enuActor.html#enuActor.MyFSM.transition">[docs]</a><span class="k">def</span> <span class="nf">transition</span><span class="p">(</span><span class="n">during_state</span><span class="p">,</span> <span class="n">after_state</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Decorator enabling the function to trigger state of the FSM.</span>
 
+<span class="sd">    :param during_state: event at beginning of the function</span>
+<span class="sd">    :param after_state: event after the function is performed if specified</span>
+<span class="sd">    :returns: function return</span>
+<span class="sd">    :raises: :class:`~.Error.DeviceErr`</span>
 
-
-
-
-<span class="c">#s = Shutter()</span>
-<span class="c">#print &quot;state after instanciation: %s&quot; % s.current</span>
-<span class="c">#s.init()</span>
-<span class="c">#print &quot;state after init %s&quot; % s.current</span>
-<span class="c">#s.call_open()</span>
-<span class="c">#print &quot;state while opening: %s&quot; % s.current</span>
-<span class="c">#import time</span>
-<span class="c">#time.sleep(3)</span>
-<span class="c">#print s.current</span>
-</pre></div></div></div>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">wrapper</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
+        <span class="k">def</span> <span class="nf">wrapped_func</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fsm</span><span class="o">.</span><span class="n">trigger</span><span class="p">(</span><span class="n">during_state</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">res</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">after_state</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">fsm</span><span class="o">.</span><span class="n">trigger</span><span class="p">(</span><span class="n">after_state</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">res</span>
+            <span class="k">except</span> <span class="n">Error</span><span class="o">.</span><span class="n">DeviceErr</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">fsm</span><span class="o">.</span><span class="n">fail</span><span class="p">()</span>
+                <span class="k">raise</span> <span class="n">e</span>
+        <span class="k">return</span> <span class="n">wrapped_func</span>
+    <span class="k">return</span> <span class="n">wrapper</span>
+</pre></div></div>
 
           </div>
         </div>
@@ -327,6 +338,8 @@
       </div>
       <div class="clearer"></div>
     </div>
+    <div class="relbar-bottom">
+        
     <div class="related">
       <h3>Navigation</h3>
       <ul>
@@ -335,14 +348,18 @@
              >index</a></li>
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
-             >modules</a> |</li>
-        <li><a href="../../index.html">enuActor  documentation</a> &raquo;</li>
+             >modules</a> &nbsp; &nbsp;</li>
+    <li><a href="../../index.html">enuActor  documentation</a> &raquo;</li>
+
           <li><a href="../index.html" >Module code</a> &raquo;</li> 
       </ul>
     </div>
+    </div>
+
     <div class="footer">
         &copy; Copyright 2014, Pégot-Ogier Thomas.
       Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
     </div>
+    <!-- cloud_sptheme 1.4 -->
   </body>
 </html>

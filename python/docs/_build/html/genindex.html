@@ -1,4 +1,6 @@
 
+
+
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -9,8 +11,9 @@
     
     <title>Index &mdash; enuActor  documentation</title>
     
-    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/cloud.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Noticia+Text|Open+Sans|Droid+Sans+Mono" type="text/css" />
     
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
@@ -24,9 +27,14 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/jquery.cookie.js"></script>
+    <script type="text/javascript" src="_static/cloud.js"></script>
     <link rel="top" title="enuActor  documentation" href="index.html" /> 
+        <meta name="viewport" content="width=device-width, initial-scale=1">
   </head>
   <body>
+    <div class="relbar-top">
+        
     <div class="related">
       <h3>Navigation</h3>
       <ul>
@@ -35,10 +43,13 @@
              accesskey="I">index</a></li>
         <li class="right" >
           <a href="py-modindex.html" title="Python Module Index"
-             >modules</a> |</li>
-        <li><a href="index.html">enuActor  documentation</a> &raquo;</li> 
+             >modules</a> &nbsp; &nbsp;</li>
+    <li><a href="index.html">enuActor  documentation</a> &raquo;</li>
+ 
       </ul>
-    </div>  
+    </div>
+    </div>
+  
 
     <div class="document">
       <div class="documentwrapper">
@@ -60,6 +71,7 @@
  | <a href="#I"><strong>I</strong></a>
  | <a href="#L"><strong>L</strong></a>
  | <a href="#M"><strong>M</strong></a>
+ | <a href="#O"><strong>O</strong></a>
  | <a href="#P"><strong>P</strong></a>
  | <a href="#Q"><strong>Q</strong></a>
  | <a href="#R"><strong>R</strong></a>
@@ -115,15 +127,9 @@
   </dt>
 
       
-  <dt><a href="enuActor.Devices.html#enuActor.Devices.bia.Bia.check_status">check_status() (enuActor.Devices.bia.Bia method)</a>
+  <dt><a href="enuActor.Devices.html#enuActor.Devices.Device.DualModeDevice.check_status">check_status() (enuActor.Devices.Device.DualModeDevice method)</a>
   </dt>
 
-      <dd><dl>
-        
-  <dt><a href="enuActor.Devices.html#enuActor.Devices.shutter.Shutter.check_status">(enuActor.Devices.shutter.Shutter method)</a>
-  </dt>
-
-      </dl></dd>
       
   <dt><a href="enuActor.Devices.html#enuActor.Devices.Error.CommErr">CommErr</a>
   </dt>
@@ -142,18 +148,10 @@
   <dt><a href="enuActor.Devices.html#enuActor.Devices.Device.Device">Device (class in enuActor.Devices.Device)</a>
   </dt>
 
-      
-  <dt><a href="enuActor.Devices.html#enuActor.Devices.Error.DeviceErr">DeviceErr</a>
-  </dt>
-
   </dl></td>
   <td style="width: 33%" valign="top"><dl>
       
-  <dt><a href="enuActor.Devices.html#enuActor.Devices.Device.DeviceOperation">DeviceOperation (class in enuActor.Devices.Device)</a>
-  </dt>
-
-      
-  <dt><a href="enuActor.Devices.html#enuActor.Devices.Device.DeviceSimulator">DeviceSimulator (class in enuActor.Devices.Device)</a>
+  <dt><a href="enuActor.Devices.html#enuActor.Devices.Error.DeviceErr">DeviceErr</a>
   </dt>
 
       
@@ -219,6 +217,10 @@
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%" valign="top"><dl>
       
+  <dt><a href="enuActor.Devices.html#enuActor.Devices.Device.Device.fail">fail() (enuActor.Devices.Device.Device method)</a>
+  </dt>
+
+      
   <dt><a href="enuActor.html#enuActor.MyFSM.Fysom">Fysom (class in enuActor.MyFSM)</a>
   </dt>
 
@@ -245,14 +247,10 @@
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%" valign="top"><dl>
       
-  <dt><a href="enuActor.Devices.html#enuActor.Devices.bia.Bia.handleTimeout">handleTimeout() (enuActor.Devices.bia.Bia method)</a>
+  <dt><a href="enuActor.Devices.html#enuActor.Devices.Device.Device.handleTimeout">handleTimeout() (enuActor.Devices.Device.Device method)</a>
   </dt>
 
       <dd><dl>
-        
-  <dt><a href="enuActor.Devices.html#enuActor.Devices.shutter.Shutter.handleTimeout">(enuActor.Devices.shutter.Shutter method)</a>
-  </dt>
-
         
   <dt><a href="enuActor.html#enuActor.QThread.QThread.handleTimeout">(enuActor.QThread.QThread method)</a>
   </dt>
@@ -279,11 +277,15 @@
 
       </dl></dd>
       
-  <dt><a href="enuActor.html#enuActor.MyFSM.Fysom.is_finished">is_finished() (enuActor.MyFSM.Fysom method)</a>
+  <dt><a href="enuActor.Devices.html#enuActor.Devices.Device.interlock">interlock() (in module enuActor.Devices.Device)</a>
   </dt>
 
   </dl></td>
   <td style="width: 33%" valign="top"><dl>
+      
+  <dt><a href="enuActor.html#enuActor.MyFSM.Fysom.is_finished">is_finished() (enuActor.MyFSM.Fysom method)</a>
+  </dt>
+
       
   <dt><a href="enuActor.html#enuActor.MyFSM.Fysom.isstate">isstate() (enuActor.MyFSM.Fysom method)</a>
   </dt>
@@ -324,6 +326,48 @@
 
       
   <dt><a href="enuActor.Devices.html#enuActor.Devices.shutter.Shutter.MASK_ERROR_SB_6">MASK_ERROR_SB_6 (enuActor.Devices.shutter.Shutter attribute)</a>
+  </dt>
+
+  </dl></td>
+</tr></table>
+
+<h2 id="O">O</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%" valign="top"><dl>
+      
+  <dt><a href="enuActor.Devices.html#enuActor.Devices.bia.Bia.op_check_status">op_check_status() (enuActor.Devices.bia.Bia method)</a>
+  </dt>
+
+      <dd><dl>
+        
+  <dt><a href="enuActor.Devices.html#enuActor.Devices.shutter.Shutter.op_check_status">(enuActor.Devices.shutter.Shutter method)</a>
+  </dt>
+
+      </dl></dd>
+      
+  <dt><a href="enuActor.Devices.html#enuActor.Devices.Device.OperationDevice.op_send">op_send() (enuActor.Devices.Device.OperationDevice method)</a>
+  </dt>
+
+      
+  <dt><a href="enuActor.Devices.html#enuActor.Devices.Device.OperationDevice.op_start_communication">op_start_communication() (enuActor.Devices.Device.OperationDevice method)</a>
+  </dt>
+
+      
+  <dt><a href="enuActor.Devices.html#enuActor.Devices.Device.OperationDevice.op_start_ethernet">op_start_ethernet() (enuActor.Devices.Device.OperationDevice method)</a>
+  </dt>
+
+  </dl></td>
+  <td style="width: 33%" valign="top"><dl>
+      
+  <dt><a href="enuActor.Devices.html#enuActor.Devices.Device.OperationDevice.op_start_serial">op_start_serial() (enuActor.Devices.Device.OperationDevice method)</a>
+  </dt>
+
+      
+  <dt><a href="enuActor.Devices.html#enuActor.Devices.Device.OperationDevice.op_start_ttl">op_start_ttl() (enuActor.Devices.Device.OperationDevice method)</a>
+  </dt>
+
+      
+  <dt><a href="enuActor.Devices.html#enuActor.Devices.Device.OperationDevice">OperationDevice (class in enuActor.Devices.Device)</a>
   </dt>
 
   </dl></td>
@@ -402,7 +446,7 @@
 
       <dd><dl>
         
-  <dt><a href="enuActor.Devices.html#enuActor.Devices.Device.DeviceOperation.send">(enuActor.Devices.Device.DeviceOperation method)</a>
+  <dt><a href="enuActor.Devices.html#enuActor.Devices.Device.DualModeDevice.send">(enuActor.Devices.Device.DualModeDevice method)</a>
   </dt>
 
       </dl></dd>
@@ -427,19 +471,33 @@
   </dt>
 
       
-  <dt><a href="enuActor.Devices.html#enuActor.Devices.Device.DeviceSimulator.sim_send">sim_send() (enuActor.Devices.Device.DeviceSimulator method)</a>
+  <dt><a href="enuActor.Devices.html#enuActor.Devices.Device.SimulationDevice.sim_check_status">sim_check_status() (enuActor.Devices.Device.SimulationDevice method)</a>
   </dt>
 
       
-  <dt><a href="enuActor.Devices.html#enuActor.Devices.Device.DeviceSimulator.sim_start_communication">sim_start_communication() (enuActor.Devices.Device.DeviceSimulator method)</a>
+  <dt><a href="enuActor.Devices.html#enuActor.Devices.Device.SimulationDevice.sim_send">sim_send() (enuActor.Devices.Device.SimulationDevice method)</a>
   </dt>
 
       
-  <dt><a href="enuActor.Devices.html#enuActor.Devices.Device.DeviceSimulator.sim_start_serial">sim_start_serial() (enuActor.Devices.Device.DeviceSimulator method)</a>
+  <dt><a href="enuActor.Devices.html#enuActor.Devices.Device.SimulationDevice.sim_start_communication">sim_start_communication() (enuActor.Devices.Device.SimulationDevice method)</a>
   </dt>
 
       
-  <dt><a href="enuActor.Devices.html#enuActor.Devices.Device.DeviceSimulator.sim_start_ttl">sim_start_ttl() (enuActor.Devices.Device.DeviceSimulator method)</a>
+  <dt><a href="enuActor.Devices.html#enuActor.Devices.Device.SimulationDevice.sim_start_ethernet">sim_start_ethernet() (enuActor.Devices.Device.SimulationDevice method)</a>
+  </dt>
+
+      
+  <dt><a href="enuActor.Devices.html#enuActor.Devices.Device.SimulationDevice.sim_start_serial">sim_start_serial() (enuActor.Devices.Device.SimulationDevice method)</a>
+  </dt>
+
+      
+  <dt><a href="enuActor.Devices.html#enuActor.Devices.Device.SimulationDevice.sim_start_ttl">sim_start_ttl() (enuActor.Devices.Device.SimulationDevice method)</a>
+  </dt>
+
+  </dl></td>
+  <td style="width: 33%" valign="top"><dl>
+      
+  <dt><a href="enuActor.Devices.html#enuActor.Devices.Device.SimulationDevice">SimulationDevice (class in enuActor.Devices.Device)</a>
   </dt>
 
       
@@ -448,23 +506,27 @@
 
       <dd><dl>
         
-  <dt><a href="enuActor.Devices.html#enuActor.Devices.Device.DeviceOperation.start_communication">(enuActor.Devices.Device.DeviceOperation method)</a>
+  <dt><a href="enuActor.Devices.html#enuActor.Devices.Device.DualModeDevice.start_communication">(enuActor.Devices.Device.DualModeDevice method)</a>
   </dt>
 
       </dl></dd>
-  </dl></td>
-  <td style="width: 33%" valign="top"><dl>
       
-  <dt><a href="enuActor.Devices.html#enuActor.Devices.Device.DeviceOperation.start_ethernet">start_ethernet() (enuActor.Devices.Device.DeviceOperation method)</a>
+  <dt><a href="enuActor.Devices.html#enuActor.Devices.Device.Device.start_ethernet">start_ethernet() (enuActor.Devices.Device.Device method)</a>
   </dt>
 
+      <dd><dl>
+        
+  <dt><a href="enuActor.Devices.html#enuActor.Devices.Device.DualModeDevice.start_ethernet">(enuActor.Devices.Device.DualModeDevice method)</a>
+  </dt>
+
+      </dl></dd>
       
   <dt><a href="enuActor.Devices.html#enuActor.Devices.Device.Device.start_serial">start_serial() (enuActor.Devices.Device.Device method)</a>
   </dt>
 
       <dd><dl>
         
-  <dt><a href="enuActor.Devices.html#enuActor.Devices.Device.DeviceOperation.start_serial">(enuActor.Devices.Device.DeviceOperation method)</a>
+  <dt><a href="enuActor.Devices.html#enuActor.Devices.Device.DualModeDevice.start_serial">(enuActor.Devices.Device.DualModeDevice method)</a>
   </dt>
 
       </dl></dd>
@@ -474,7 +536,7 @@
 
       <dd><dl>
         
-  <dt><a href="enuActor.Devices.html#enuActor.Devices.Device.DeviceOperation.start_ttl">(enuActor.Devices.Device.DeviceOperation method)</a>
+  <dt><a href="enuActor.Devices.html#enuActor.Devices.Device.DualModeDevice.start_ttl">(enuActor.Devices.Device.DualModeDevice method)</a>
   </dt>
 
       </dl></dd>
@@ -517,7 +579,7 @@
   </dt>
 
       
-  <dt><a href="enuActor.Devices.html#enuActor.Devices.Device.transition">transition() (in module enuActor.Devices.Device)</a>
+  <dt><a href="enuActor.html#enuActor.MyFSM.transition">transition() (in module enuActor.MyFSM)</a>
   </dt>
 
   </dl></td>
@@ -556,6 +618,8 @@
       </div>
       <div class="clearer"></div>
     </div>
+    <div class="relbar-bottom">
+        
     <div class="related">
       <h3>Navigation</h3>
       <ul>
@@ -564,13 +628,17 @@
              >index</a></li>
         <li class="right" >
           <a href="py-modindex.html" title="Python Module Index"
-             >modules</a> |</li>
-        <li><a href="index.html">enuActor  documentation</a> &raquo;</li> 
+             >modules</a> &nbsp; &nbsp;</li>
+    <li><a href="index.html">enuActor  documentation</a> &raquo;</li>
+ 
       </ul>
     </div>
+    </div>
+
     <div class="footer">
         &copy; Copyright 2014, Pégot-Ogier Thomas.
       Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
     </div>
+    <!-- cloud_sptheme 1.4 -->
   </body>
 </html>

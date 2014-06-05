@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -8,8 +10,9 @@
     
     <title>enuActor.Devices.Device &mdash; enuActor  documentation</title>
     
-    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/cloud.css" type="text/css" />
     <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Noticia+Text|Open+Sans|Droid+Sans+Mono" type="text/css" />
     
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
@@ -23,10 +26,15 @@
     <script type="text/javascript" src="../../../_static/jquery.js"></script>
     <script type="text/javascript" src="../../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.cookie.js"></script>
+    <script type="text/javascript" src="../../../_static/cloud.js"></script>
     <link rel="top" title="enuActor  documentation" href="../../../index.html" />
     <link rel="up" title="Module code" href="../../index.html" /> 
+        <meta name="viewport" content="width=device-width, initial-scale=1">
   </head>
   <body>
+    <div class="relbar-top">
+        
     <div class="related">
       <h3>Navigation</h3>
       <ul>
@@ -35,11 +43,14 @@
              accesskey="I">index</a></li>
         <li class="right" >
           <a href="../../../py-modindex.html" title="Python Module Index"
-             >modules</a> |</li>
-        <li><a href="../../../index.html">enuActor  documentation</a> &raquo;</li>
+             >modules</a> &nbsp; &nbsp;</li>
+    <li><a href="../../../index.html">enuActor  documentation</a> &raquo;</li>
+
           <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
       </ul>
-    </div>  
+    </div>
+    </div>
+  
 
     <div class="document">
       <div class="documentwrapper">
@@ -115,17 +126,34 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">connection</span> <span class="o">=</span> <span class="bp">None</span>
 
         <span class="c"># Device attributes</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">=</span> <span class="s">&quot;operation&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lastActionCmd</span> <span class="o">=</span> <span class="bp">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">MAP</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">MAP</span><span class="p">)</span> <span class="c"># referenced</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">MAP</span><span class="p">[</span><span class="s">&#39;callbacks&#39;</span><span class="p">][</span><span class="s">&#39;oninit&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">initialise</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">MAP</span><span class="p">[</span><span class="s">&#39;callbacks&#39;</span><span class="p">][</span><span class="s">&#39;onload&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">e</span><span class="p">:</span>\
+            <span class="bp">self</span><span class="o">.</span><span class="n">load_cfg</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+
+<div class="viewcode-block" id="Device.handleTimeout"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.Device.handleTimeout">[docs]</a>    <span class="k">def</span> <span class="nf">handleTimeout</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Override method :meth:`.QThread.handleTimeout`.</span>
+<span class="sd">        Process while device is idling.</span>
+
+<span class="sd">        :returns: @todo</span>
+<span class="sd">        :raises: :class:`~.Error.CommErr`</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">started</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">check_status</span><span class="p">()</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">fsm</span><span class="o">.</span><span class="n">current</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&#39;INITIALISING&#39;</span><span class="p">,</span> <span class="s">&#39;BUSY&#39;</span><span class="p">]:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">fsm</span><span class="o">.</span><span class="n">idle</span><span class="p">()</span>
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">fsm</span><span class="o">.</span><span class="n">current</span> <span class="o">==</span> <span class="s">&#39;none&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">fsm</span><span class="o">.</span><span class="n">load</span><span class="p">()</span>
 
     <span class="c">###################</span>
     <span class="c">#  STATE MACHINE  #</span>
     <span class="c">###################</span>
-
+</div>
 <div class="viewcode-block" id="Device.startFSM"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.Device.startFSM">[docs]</a>    <span class="k">def</span> <span class="nf">startFSM</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Instantiate the :mod:`.MyFSM` class (create the State Machine).</span>
 
@@ -141,7 +169,7 @@
 <span class="sd">        :param e: event</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">print</span> <span class="s">&#39;state :</span><span class="si">%s</span><span class="s"> </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">e</span><span class="o">.</span><span class="n">dst</span><span class="p">)</span>
+        <span class="k">print</span> <span class="s">&#39;state :</span><span class="si">%s</span><span class="s"> </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">e</span><span class="o">.</span><span class="n">dst</span><span class="p">)</span>
 </div>
 <div class="viewcode-block" id="Device.initialise"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.Device.initialise">[docs]</a>    <span class="k">def</span> <span class="nf">initialise</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Overriden by subclasses:</span>
@@ -159,9 +187,13 @@
 
 <span class="sd">        :returns: ``&#39;LOADED&#39;``, ``&#39;IDLE&#39;``, ``&#39;BUSY&#39;``, ...</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s"> status [</span><span class="si">%s</span><span class="s">, </span><span class="si">%s</span><span class="s">]&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="o">.</span><span class="n">upper</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">fsm</span><span class="o">.</span><span class="n">current</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">status</span><span class="p">)</span>
+        <span class="k">return</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s"> status [</span><span class="si">%s</span><span class="s">, </span><span class="si">%s</span><span class="s">]&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="o">.</span><span class="n">upper</span><span class="p">(),</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">fsm</span><span class="o">.</span><span class="n">current</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">currPos</span><span class="p">)</span>
 
-    <span class="c">#callbacks: init, safe_off, shut_down</span>
+    <span class="c">#callbacks: init, safe_off, shut_down</span></div>
+    <span class="nd">@transition</span><span class="p">(</span><span class="s">&#39;fail&#39;</span><span class="p">)</span>
+<div class="viewcode-block" id="Device.fail"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.Device.fail">[docs]</a>    <span class="k">def</span> <span class="nf">fail</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">reason</span><span class="p">):</span>
+        <span class="k">print</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">_FAIL : </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">reason</span><span class="p">)</span>
 
     <span class="c">############################</span>
     <span class="c">#  COMMUNICATION HANDLING  #</span>
@@ -215,6 +247,11 @@
 </div>
 <div class="viewcode-block" id="Device.start_ttl"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.Device.start_ttl">[docs]</a>    <span class="k">def</span> <span class="nf">start_ttl</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;To be overriden virtual method</span>
+<span class="sd">      &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">NotImplemented</span>
+</div>
+<div class="viewcode-block" id="Device.start_ethernet"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.Device.start_ethernet">[docs]</a>    <span class="k">def</span> <span class="nf">start_ethernet</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;To be overriden virtual method</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">NotImplemented</span>
 </div>
@@ -224,29 +261,38 @@
         <span class="k">return</span> <span class="bp">NotImplemented</span>
 
 </div></div>
-<div class="viewcode-block" id="DeviceSimulator"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.DeviceSimulator">[docs]</a><span class="k">class</span> <span class="nc">DeviceSimulator</span><span class="p">(</span><span class="n">Device</span><span class="p">):</span>
+<div class="viewcode-block" id="SimulationDevice"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.SimulationDevice">[docs]</a><span class="k">class</span> <span class="nc">SimulationDevice</span><span class="p">(</span><span class="n">Device</span><span class="p">):</span>
 
     <span class="sd">&quot;&quot;&quot;Device in simulation mode:</span>
 
 <span class="sd">         Almost nothing&quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">actor</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">cfg_path</span><span class="o">=</span><span class="n">path</span><span class="p">):</span>
-        <span class="n">Device</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">actor</span><span class="p">,</span> <span class="n">cfg_path</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SimulationDevice</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">actor</span><span class="p">,</span> <span class="n">cfg_path</span><span class="p">)</span>
 
-<div class="viewcode-block" id="DeviceSimulator.sim_start_communication"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.DeviceSimulator.sim_start_communication">[docs]</a>    <span class="k">def</span> <span class="nf">sim_start_communication</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="k">pass</span>
+<div class="viewcode-block" id="SimulationDevice.sim_start_communication"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.SimulationDevice.sim_start_communication">[docs]</a>    <span class="k">def</span> <span class="nf">sim_start_communication</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">print</span> <span class="s">&quot;[Simulation] </span><span class="si">%s</span><span class="s">: start communication&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">device</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">startFSM</span><span class="p">()</span>
 </div>
-<div class="viewcode-block" id="DeviceSimulator.sim_start_serial"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.DeviceSimulator.sim_start_serial">[docs]</a>    <span class="k">def</span> <span class="nf">sim_start_serial</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_buff</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
-        <span class="k">pass</span>
+<div class="viewcode-block" id="SimulationDevice.sim_start_serial"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.SimulationDevice.sim_start_serial">[docs]</a>    <span class="k">def</span> <span class="nf">sim_start_serial</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_buff</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="k">print</span> <span class="s">&quot;[Simulation] </span><span class="si">%s</span><span class="s">: start serial&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">device</span>
 </div>
-<div class="viewcode-block" id="DeviceSimulator.sim_start_ttl"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.DeviceSimulator.sim_start_ttl">[docs]</a>    <span class="k">def</span> <span class="nf">sim_start_ttl</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">pass</span>
+<div class="viewcode-block" id="SimulationDevice.sim_start_ethernet"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.SimulationDevice.sim_start_ethernet">[docs]</a>    <span class="k">def</span> <span class="nf">sim_start_ethernet</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">print</span> <span class="s">&quot;[Simulation] </span><span class="si">%s</span><span class="s">: start ethernet&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">device</span>
 </div>
-<div class="viewcode-block" id="DeviceSimulator.sim_send"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.DeviceSimulator.sim_send">[docs]</a>    <span class="k">def</span> <span class="nf">sim_send</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_buff</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
-        <span class="k">pass</span>
+<div class="viewcode-block" id="SimulationDevice.sim_start_ttl"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.SimulationDevice.sim_start_ttl">[docs]</a>    <span class="k">def</span> <span class="nf">sim_start_ttl</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">print</span> <span class="s">&quot;[Simulation] </span><span class="si">%s</span><span class="s">: start ttl&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">device</span>
+</div>
+<div class="viewcode-block" id="SimulationDevice.sim_send"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.SimulationDevice.sim_send">[docs]</a>    <span class="k">def</span> <span class="nf">sim_send</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_buff</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="k">print</span> <span class="s">&quot;[Simulation] </span><span class="si">%s</span><span class="s">: sending &#39;</span><span class="si">%s</span><span class="s">&#39;&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">input_buff</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="SimulationDevice.sim_check_status"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.SimulationDevice.sim_check_status">[docs]</a>    <span class="k">def</span> <span class="nf">sim_check_status</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c">#print &quot;[Simulation] %s: checking status&quot; % self.device</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">lastActionCmd</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">currPos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lastActionCmd</span>
 
 </div></div>
-<div class="viewcode-block" id="DeviceOperation"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.DeviceOperation">[docs]</a><span class="k">class</span> <span class="nc">DeviceOperation</span><span class="p">(</span><span class="n">Device</span><span class="p">):</span>
+<div class="viewcode-block" id="OperationDevice"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.OperationDevice">[docs]</a><span class="k">class</span> <span class="nc">OperationDevice</span><span class="p">(</span><span class="n">Device</span><span class="p">):</span>
 
     <span class="sd">&quot;&quot;&quot;Device in operation mode:</span>
 
@@ -254,10 +300,10 @@
 <span class="sd">         * Starting, sending and receiving message is implemented&quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">actor</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">cfg_path</span><span class="o">=</span><span class="n">path</span><span class="p">):</span>
-        <span class="n">Device</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">actor</span><span class="p">,</span> <span class="n">cfg_path</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">OperationDevice</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">actor</span><span class="p">,</span> <span class="n">cfg_path</span><span class="p">)</span>
 
 
-<div class="viewcode-block" id="DeviceOperation.start_communication"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.DeviceOperation.start_communication">[docs]</a>    <span class="k">def</span> <span class="nf">start_communication</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<div class="viewcode-block" id="OperationDevice.op_start_communication"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.OperationDevice.op_start_communication">[docs]</a>    <span class="k">def</span> <span class="nf">op_start_communication</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Docstring for start_communication.</span>
 
 <span class="sd">        .. note:: Need first to specify config file and device by calling :func:`load_cfg`</span>
@@ -272,7 +318,7 @@
 <span class="sd">        :raises: :class:`~.Error.CfgFileErr`</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">load_cfg</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">load_cfg</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s">&quot;simulated&quot;</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">startFSM</span><span class="p">()</span>
             <span class="k">print</span> <span class="s">&quot;[simulated]&quot;</span>
@@ -298,7 +344,7 @@
 <span class="s">LINK: </span><span class="si">%s</span><span class="se">\n</span><span class="s">CfgFile: </span><span class="si">%s</span><span class="se">\n</span><span class="s"> &quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">link</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cfg</span><span class="p">))</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">startFSM</span><span class="p">()</span>
 </div>
-<div class="viewcode-block" id="DeviceOperation.start_serial"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.DeviceOperation.start_serial">[docs]</a>    <span class="k">def</span> <span class="nf">start_serial</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_buff</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+<div class="viewcode-block" id="OperationDevice.op_start_serial"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.OperationDevice.op_start_serial">[docs]</a>    <span class="k">def</span> <span class="nf">op_start_serial</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_buff</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Start a serial communication</span>
 
 <span class="sd">        :param input_buff: Send at start to check communication</span>
@@ -324,7 +370,7 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">ser</span><span class="o">.</span><span class="n">flushOutput</span><span class="p">()</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ser</span>
 </div>
-<div class="viewcode-block" id="DeviceOperation.start_ethernet"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.DeviceOperation.start_ethernet">[docs]</a>    <span class="k">def</span> <span class="nf">start_ethernet</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="OperationDevice.op_start_ethernet"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.OperationDevice.op_start_ethernet">[docs]</a>    <span class="k">def</span> <span class="nf">op_start_ethernet</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;@todo: Docstring for start_ethernet.</span>
 
 <span class="sd">        :returns: @todo</span>
@@ -335,13 +381,14 @@
         <span class="kn">import</span> <span class="nn">socket</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">sock</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">AF_INET</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">SOCK_STREAM</span><span class="p">)</span>
+            <span class="n">sock</span><span class="o">.</span><span class="n">settimeout</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_cfg</span><span class="p">[</span><span class="s">&#39;timeout&#39;</span><span class="p">]))</span>
             <span class="n">sock</span><span class="o">.</span><span class="n">connect</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">_cfg</span><span class="p">[</span><span class="s">&#39;ip_dst&#39;</span><span class="p">],</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_cfg</span><span class="p">[</span><span class="s">&#39;port&#39;</span><span class="p">])))</span>
-            <span class="c">#sock.setblocking(0)</span>
+            <span class="n">sock</span><span class="o">.</span><span class="n">settimeout</span><span class="p">(</span><span class="bp">None</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">IOError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
             <span class="k">raise</span> <span class="n">Error</span><span class="o">.</span><span class="n">CommErr</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">sock</span>
 </div>
-<div class="viewcode-block" id="DeviceOperation.start_ttl"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.DeviceOperation.start_ttl">[docs]</a>    <span class="k">def</span> <span class="nf">start_ttl</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="OperationDevice.op_start_ttl"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.OperationDevice.op_start_ttl">[docs]</a>    <span class="k">def</span> <span class="nf">op_start_ttl</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;@todo: Docstring for start_ttl.</span>
 
 <span class="sd">        :returns: @todo</span>
@@ -350,7 +397,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span>
 </div>
-<div class="viewcode-block" id="DeviceOperation.send"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.DeviceOperation.send">[docs]</a>    <span class="k">def</span> <span class="nf">send</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_buff</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+<div class="viewcode-block" id="OperationDevice.op_send"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.OperationDevice.op_send">[docs]</a>    <span class="k">def</span> <span class="nf">op_send</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_buff</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Send string to interface</span>
 
 <span class="sd">        :param input_buff: string to send to check com.</span>
@@ -386,67 +433,103 @@
             <span class="k">raise</span> <span class="ne">NotImplementedError</span>
 
 </div></div>
-<div class="viewcode-block" id="DualModeDevice"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.DualModeDevice">[docs]</a><span class="k">class</span> <span class="nc">DualModeDevice</span><span class="p">(</span><span class="n">DeviceOperation</span><span class="p">,</span> <span class="n">DeviceSimulator</span><span class="p">):</span>
+<div class="viewcode-block" id="DualModeDevice"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.DualModeDevice">[docs]</a><span class="k">class</span> <span class="nc">DualModeDevice</span><span class="p">(</span><span class="n">OperationDevice</span><span class="p">,</span> <span class="n">SimulationDevice</span><span class="p">):</span>
 
     <span class="sd">&quot;&quot;&quot;Switch between class following the device mode&quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">actor</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;@todo: to be defined1. &quot;&quot;&quot;</span>
-        <span class="c">#DeviceOperation.__init__(self)</span>
-        <span class="c">#DeviceSimulator.__init__(self)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">DualModeDevice</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">actor</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_start_communication_map</span> <span class="o">=</span> <span class="p">{</span>
-                <span class="s">&#39;simulated&#39;</span><span class="p">:</span> <span class="n">DeviceSimulator</span><span class="o">.</span><span class="n">sim_start_communication</span><span class="p">,</span>
-                <span class="s">&#39;operation&#39;</span><span class="p">:</span> <span class="n">DeviceOperation</span><span class="o">.</span><span class="n">start_communication</span>
+                <span class="s">&#39;simulated&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">sim_start_communication</span><span class="p">,</span>
+                <span class="s">&#39;operation&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">op_start_communication</span>
                 <span class="p">}</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_start_serial_map</span> <span class="o">=</span> <span class="p">{</span>
-                <span class="s">&#39;simulated&#39;</span><span class="p">:</span> <span class="n">DeviceSimulator</span><span class="o">.</span><span class="n">sim_start_serial</span><span class="p">,</span>
-                <span class="s">&#39;operation&#39;</span><span class="p">:</span> <span class="n">DeviceOperation</span><span class="o">.</span><span class="n">start_serial</span>
+                <span class="s">&#39;simulated&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">sim_start_serial</span><span class="p">,</span>
+                <span class="s">&#39;operation&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">op_start_serial</span>
+                <span class="p">}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_start_ethernet_map</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s">&#39;simulated&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">sim_start_ethernet</span><span class="p">,</span>
+                <span class="s">&#39;operation&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">op_start_ethernet</span>
                 <span class="p">}</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_start_ttl_map</span> <span class="o">=</span> <span class="p">{</span>
-                <span class="s">&#39;simulated&#39;</span><span class="p">:</span> <span class="n">DeviceSimulator</span><span class="o">.</span><span class="n">sim_start_ttl</span><span class="p">,</span>
-            <span class="s">&#39;operation&#39;</span><span class="p">:</span> <span class="n">DeviceOperation</span><span class="o">.</span><span class="n">start_ttl</span>
+                <span class="s">&#39;simulated&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">sim_start_ttl</span><span class="p">,</span>
+                <span class="s">&#39;operation&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">op_start_ttl</span>
                 <span class="p">}</span>
-
         <span class="bp">self</span><span class="o">.</span><span class="n">_send_map</span> <span class="o">=</span> <span class="p">{</span>
-                <span class="s">&#39;simulated&#39;</span><span class="p">:</span> <span class="n">DeviceSimulator</span><span class="o">.</span><span class="n">sim_send</span><span class="p">,</span>
-                <span class="s">&#39;operation&#39;</span><span class="p">:</span> <span class="n">DeviceOperation</span><span class="o">.</span><span class="n">send</span>
+                <span class="s">&#39;simulated&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">sim_send</span><span class="p">,</span>
+                <span class="s">&#39;operation&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">op_send</span>
+                <span class="p">}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_check_status_map</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s">&#39;simulated&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">sim_check_status</span><span class="p">,</span>
+                <span class="s">&#39;operation&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">op_check_status</span>   <span class="c"># be carefull here</span>
                 <span class="p">}</span>
 
-        <span class="k">def</span> <span class="nf">start_communication</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_start_communication_map</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">]()</span>
-
-        <span class="k">def</span> <span class="nf">start_serial</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_start_serial_map</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">]()</span>
-
-        <span class="k">def</span> <span class="nf">start_ttl</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_start_ttl_map</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">]()</span>
-
-        <span class="k">def</span> <span class="nf">send_map</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_send_map</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">]()</span>
+<div class="viewcode-block" id="DualModeDevice.start_communication"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.DualModeDevice.start_communication">[docs]</a>    <span class="k">def</span> <span class="nf">start_communication</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_start_communication_map</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">]()</span>
 </div>
-<div class="viewcode-block" id="transition"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.transition">[docs]</a><span class="k">def</span> <span class="nf">transition</span><span class="p">(</span><span class="n">during_state</span><span class="p">,</span> <span class="n">after_state</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Decorator enabling the function to trigger state of the FSM.</span>
+<div class="viewcode-block" id="DualModeDevice.start_serial"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.DualModeDevice.start_serial">[docs]</a>    <span class="k">def</span> <span class="nf">start_serial</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_start_serial_map</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">](</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="DualModeDevice.start_ethernet"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.DualModeDevice.start_ethernet">[docs]</a>    <span class="k">def</span> <span class="nf">start_ethernet</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_start_ethernet_map</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">](</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="DualModeDevice.start_ttl"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.DualModeDevice.start_ttl">[docs]</a>    <span class="k">def</span> <span class="nf">start_ttl</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_start_ttl_map</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">](</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="DualModeDevice.send"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.DualModeDevice.send">[docs]</a>    <span class="k">def</span> <span class="nf">send</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_send_map</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">](</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="DualModeDevice.check_status"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.DualModeDevice.check_status">[docs]</a>    <span class="k">def</span> <span class="nf">check_status</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_check_status_map</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">]()</span>
 
-<span class="sd">    :param during_state: event at beginning of the function</span>
-<span class="sd">    :param after_state: event after the function is performed if specified</span>
-<span class="sd">    :returns: function return</span>
-<span class="sd">    :raises: :class:`~.Error.DeviceErr`</span>
+
+<span class="c">#######################################################################</span>
+<span class="c">#                          Interlock routine                          #</span>
+<span class="c">#######################################################################</span>
+</div></div>
+<div class="viewcode-block" id="interlock"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.interlock">[docs]</a><span class="k">def</span> <span class="nf">interlock</span><span class="p">(</span><span class="n">self_position</span><span class="p">,</span> <span class="n">target_position</span><span class="p">,</span> <span class="n">target</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Interlock between self device and target device</span>
+
+<span class="sd">    .. note:: Choice of iterable is exclusive either\</span>
+<span class="sd">    ``self_position`` or ``target_position``</span>
+
+<span class="sd">    :param self_position: position(s) from current device class (&#39;*&#39; for all position)</span>
+<span class="sd">    :type self_position: str, int, float, iterable (list, tuple,...)</span>
+<span class="sd">    :param target_position: position from target device class. (&#39;*&#39; for all position)</span>
+<span class="sd">    :type target_position: str, int, float, iterable.</span>
+<span class="sd">    :param target: target device class</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c"># TODO: Another way than &quot;self_position in args&quot;</span>
     <span class="k">def</span> <span class="nf">wrapper</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
         <span class="k">def</span> <span class="nf">wrapped_func</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">fsm</span><span class="o">.</span><span class="n">trigger</span><span class="p">(</span><span class="n">during_state</span><span class="p">)</span>
-            <span class="k">try</span><span class="p">:</span>
-                <span class="n">res</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span>
-                <span class="k">if</span> <span class="n">after_state</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">fsm</span><span class="o">.</span><span class="n">trigger</span><span class="p">(</span><span class="n">after_state</span><span class="p">)</span>
-                <span class="k">return</span> <span class="n">res</span>
-            <span class="k">except</span> <span class="n">Error</span><span class="o">.</span><span class="n">DeviceErr</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">fsm</span><span class="o">.</span><span class="n">fail</span><span class="p">()</span>
-                <span class="k">raise</span> <span class="n">e</span>
+            <span class="n">target_currPos</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="p">,</span> <span class="n">target</span><span class="p">),</span> <span class="s">&quot;currPos&quot;</span><span class="p">)</span>
+            <span class="n">condition1</span> <span class="o">=</span> <span class="n">self_position</span> <span class="o">==</span> <span class="s">&#39;*&#39;</span>
+            <span class="n">condition2</span> <span class="o">=</span> <span class="n">target_position</span> <span class="o">==</span> <span class="s">&#39;*&#39;</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">self_position</span><span class="p">,</span> <span class="s">&#39;__iter__&#39;</span><span class="p">):</span>
+                <span class="c">#self_position is iterable</span>
+                <span class="k">if</span> <span class="n">condition2</span> <span class="ow">is</span> <span class="bp">False</span><span class="p">:</span>
+                    <span class="n">condition2</span> <span class="o">=</span> <span class="n">target_currPos</span> <span class="o">==</span> <span class="n">target_position</span>
+                <span class="k">for</span> <span class="n">position</span> <span class="ow">in</span> <span class="n">self_position</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">position</span> <span class="ow">in</span> <span class="n">args</span> <span class="ow">and</span> <span class="n">condition2</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">fail</span><span class="p">(</span><span class="s">&quot;WTF !!!!&quot;</span><span class="p">)</span>
+                        <span class="k">return</span>
+            <span class="k">elif</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">target_position</span><span class="p">,</span> <span class="s">&#39;__iter__&#39;</span><span class="p">):</span>
+                <span class="c">#target_position is iterable</span>
+                <span class="k">if</span> <span class="n">condition1</span> <span class="ow">is</span> <span class="bp">False</span><span class="p">:</span>
+                    <span class="n">condition1</span> <span class="o">=</span> <span class="n">self_position</span> <span class="ow">in</span> <span class="n">args</span>
+                <span class="k">for</span> <span class="n">position</span> <span class="ow">in</span> <span class="n">target_position</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">condition1</span> <span class="ow">and</span> <span class="n">target_currPos</span> <span class="o">==</span> <span class="n">position</span><span class="p">:</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">fail</span><span class="p">(</span><span class="s">&quot;WTF !!!!&quot;</span><span class="p">)</span>
+                                <span class="k">return</span> <span class="mi">0</span>
+            <span class="k">elif</span> <span class="n">condition1</span> <span class="ow">and</span> <span class="n">target_currPos</span> <span class="o">==</span> <span class="n">target_position</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">fail</span><span class="p">(</span><span class="s">&quot;WTF !!!!&quot;</span><span class="p">)</span>
+                <span class="k">return</span> <span class="mi">0</span>
+            <span class="k">return</span> <span class="n">func</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">wrapped_func</span>
-    <span class="k">return</span> <span class="n">wrapper</span>
-</pre></div></div>
+    <span class="k">return</span> <span class="n">wrapper</span></div>
+</pre></div>
 
           </div>
         </div>
@@ -470,6 +553,8 @@
       </div>
       <div class="clearer"></div>
     </div>
+    <div class="relbar-bottom">
+        
     <div class="related">
       <h3>Navigation</h3>
       <ul>
@@ -478,14 +563,18 @@
              >index</a></li>
         <li class="right" >
           <a href="../../../py-modindex.html" title="Python Module Index"
-             >modules</a> |</li>
-        <li><a href="../../../index.html">enuActor  documentation</a> &raquo;</li>
+             >modules</a> &nbsp; &nbsp;</li>
+    <li><a href="../../../index.html">enuActor  documentation</a> &raquo;</li>
+
           <li><a href="../../index.html" >Module code</a> &raquo;</li> 
       </ul>
     </div>
+    </div>
+
     <div class="footer">
         &copy; Copyright 2014, Pégot-Ogier Thomas.
       Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
     </div>
+    <!-- cloud_sptheme 1.4 -->
   </body>
 </html>

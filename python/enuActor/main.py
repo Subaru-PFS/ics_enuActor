@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from Devices import shutter, rexm, bia
+from Devices import shutter, bia
 try:
     import actorcore.Actor
 except Exception, e:
@@ -14,7 +14,7 @@ class OurActor(actorcore.Actor.Actor):
                                        productName=productName,
                                        configFile=configFile)
         self.shutter = shutter.Shutter(actor=self)
-        self.rexm = rexm.Rexm(actor=self)
+        #self.rexm = rexm.Rexm(actor=self)
         self.bia = bia.Bia(actor=self)
 
     def __del__(self):

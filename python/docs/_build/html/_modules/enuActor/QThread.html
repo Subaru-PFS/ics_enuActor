@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -8,8 +10,9 @@
     
     <title>enuActor.QThread &mdash; enuActor  documentation</title>
     
-    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/cloud.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Noticia+Text|Open+Sans|Droid+Sans+Mono" type="text/css" />
     
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
@@ -23,10 +26,15 @@
     <script type="text/javascript" src="../../_static/jquery.js"></script>
     <script type="text/javascript" src="../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.cookie.js"></script>
+    <script type="text/javascript" src="../../_static/cloud.js"></script>
     <link rel="top" title="enuActor  documentation" href="../../index.html" />
     <link rel="up" title="Module code" href="../index.html" /> 
+        <meta name="viewport" content="width=device-width, initial-scale=1">
   </head>
   <body>
+    <div class="relbar-top">
+        
     <div class="related">
       <h3>Navigation</h3>
       <ul>
@@ -35,11 +43,14 @@
              accesskey="I">index</a></li>
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
-             >modules</a> |</li>
-        <li><a href="../../index.html">enuActor  documentation</a> &raquo;</li>
+             >modules</a> &nbsp; &nbsp;</li>
+    <li><a href="../../index.html">enuActor  documentation</a> &raquo;</li>
+
           <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
       </ul>
-    </div>  
+    </div>
+    </div>
+  
 
     <div class="document">
       <div class="documentwrapper">
@@ -75,7 +86,7 @@
 
 
 <div class="viewcode-block" id="QThread"><a class="viewcode-back" href="../../enuActor.html#enuActor.QThread.QThread">[docs]</a><span class="k">class</span> <span class="nc">QThread</span><span class="p">(</span><span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">):</span>
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">actor</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span> <span class="n">isDaemon</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">queueClass</span><span class="o">=</span><span class="n">Queue</span><span class="o">.</span><span class="n">PriorityQueue</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">actor</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">isDaemon</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">queueClass</span><span class="o">=</span><span class="n">Queue</span><span class="o">.</span><span class="n">PriorityQueue</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; A thread with a queue. The thread&#39;s .run() method pops items off its public .queue and executes them. &quot;&quot;&quot;</span>
         <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">setDaemon</span><span class="p">(</span><span class="n">isDaemon</span><span class="p">)</span>
@@ -211,6 +222,8 @@
       </div>
       <div class="clearer"></div>
     </div>
+    <div class="relbar-bottom">
+        
     <div class="related">
       <h3>Navigation</h3>
       <ul>
@@ -219,14 +232,18 @@
              >index</a></li>
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
-             >modules</a> |</li>
-        <li><a href="../../index.html">enuActor  documentation</a> &raquo;</li>
+             >modules</a> &nbsp; &nbsp;</li>
+    <li><a href="../../index.html">enuActor  documentation</a> &raquo;</li>
+
           <li><a href="../index.html" >Module code</a> &raquo;</li> 
       </ul>
     </div>
+    </div>
+
     <div class="footer">
         &copy; Copyright 2014, Pégot-Ogier Thomas.
       Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
     </div>
+    <!-- cloud_sptheme 1.4 -->
   </body>
 </html>

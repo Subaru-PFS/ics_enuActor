@@ -68,12 +68,27 @@ class Device(QThread):
         # Device attributes
         self.device = self.__class__.__name__
         self.mode = "operation"
-        self.status = None
+        self.lastActionCmd = None
         self.MAP = copy.deepcopy(MAP) # referenced
         self.MAP['callbacks']['oninit'] = lambda e: self.initialise()
         self.MAP['callbacks']['onload'] = lambda e:\
             self.load_cfg(self.__class__.__name__)
         self.start()
+
+    def handleTimeout(self):
+        """Override method :meth:`.QThread.handleTimeout`.
+        Process while device is idling.
+
+        :returns: @todo
+        :raises: :class:`~.Error.CommErr`
+
+        """
+        if self.started:
+            self.check_status()
+            if self.fsm.current in ['INITIALISING', 'BUSY']:
+                self.fsm.idle()
+            elif self.fsm.current == 'none':
+                self.fsm.load()
 
     ###################
     #  STATE MACHINE  #
@@ -99,20 +114,19 @@ class Device(QThread):
     def initialise(self):
         """Overriden by subclasses:
          * (Re)Load parameters from config files
-         * Check communication
-
-        .. todo:: Add load cfg file routine
+         * Check communication & status
 
         """
         self.load_cfg(self.device)
-        self.handleTimeout()
+        self.check_status()
 
     def getStatus(self):
         """return status of shutter (FSM)
 
         :returns: ``'LOADED'``, ``'IDLE'``, ``'BUSY'``, ...
         """
-        return "%s status [%s, %s]" % (self.device.upper(), self.fsm.current, self.status)
+        return "%s status [%s, %s]" % (self.device.upper(),
+                self.fsm.current, self.currPos)
 
     #callbacks: init, safe_off, shut_down
     @transition('fail')
@@ -195,20 +209,27 @@ class SimulationDevice(Device):
         super(SimulationDevice, self).__init__(actor, cfg_path)
 
     def sim_start_communication(self, *args, **kwargs):
-        print "Simulation: start comm"
+        print "[Simulation] %s: start communication" % self.device
         self.startFSM()
 
     def sim_start_serial(self, input_buff=None):
-        print "Simulation: start serial"
+        print "[Simulation] %s: start serial" % self.device
 
     def sim_start_ethernet(self):
-        print "Simulation: start ethernet"
+        print "[Simulation] %s: start ethernet" % self.device
 
     def sim_start_ttl(self):
-        pass
+        print "[Simulation] %s: start ttl" % self.device
 
     def sim_send(self, input_buff=None):
-        print "Simulation: send"
+        import sys
+        sys.stdout.write("[Simulation] %s: sending '%s'" %
+                (self.device, input_buff))
+
+    def sim_check_status(self):
+        #print "[Simulation] %s: checking status" % self.device
+        if self.lastActionCmd is not None:
+            self.currPos = self.lastActionCmd
 
 
 class OperationDevice(Device):
@@ -379,6 +400,10 @@ class DualModeDevice(OperationDevice, SimulationDevice):
                 'simulated': self.sim_send,
                 'operation': self.op_send
                 }
+        self._check_status_map = {
+                'simulated': self.sim_check_status,
+                'operation': self.op_check_status   # be carefull here
+                }
 
     def start_communication(self, *args, **kwargs):
         self._start_communication_map[self.mode]()
@@ -387,7 +412,6 @@ class DualModeDevice(OperationDevice, SimulationDevice):
         return self._start_serial_map[self.mode](*args, **kwargs)
 
     def start_ethernet(self, *args, **kwargs):
-        print "in DualModeDevice start_ethernet"
         return self._start_ethernet_map[self.mode](*args, **kwargs)
 
     def start_ttl(self, *args, **kwargs):
@@ -395,6 +419,9 @@ class DualModeDevice(OperationDevice, SimulationDevice):
 
     def send(self, *args, **kwargs):
         return self._send_map[self.mode](*args, **kwargs)
+
+    def check_status(self):
+        return self._check_status_map[self.mode]()
 
 
 #######################################################################
@@ -404,12 +431,14 @@ class DualModeDevice(OperationDevice, SimulationDevice):
 def interlock(self_position, target_position, target):
     """Interlock between self device and target device
 
-    .. note:: Choice of iterable is exclusive either
+    .. note:: Choice of iterable is exclusive either\
     ``self_position`` or ``target_position``
 
-    :param self_position: position(s) from current device class ('*' for all position)
+    :param self_position: position(s) from current device class\
+            ('*' for all position)
     :type self_position: str, int, float, iterable (list, tuple,...)
-    :param target_position: position from target device class. ('*' for all position)
+    :param target_position: position from target device class.\
+            ('*' for all position)
     :type target_position: str, int, float, iterable.
     :param target: target device class
 
@@ -426,7 +455,7 @@ def interlock(self_position, target_position, target):
                     condition2 = target_currPos == target_position
                 for position in self_position:
                     if position in args and condition2:
-                        self.fail("WTF !!!!")
+                        self.fail("Interlock !!!")
                         return
             elif hasattr(target_position, '__iter__'):
                 #target_position is iterable
@@ -434,11 +463,11 @@ def interlock(self_position, target_position, target):
                     condition1 = self_position in args
                 for position in target_position:
                     if condition1 and target_currPos == position:
-                                self.fail("WTF !!!!")
-                                return 0
+                                self.fail("Interlock !!!")
+                                return
             elif condition1 and target_currPos == target_position:
-                self.fail("WTF !!!!")
-                return 0
+                self.fail("Interlock !!!")
+                return
             return func(self, *args)
         return wrapped_func
     return wrapper

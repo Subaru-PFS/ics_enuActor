@@ -59,25 +59,20 @@ class Shutter(DualModeDevice):
         :raises: :class:`~.Error.CommErr`, :class:`~.Error.DeviceErr`
 
         """
-        if self.mode == "simulated":
-            self.currPos = "open" if transition == 'open'\
-                else 'closed'
-            self.fsm.idle()
-        else: #if mode operation
-            try:
-                if transition == 'open':
-                    self.send('os\r\n')
-                elif transition == 'close':
-                    self.send('cs\r\n')
-                elif transition == 'reset':
-                    self.send('rs\r\n')
-                self.check_status()
-            except Error.DeviceErr, e:
-                print e
-                #raise e
-            except Error.CommErr, e:
-                print e
-        return 0
+        self.lastActionCmd = transition
+        try:
+            if transition == 'open':
+                self.send('os\r\n')
+            elif transition == 'close':
+                self.send('cs\r\n')
+            elif transition == 'reset':
+                self.send('rs\r\n')
+            self.check_status()
+        except Error.DeviceErr, e:
+            print e
+            #raise e
+        except Error.CommErr, e:
+            print e
 
     @interlock("*", ["on", "strobe"], "bia")
     def initialise(self):
@@ -88,9 +83,7 @@ class Shutter(DualModeDevice):
 
         """
         self.load_cfg(self.device)
-        self.handleTimeout()
-        if self.mode == 'operation':
-            self.check_status()
+        self.check_status()
 
     def terminal(self):
         """launch terminal connection to shutter device
@@ -100,24 +93,7 @@ class Shutter(DualModeDevice):
         """
         return NotImplementedError
 
-    def handleTimeout(self):
-        """Override method :meth:`.QThread.handleTimeout`.
-        Process while device is idling.
-
-        :returns: @todo
-        :raises: :class:`~.Error.CommErr`
-
-        """
-        if self.mode is "operation" and self.started:
-            self.check_status()
-        elif self.started:
-            self.status = self.currPos
-            if self.fsm.current in ['INITIALISING', 'BUSY']:
-                self.fsm.idle()
-            elif self.fsm.current == 'none':
-                self.fsm.load()
-
-    def check_status(self):
+    def op_check_status(self):
         """Check status byte 1, 3, 4, 5 and 6 from Shutter controller\
             and return current list of status byte.
 

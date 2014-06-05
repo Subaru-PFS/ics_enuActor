@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -8,8 +10,9 @@
     
     <title>enuActor package &mdash; enuActor  documentation</title>
     
-    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/cloud.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Noticia+Text|Open+Sans|Droid+Sans+Mono" type="text/css" />
     
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
@@ -23,11 +26,16 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/jquery.cookie.js"></script>
+    <script type="text/javascript" src="_static/cloud.js"></script>
     <link rel="top" title="enuActor  documentation" href="index.html" />
     <link rel="next" title="enuActor.Commands package" href="enuActor.Commands.html" />
     <link rel="prev" title="Welcome to enuActor’s documentation!" href="index.html" /> 
+        <meta name="viewport" content="width=device-width, initial-scale=1">
   </head>
   <body>
+    <div class="relbar-top">
+        
     <div class="related">
       <h3>Navigation</h3>
       <ul>
@@ -36,16 +44,19 @@
              accesskey="I">index</a></li>
         <li class="right" >
           <a href="py-modindex.html" title="Python Module Index"
-             >modules</a> |</li>
+             >modules</a> &nbsp; &nbsp;</li>
         <li class="right" >
           <a href="enuActor.Commands.html" title="enuActor.Commands package"
-             accesskey="N">next</a> |</li>
+             accesskey="N">next</a> &nbsp; &nbsp;</li>
         <li class="right" >
           <a href="index.html" title="Welcome to enuActor’s documentation!"
-             accesskey="P">previous</a> |</li>
-        <li><a href="index.html">enuActor  documentation</a> &raquo;</li> 
+             accesskey="P">previous</a> &nbsp; &nbsp;</li>
+    <li><a href="index.html">enuActor  documentation</a> &raquo;</li>
+ 
       </ul>
-    </div>  
+    </div>
+    </div>
+  
 
     <div class="document">
       <div class="documentwrapper">
@@ -145,6 +156,30 @@ the event name to trigger as a string.</p>
 <p>Raised whenever an unexpected event gets triggered.</p>
 </dd></dl>
 
+<dl class="function">
+<dt id="enuActor.MyFSM.transition">
+<tt class="descclassname">enuActor.MyFSM.</tt><tt class="descname">transition</tt><big>(</big><em>during_state</em>, <em>after_state=None</em><big>)</big><a class="reference internal" href="_modules/enuActor/MyFSM.html#transition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.MyFSM.transition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decorator enabling the function to trigger state of the FSM.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>during_state</strong> &#8211; event at beginning of the function</li>
+<li><strong>after_state</strong> &#8211; event after the function is performed if specified</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">function return</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body"><p class="first last"><a class="reference internal" href="enuActor.Devices.html#enuActor.Devices.Error.DeviceErr" title="enuActor.Devices.Error.DeviceErr"><tt class="xref py py-class docutils literal"><span class="pre">DeviceErr</span></tt></a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
 </div>
 <div class="section" id="module-enuActor.QThread">
 <span id="enuactor-qthread-module"></span><h2>enuActor.QThread module<a class="headerlink" href="#module-enuActor.QThread" title="Permalink to this headline">¶</a></h2>
@@ -161,7 +196,7 @@ the event name to trigger as a string.</p>
 
 <dl class="class">
 <dt id="enuActor.QThread.QThread">
-<em class="property">class </em><tt class="descclassname">enuActor.QThread.</tt><tt class="descname">QThread</tt><big>(</big><em>actor</em>, <em>name</em>, <em>timeout=2.0</em>, <em>isDaemon=True</em>, <em>queueClass=&lt;class Queue.PriorityQueue at 0x2ade050&gt;</em><big>)</big><a class="reference internal" href="_modules/enuActor/QThread.html#QThread"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.QThread.QThread" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><tt class="descclassname">enuActor.QThread.</tt><tt class="descname">QThread</tt><big>(</big><em>actor</em>, <em>name</em>, <em>timeout=2</em>, <em>isDaemon=True</em>, <em>queueClass=&lt;class Queue.PriorityQueue at 0x2cd09a8&gt;</em><big>)</big><a class="reference internal" href="_modules/enuActor/QThread.html#QThread"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.QThread.QThread" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">threading.Thread</span></tt></p>
 <dl class="method">
 <dt id="enuActor.QThread.QThread.exitMsg">
@@ -220,6 +255,10 @@ the event name to trigger as a string.</p>
 </div>
 <div class="section" id="module-enuActor">
 <span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-enuActor" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="class-diagram">
+<h3>Class diagram<a class="headerlink" href="#class-diagram" title="Permalink to this headline">¶</a></h3>
+<img alt="diagram class here" class="align-center" src="../../diagram_class.png" />
+</div>
 </div>
 </div>
 
@@ -228,26 +267,34 @@ the event name to trigger as a string.</p>
         </div>
       </div>
       <div class="sphinxsidebar">
-        <div class="sphinxsidebarwrapper">
-  <h3><a href="index.html">Table Of Contents</a></h3>
-  <ul>
+        <div class="sphinxsidebarwrapper"><div class="sphinxlocaltoc">
+    <h3><a href="index.html">Page contents</a></h3>
+    <ul>
 <li><a class="reference internal" href="#">enuActor package</a><ul>
 <li><a class="reference internal" href="#subpackages">Subpackages</a></li>
 <li><a class="reference internal" href="#submodules">Submodules</a></li>
 <li><a class="reference internal" href="#module-enuActor.MyFSM">enuActor.MyFSM module</a></li>
 <li><a class="reference internal" href="#module-enuActor.QThread">enuActor.QThread module</a></li>
 <li><a class="reference internal" href="#enuactor-main-module">enuActor.main module</a></li>
-<li><a class="reference internal" href="#module-enuActor">Module contents</a></li>
+<li><a class="reference internal" href="#module-enuActor">Module contents</a><ul>
+<li><a class="reference internal" href="#class-diagram">Class diagram</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
 
-  <h4>Previous topic</h4>
-  <p class="topless"><a href="index.html"
-                        title="previous chapter">Welcome to enuActor&#8217;s documentation!</a></p>
-  <h4>Next topic</h4>
-  <p class="topless"><a href="enuActor.Commands.html"
-                        title="next chapter">enuActor.Commands package</a></p>
+  </div>
+  <div class="sphinxprev">
+    <h4>Previous page</h4>
+    <p class="topless"><a href="index.html"
+                          title="Previous page">&larr; Welcome to enuActor&#8217;s documentation!</a></p>
+  </div>
+  <div class="sphinxnext">
+    <h4>Next page</h4>
+    <p class="topless"><a href="enuActor.Commands.html"
+                          title="Next page">&rarr; enuActor.Commands package</a></p>
+  </div>
   <h3>This Page</h3>
   <ul class="this-page-menu">
     <li><a href="_sources/enuActor.txt"
@@ -270,6 +317,8 @@ the event name to trigger as a string.</p>
       </div>
       <div class="clearer"></div>
     </div>
+    <div class="relbar-bottom">
+        
     <div class="related">
       <h3>Navigation</h3>
       <ul>
@@ -278,19 +327,23 @@ the event name to trigger as a string.</p>
              >index</a></li>
         <li class="right" >
           <a href="py-modindex.html" title="Python Module Index"
-             >modules</a> |</li>
+             >modules</a> &nbsp; &nbsp;</li>
         <li class="right" >
           <a href="enuActor.Commands.html" title="enuActor.Commands package"
-             >next</a> |</li>
+             >next</a> &nbsp; &nbsp;</li>
         <li class="right" >
           <a href="index.html" title="Welcome to enuActor’s documentation!"
-             >previous</a> |</li>
-        <li><a href="index.html">enuActor  documentation</a> &raquo;</li> 
+             >previous</a> &nbsp; &nbsp;</li>
+    <li><a href="index.html">enuActor  documentation</a> &raquo;</li>
+ 
       </ul>
     </div>
+    </div>
+
     <div class="footer">
         &copy; Copyright 2014, Pégot-Ogier Thomas.
       Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
     </div>
+    <!-- cloud_sptheme 1.4 -->
   </body>
 </html>

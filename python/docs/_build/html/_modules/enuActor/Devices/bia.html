@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -8,8 +10,9 @@
     
     <title>enuActor.Devices.bia &mdash; enuActor  documentation</title>
     
-    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/cloud.css" type="text/css" />
     <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Noticia+Text|Open+Sans|Droid+Sans+Mono" type="text/css" />
     
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
@@ -23,10 +26,15 @@
     <script type="text/javascript" src="../../../_static/jquery.js"></script>
     <script type="text/javascript" src="../../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.cookie.js"></script>
+    <script type="text/javascript" src="../../../_static/cloud.js"></script>
     <link rel="top" title="enuActor  documentation" href="../../../index.html" />
     <link rel="up" title="Module code" href="../../index.html" /> 
+        <meta name="viewport" content="width=device-width, initial-scale=1">
   </head>
   <body>
+    <div class="relbar-top">
+        
     <div class="related">
       <h3>Navigation</h3>
       <ul>
@@ -35,11 +43,14 @@
              accesskey="I">index</a></li>
         <li class="right" >
           <a href="../../../py-modindex.html" title="Python Module Index"
-             >modules</a> |</li>
-        <li><a href="../../../index.html">enuActor  documentation</a> &raquo;</li>
+             >modules</a> &nbsp; &nbsp;</li>
+    <li><a href="../../../index.html">enuActor  documentation</a> &raquo;</li>
+
           <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
       </ul>
-    </div>  
+    </div>
+    </div>
+  
 
     <div class="document">
       <div class="documentwrapper">
@@ -74,7 +85,7 @@
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">actor</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
-        <span class="n">Device</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">actor</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">Bia</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">actor</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">currPos</span> <span class="o">=</span> <span class="s">&quot;off&quot;</span>
 
     <span class="c">############################</span>
@@ -89,10 +100,8 @@
 <span class="sd">        :raises: @todo</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">load_cfg</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s">&#39;operation&#39;</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">handleTimeout</span><span class="p">()</span>
         <span class="c">#TODO: to improve</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">check_status</span><span class="p">()</span>
 </div>
 <div class="viewcode-block" id="Bia.setConfig"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.bia.Bia.setConfig">[docs]</a>    <span class="k">def</span> <span class="nf">setConfig</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">freq</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">dur</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">intensity</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;It specifies parameters for light and strobe mode.</span>
@@ -115,6 +124,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_param</span><span class="p">[</span><span class="s">&quot;duration&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">dur</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_param</span><span class="p">[</span><span class="s">&quot;intensity&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">intensity</span>
 </div>
+    <span class="nd">@interlock</span><span class="p">([</span><span class="s">&quot;on&quot;</span><span class="p">,</span> <span class="s">&quot;strobe&quot;</span><span class="p">],</span> <span class="s">&quot;open&quot;</span><span class="p">,</span> <span class="s">&quot;shutter&quot;</span><span class="p">)</span>
     <span class="nd">@transition</span><span class="p">(</span><span class="s">&#39;busy&#39;</span><span class="p">,</span> <span class="s">&#39;idle&#39;</span><span class="p">)</span>
 <div class="viewcode-block" id="Bia.bia"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.bia.Bia.bia">[docs]</a>    <span class="k">def</span> <span class="nf">bia</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">transition</span><span class="p">,</span> <span class="n">strobe</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Operation on/off bia</span>
@@ -128,64 +138,42 @@
 <span class="sd">        :returns: 0 if OK</span>
 <span class="sd">        :raises: :class:`~.Error.CommErr`, :class:`~.Error.DeviceErr`</span>
 
-
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="c">#if self.mode == &quot;simulated&quot;:</span>
-            <span class="c">#self.currPos = &quot;on&quot; if transition == &#39;on&#39;\</span>
-                    <span class="c">#else &#39;off&#39;</span>
-        <span class="k">if</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="k">try</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">transition</span> <span class="o">==</span> <span class="s">&#39;on&#39;</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s">&#39;a</span><span class="se">\r\n</span><span class="s">&#39;</span><span class="p">)</span>
-                    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="o">.</span><span class="mi">5</span><span class="p">)</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s">&#39;p10</span><span class="se">\r\n</span><span class="s">&#39;</span><span class="p">)</span>
-                    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="o">.</span><span class="mi">5</span><span class="p">)</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s">&#39;d1000</span><span class="se">\r\n</span><span class="s">&#39;</span><span class="p">)</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">currPos</span> <span class="o">=</span> <span class="s">&quot;on&quot;</span> <span class="c"># TODO: To be change when got input</span>
-                <span class="k">elif</span> <span class="n">transition</span> <span class="o">==</span> <span class="s">&#39;strobe&#39;</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s">&#39;a</span><span class="se">\r\n</span><span class="s">&#39;</span><span class="p">)</span>
-                    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="o">.</span><span class="mi">5</span><span class="p">)</span>
-                    <span class="k">if</span> <span class="n">strobe</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
-                        <span class="c"># Use default parameters</span>
-                        <span class="n">strobe</span> <span class="o">=</span> <span class="p">[</span>
-                                <span class="bp">self</span><span class="o">.</span><span class="n">_param</span><span class="p">[</span><span class="s">&quot;frequency&quot;</span><span class="p">],</span>
-                                <span class="bp">self</span><span class="o">.</span><span class="n">_param</span><span class="p">[</span><span class="s">&quot;duration&quot;</span><span class="p">]</span>
-                                <span class="p">]</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s">&#39;p</span><span class="si">%i</span><span class="se">\r\n</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">int</span><span class="p">(</span><span class="n">strobe</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
-                    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s">&#39;d</span><span class="si">%i</span><span class="se">\r\n</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">int</span><span class="p">(</span><span class="n">strobe</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">currPos</span> <span class="o">=</span> <span class="s">&quot;strobe&quot;</span> <span class="c"># TODO: To be change when got input</span>
-                <span class="k">elif</span> <span class="n">transition</span> <span class="o">==</span> <span class="s">&#39;off&#39;</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s">&#39;c</span><span class="se">\r\n</span><span class="s">&#39;</span><span class="p">)</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">currPos</span> <span class="o">=</span> <span class="s">&quot;off&quot;</span> <span class="c"># TODO: To be change when got input</span>
-            <span class="k">except</span> <span class="n">socket</span><span class="o">.</span><span class="n">error</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="n">Error</span><span class="o">.</span><span class="n">CommErr</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
-        <span class="k">return</span> <span class="mi">0</span>
-
-    <span class="c">##################</span>
-    <span class="c">#  About Thread  #</span>
-    <span class="c">##################</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lastActionCmd</span> <span class="o">=</span> <span class="n">transition</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">transition</span> <span class="o">==</span> <span class="s">&#39;on&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s">&#39;a</span><span class="se">\r\n</span><span class="s">&#39;</span><span class="p">)</span>
+                <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="o">.</span><span class="mi">5</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s">&#39;p10</span><span class="se">\r\n</span><span class="s">&#39;</span><span class="p">)</span>
+                <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="o">.</span><span class="mi">5</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s">&#39;d1000</span><span class="se">\r\n</span><span class="s">&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">currPos</span> <span class="o">=</span> <span class="s">&quot;on&quot;</span> <span class="c"># TODO: To be change when got input</span>
+            <span class="k">elif</span> <span class="n">transition</span> <span class="o">==</span> <span class="s">&#39;strobe&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s">&#39;a</span><span class="se">\r\n</span><span class="s">&#39;</span><span class="p">)</span>
+                <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="o">.</span><span class="mi">5</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">strobe</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="c"># Use default parameters</span>
+                    <span class="n">strobe</span> <span class="o">=</span> <span class="p">[</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">_param</span><span class="p">[</span><span class="s">&quot;frequency&quot;</span><span class="p">],</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">_param</span><span class="p">[</span><span class="s">&quot;duration&quot;</span><span class="p">]</span>
+                            <span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s">&#39;p</span><span class="si">%i</span><span class="se">\r\n</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">int</span><span class="p">(</span><span class="n">strobe</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+                <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s">&#39;d</span><span class="si">%i</span><span class="se">\r\n</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">int</span><span class="p">(</span><span class="n">strobe</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">currPos</span> <span class="o">=</span> <span class="s">&quot;strobe&quot;</span> <span class="c"># TODO: To be change when got input</span>
+            <span class="k">elif</span> <span class="n">transition</span> <span class="o">==</span> <span class="s">&#39;off&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s">&#39;c</span><span class="se">\r\n</span><span class="s">&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">currPos</span> <span class="o">=</span> <span class="s">&quot;off&quot;</span> <span class="c"># TODO: To be change when got input</span>
+        <span class="k">except</span> <span class="n">socket</span><span class="o">.</span><span class="n">error</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">Error</span><span class="o">.</span><span class="n">CommErr</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">check_status</span><span class="p">()</span>
 </div>
-<div class="viewcode-block" id="Bia.handleTimeout"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.bia.Bia.handleTimeout">[docs]</a>    <span class="k">def</span> <span class="nf">handleTimeout</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Override method :meth:`.QThread.handleTimeout`.</span>
-<span class="sd">        Process while device is idling.</span>
-
-<span class="sd">        :returns: @todo</span>
-<span class="sd">        :raises: :class:`~.Error.CommErr`</span>
-
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="ow">is</span> <span class="s">&quot;operation&quot;</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">started</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">check_status</span><span class="p">()</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">started</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">currPos</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">fsm</span><span class="o">.</span><span class="n">current</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&#39;INITIALISING&#39;</span><span class="p">,</span> <span class="s">&#39;BUSY&#39;</span><span class="p">]:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">fsm</span><span class="o">.</span><span class="n">idle</span><span class="p">()</span>
-            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">fsm</span><span class="o">.</span><span class="n">current</span> <span class="o">==</span> <span class="s">&#39;none&#39;</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">fsm</span><span class="o">.</span><span class="n">load</span><span class="p">()</span>
-</div>
-<div class="viewcode-block" id="Bia.check_status"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.bia.Bia.check_status">[docs]</a>    <span class="k">def</span> <span class="nf">check_status</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="Bia.op_check_status"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.bia.Bia.op_check_status">[docs]</a>    <span class="k">def</span> <span class="nf">op_check_status</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; *Can not check status yet*  &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">currPos</span> <span class="c"># TODO: to be changed whan input received</span>
+        <span class="c"># TODO: to be changed whan input received</span>
+        <span class="c"># Same as sim_check_status</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">lastActionCmd</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">currPos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lastActionCmd</span>
 </pre></div></div></div>
 
           </div>
@@ -210,6 +198,8 @@
       </div>
       <div class="clearer"></div>
     </div>
+    <div class="relbar-bottom">
+        
     <div class="related">
       <h3>Navigation</h3>
       <ul>
@@ -218,14 +208,18 @@
              >index</a></li>
         <li class="right" >
           <a href="../../../py-modindex.html" title="Python Module Index"
-             >modules</a> |</li>
-        <li><a href="../../../index.html">enuActor  documentation</a> &raquo;</li>
+             >modules</a> &nbsp; &nbsp;</li>
+    <li><a href="../../../index.html">enuActor  documentation</a> &raquo;</li>
+
           <li><a href="../../index.html" >Module code</a> &raquo;</li> 
       </ul>
     </div>
+    </div>
+
     <div class="footer">
         &copy; Copyright 2014, Pégot-Ogier Thomas.
       Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
     </div>
+    <!-- cloud_sptheme 1.4 -->
   </body>
 </html>
