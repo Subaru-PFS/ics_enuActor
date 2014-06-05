@@ -80,7 +80,7 @@ class Shutter(DualModeDevice):
         return 0
 
     #@transition('init', 'idle')
-    @interlock("[open, close]", "on", "bia")
+    @interlock("*", ["on", "strobe"], "bia")
     def initialise(self):
         """ Initialise shutter.
         Here just trigger the FSM to INITIALISING and IDLE

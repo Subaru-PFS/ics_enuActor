@@ -379,10 +379,8 @@ class DualModeDevice(OperationDevice, SimulationDevice):
 
     def start_communication(self, *args, **kwargs):
         self._start_communication_map[self.mode]()
-        #self.startFSM()
 
     def start_serial(self, *args, **kwargs):
-        #self.startFSM()
         return self._start_serial_map[self.mode](*args, **kwargs)
 
     def start_ethernet(self, *args, **kwargs):
@@ -396,8 +394,9 @@ class DualModeDevice(OperationDevice, SimulationDevice):
         return self._send_map[self.mode](*args, **kwargs)
 
 
-
-
+#######################################################################
+#            Decorators Interlock & transition simple call            #
+#######################################################################
 
 def transition(during_state, after_state=None):
     """Decorator enabling the function to trigger state of the FSM.
@@ -428,33 +427,36 @@ def interlock(self_position, target_position, target):
     .. note:: Choice of iterable is exclusive either
     ``self_position`` or ``target_position``
 
-    :param self_position: position(s) from current device class
+    :param self_position: position(s) from current device class ('*' for all position)
     :type self_position: str, int, float, iterable (list, tuple,...)
-    :param target_position: position from target device class
+    :param target_position: position from target device class. ('*' for all position)
     :type target_position: str, int, float, iterable.
     :param target: target device class
 
     """
+    # TODO: Another way than "self_position in args"
     def wrapper(func):
         def wrapped_func(self, *args):
             target_currPos = getattr(getattr(self.actor, target), "currPos")
-            # TODO: To improve args
+            condition1 = self_position == '*'
+            condition2 = target_position == '*'
             if hasattr(self_position, '__iter__'):
                 #self_position is iterable
+                if condition2 is False:
+                    condition2 = target_currPos == target_position
                 for position in self_position:
-                    if position in args and\
-                            target_currPos == target_position:
-                                print "Interlock !"
-                                return 0
+                    if position in args and condition2:
+                        print "Interlock !"
+                        return 0
             elif hasattr(target_position, '__iter__'):
                 #target_position is iterable
+                if condition1 is False:
+                    condition1 = self_position in args
                 for position in target_position:
-                    if self_position in args and\
-                            target_currPos == position:
+                    if condition1 and target_currPos == position:
                                 print "Interlock !"
                                 return 0
-            elif self_position in args and\
-                    target_currPos == target_position:
+            elif condition1 and target_currPos == target_position:
                 print "Interlock !"
                 return 0
             return func(self, *args)
