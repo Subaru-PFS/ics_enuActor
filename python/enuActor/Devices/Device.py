@@ -297,7 +297,7 @@ LINK: %s\nCfgFile: %s\n " % (self.link, self._cfg))
             parity = self._cfg['parity'],
             stopbits = int(self._cfg['stopbits']),
             bytesize = int(self._cfg['bytesize']),
-            timeout = 0.1
+            timeout = 1
         )
 
         if connection.isOpen is False:
@@ -347,13 +347,17 @@ LINK: %s\nCfgFile: %s\n " % (self.link, self._cfg))
         buff = ''
         if self.link == 'SERIAL':
             if input_buff is not None:
-                try:
-                    self.connection.write(input_buff)
-                except serial.SerialException as e:
-                    raise Error.CommErr("[%s, %s]" % (e.errno, e.message))
-                time.sleep(0.3)
-                while self.connection.inWaiting() > 0:
-                    buff += self.connection.read(1)
+                cmpt = 0
+                while buff == '' or cmpt < 3:
+                    # try 3 times if no response
+                    try:
+                        self.connection.write(input_buff)
+                    except serial.SerialException as e:
+                        raise Error.CommErr("[%s, %s]" % (e.errno, e.message))
+                    time.sleep(0.3)
+                    while self.connection.inWaiting() > 0:
+                        buff += self.connection.read(1)
+                    cmpt += 1
                 if buff == '':
                     raise Error.CommErr("No response from serial port")
                 else:

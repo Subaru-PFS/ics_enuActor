@@ -69,10 +69,9 @@ class Shutter(DualModeDevice):
                 self.send('rs\r\n')
             self.check_status()
         except Error.DeviceErr, e:
-            print e
-            #raise e
+            raise e
         except Error.CommErr, e:
-            print e
+            raise e
 
     @interlock("*", ["on", "strobe"], "bia")
     def initialise(self):
@@ -106,10 +105,12 @@ class Shutter(DualModeDevice):
         mask = [None] * 6
         status = ''
         try:
-            self.ss = int(self.send('ss\r\n')[0])
+            ss = int(self.send('ss\r\n')[0])
+            self.currPos = Shutter.positions[ss]
         except Error.CommErr as e:
-            self.fail("%s" % e)
-        self.currPos = Shutter.positions[self.ss]
+            if self.started:
+                self.fail("%s" % e)
+            raise e
         if self.currPos == "undef.":
             self.fsm.fail()
         status += self.currPos
@@ -121,7 +122,7 @@ class Shutter(DualModeDevice):
                     'MASK_ERROR_SB_%i' % sb))) > 0:
                     error = ', '.join(np.array(getattr(Shutter,\
     'STATUS_BYTE_%i' % sb))[mask[sb - 1] == 1])
-                    self.fsm.fail()
+                    #self.fsm.fail()
                 elif self.fsm.current in ['INITIALISING', 'BUSY']:
                     self.fsm.idle()
                 elif self.fsm.current == 'none':
@@ -145,7 +146,8 @@ class Shutter(DualModeDevice):
             if int(format(int(ret[0]), 'b')) != int(ret[1]):
                 raise Error.CommErr("Control bit error (bit lost or whatever)")
         except ValueError, e:
-            raise Error.CommErr("Error bad type return from serial")
+            raise Error.CommErr("Error bad type return from serial\
+: [%s, %s]" % (ret[0], ret[1]))
 
         #return status byte 1
         mask = map(int, list(ret[1]))

@@ -43,13 +43,15 @@ class ShutterCmd(object):
             self.actor.shutter.start_communication(cmd)
         except CommErr as e: # ISSUE : I cannot catch timeout error
             cmd.error("text='%s'" % e)
+        except FysomError as e:
+            cmd.error("text='Can't start when device is in %s state'" %
+            self.actor.shutter.fsm.current)
         except:
             cmd.error("text='Unexpected error: [%s] %s'" % (
                     sys.exc_info()[0],
                     sys.exc_info()[1]))
         else:
             cmd.inform("text='Shutter started successfully!'")
-
 
     def command(self, cmd):
         """Opens a terminal to communicate directly with device"""
@@ -67,20 +69,21 @@ class ShutterCmd(object):
         except AttributeError as e:
             cmd.error("text='Shutter did not start well. details: %s" % e)
         except FysomError as e:
-            cmd.error("text='%s'" % e)
+            cmd.error("text= Can't go to this state: %s -x-> %s'" %
+            (self.actor.shutter.fsm.current, state.upper()))
 
     def shutter(self, cmd):
         """Parse shutter command and arguments
         :cmd: open or close shutter red or blue or both if no args
         """
         transition = cmd.cmd.keywords[0].name
+        if(len(cmd.cmd.keywords)==2):
+            shutter_id = cmd.cmd.keywords[1].name
+        elif( len(cmd.cmd.keywords)==1):
+            shutter_id = 'all'
+        else:
+            raise ValueError("Number of args exceed")
         try:
-            if(len(cmd.cmd.keywords)==2):
-                shutter_id = cmd.cmd.keywords[1].name
-            elif( len(cmd.cmd.keywords)==1):
-                shutter_id = 'all'
-            else:
-                raise ValueError("Number of args exceed")
             self.actor.shutter.putMsg(self.actor.shutter.shutter, transition)
         except AttributeError as e:
             cmd.error("text='Shutter did not start well. details: %s" % e)
