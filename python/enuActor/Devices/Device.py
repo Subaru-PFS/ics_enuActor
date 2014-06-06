@@ -39,7 +39,7 @@ class Device(QThread):
 
         Attributes:
          * link : ``TTL``, ``SERIAL`` or ``ETHERNET``
-         * ser : serial object from serial module @todo: change into link object
+         * connection : object for link connection
          * mode : ``operation`` or ``simulated``
          * cfg_path : path of the communication and parameter config files\
                  It should contains *devices_communication.cfg* and\
@@ -62,17 +62,18 @@ class Device(QThread):
         self._param = None
         self._cfg = None
         self.link = None
-        self.ser = None
         self.connection = None
 
         # Device attributes
         self.device = self.__class__.__name__
+        self.started = False
         self.mode = "operation"
         self.lastActionCmd = None
         self.MAP = copy.deepcopy(MAP) # referenced
         self.MAP['callbacks']['oninit'] = lambda e: self.initialise()
         self.MAP['callbacks']['onload'] = lambda e:\
             self.load_cfg(self.__class__.__name__)
+        self.fsm = Fysom(self.MAP)
         self.start()
 
     def handleTimeout(self):
@@ -99,7 +100,6 @@ class Device(QThread):
 
         """
         self.started = True
-        self.fsm = Fysom(self.MAP)
         self.fsm.startup()
         self.fsm.onchangestate = self.printstateonchange
 
@@ -259,9 +259,6 @@ class OperationDevice(Device):
 
         """
         self.load_cfg(self.device)
-        if self.mode == "simulated":
-            self.startFSM()
-            print "[simulated]"
         # Load parameter link
         if kwargs.has_key('device'):
             if kwargs.has_key('configFile'):
@@ -271,10 +268,11 @@ class OperationDevice(Device):
         # Start communication
         if self.link == 'SERIAL':
             if kwargs.has_key('startCmd'):
-                self.ser = self.start_serial(kwargs['startCmd'])
+                self.connection = self.start_serial(kwargs['startCmd'])
             else:
-                self.ser = self.start_serial()
-            #self.connection = self.ser #TODO: to be changed
+                self.connection = self.start_serial()
+                # check connection
+                self.check_status()
         elif self.link == 'ETHERNET':
             self.connection = self.start_ethernet()
         elif self.link == 'TTL':
@@ -293,22 +291,22 @@ LINK: %s\nCfgFile: %s\n " % (self.link, self._cfg))
 
         """
         import serial
-        self.ser = serial.Serial(
+        connection = serial.Serial(
             port = self._cfg['port'],
             baudrate = int(self._cfg['baudrate']),
             parity = self._cfg['parity'],
             stopbits = int(self._cfg['stopbits']),
             bytesize = int(self._cfg['bytesize']),
-            timeout = 1
+            timeout = 0.1
         )
 
-        if self.ser.isOpen is False:
-            self.ser.open()
+        if connection.isOpen is False:
+            connection.open()
         else:
             time.sleep(.2)
-            self.ser.flushInput()
-            self.ser.flushOutput()
-        return self.ser
+            connection.flushInput()
+            connection.flushOutput()
+        return connection
 
     def op_start_ethernet(self):
         """@todo: Docstring for start_ethernet.
@@ -350,12 +348,12 @@ LINK: %s\nCfgFile: %s\n " % (self.link, self._cfg))
         if self.link == 'SERIAL':
             if input_buff is not None:
                 try:
-                    self.ser.write(input_buff)
-                except serial.SerialException, e:
-                    raise Error.CommErr("[%s, %s]"% (e.errno, e.message))
+                    self.connection.write(input_buff)
+                except serial.SerialException as e:
+                    raise Error.CommErr("[%s, %s]" % (e.errno, e.message))
                 time.sleep(0.3)
-                while self.ser.inWaiting() > 0:
-                    buff += self.ser.read(1)
+                while self.connection.inWaiting() > 0:
+                    buff += self.connection.read(1)
                 if buff == '':
                     raise Error.CommErr("No response from serial port")
                 else:

@@ -107,29 +107,27 @@ class Shutter(DualModeDevice):
         status = ''
         try:
             self.ss = int(self.send('ss\r\n')[0])
-            self.currPos = Shutter.positions[self.ss]
-            if self.currPos == "undef.":
-                self.fsm.fail()
-            status += self.currPos
-            for sb in l_sb:
-                time.sleep(0.3)
-                mask[sb - 1] = self.parseStatusByte(sb)
-                #status += ', '.join(np.array(getattr(Shutter,
-                    #'STATUS_BYTE_%i' % sb))[mask[sb - 1] == 1])
+        except Error.CommErr as e:
+            self.fail("%s" % e)
+        self.currPos = Shutter.positions[self.ss]
+        if self.currPos == "undef.":
+            self.fsm.fail()
+        status += self.currPos
+        for sb in l_sb:
+            time.sleep(0.3)
+            mask[sb - 1] = self.parseStatusByte(sb)
+            if self.started:
                 if sum(mask[sb -1] * np.asarray(getattr(Shutter,
                     'MASK_ERROR_SB_%i' % sb))) > 0:
-                    print "warn ='%s'" %\
-                      ', '.join(np.array(getattr(Shutter,
-                    'STATUS_BYTE_%i' % sb))[mask[sb - 1] == 1])
-                    #self.fsm.fail()
+                    error = ', '.join(np.array(getattr(Shutter,\
+    'STATUS_BYTE_%i' % sb))[mask[sb - 1] == 1])
+                    self.fsm.fail()
                 elif self.fsm.current in ['INITIALISING', 'BUSY']:
                     self.fsm.idle()
                 elif self.fsm.current == 'none':
                     self.fsm.load()
-            self.status = status
-            return mask
-        except Error.CommErr, e:
-            print e
+        self.status = status
+        return mask
 
     def parseStatusByte(self, sb):
         """Send status byte command and parse reply of device

@@ -3,7 +3,9 @@
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
 from opscore.utility.qstr import qstr
-
+import sys
+from enuActor.Devices.Error import CommErr, DeviceErr
+from enuActor.MyFSM import FysomError
 
 class BiaCmd(object):
 
@@ -34,10 +36,26 @@ class BiaCmd(object):
                                         )
 
     def status(self, cmd):
-        cmd.inform("text='{}'".format(self.actor.bia.getStatus()))
+        try:
+            status = self.actor.bia.getStatus()
+            cmd.inform("text='{}'".format(status))
+        except AttributeError as e:
+            cmd.error("text='Bia did not start well. details: %s" % e)
+        except:
+            cmd.error("text='Unexpected error: %s'" % sys.exc_info()[0])
 
     def start(self, cmd):
-        self.actor.bia.start_communication(cmd)
+        try:
+            cmd.inform("text='starting communication...'")
+            self.actor.bia.start_communication(cmd)
+        except CommErr as e: # ISSUE : I cannot catch timeout error
+            cmd.error("text='%s'" % e)
+        except:
+            cmd.error("text='Unexpected error: [%s] %s'" % (
+                    sys.exc_info()[0],
+                    sys.exc_info()[1]))
+        else:
+            cmd.inform("text='Bia started successfully!'")
 
     def set_mode(self, cmd):
         mode = cmd.cmd.keywords[0].name
@@ -45,26 +63,51 @@ class BiaCmd(object):
 
     def set_state(self, cmd):
         state = cmd.cmd.keywords[0].name
-        getattr(self.actor.bia.fsm, state)()
-        #self.status(cmd)
+        try:
+            getattr(self.actor.bia.fsm, state)()
+        except AttributeError as e:
+            cmd.error("text='Bia did not start well. details: %s" % e)
+        except FysomError as e:
+            cmd.error("text='%s'" % e)
 
     def bia(self, cmd):
         transition = cmd.cmd.keywords[0].name
-        self.actor.bia.putMsg(self.actor.bia.bia, transition)
+        try:
+            self.actor.bia.putMsg(self.actor.bia.bia, transition)
+        except AttributeError as e:
+            cmd.error("text='Bia did not start well. details: %s" % e)
+        except:
+            cmd.error("text='Unexpected error: [%s] %s'" % (
+                    sys.exc_info()[0],
+                    sys.exc_info()[1]))
 
     def strobe_int(self, cmd):
         strobe = [
                 cmd.cmd.keywords["freq"].values[0],
                 cmd.cmd.keywords["dur"].values[0]
                 ]
-        self.actor.bia.putMsg(self.actor.bia.bia, "strobe", strobe)
+        try:
+            self.actor.bia.putMsg(self.actor.bia.bia, "strobe", strobe)
+        except AttributeError as e:
+            cmd.error("text='Bia did not start well. details: %s" % e)
+        except:
+            cmd.error("text='Unexpected error: [%s] %s'" % (
+                sys.exc_info()[0],
+                sys.exc_info()[1]))
 
     def strobe_freq_dur(self, cmd):
         strobe = [
                 cmd.cmd.keywords["freq"].values[0],
                 cmd.cmd.keywords["dur"].values[0]
                 ]
-        self.actor.bia.putMsg(self.actor.bia.bia, "strobe", strobe)
+        try:
+            self.actor.bia.putMsg(self.actor.bia.bia, "strobe", strobe)
+        except AttributeError as e:
+            cmd.error("text='Bia did not start well. details: %s" % e)
+        except:
+            cmd.error("text='Unexpected error: [%s] %s'" % (
+                sys.exc_info()[0],
+                sys.exc_info()[1]))
 
     def strobe_freq_dur_int(self, cmd):
         strobe = [
@@ -72,12 +115,34 @@ class BiaCmd(object):
                 cmd.cmd.keywords["dur"].values[0],
                 cmd.cmd.keywords["int"].values[0]
                 ]
-        self.actor.bia.putMsg(self.actor.bia.bia, "strobe", strobe)
+        try:
+            self.actor.bia.putMsg(self.actor.bia.bia, "strobe", strobe)
+        except AttributeError as e:
+            cmd.error("text='Bia did not start well. details: %s" % e)
+        except:
+            cmd.error("text='Unexpected error: [%s] %s'" % (
+                sys.exc_info()[0],
+                sys.exc_info()[1]))
 
     def strobeByDefault(self, cmd):
-        self.actor.bia.putMsg(self.actor.bia.bia, "strobe")
+        try:
+            self.actor.bia.putMsg(self.actor.bia.bia, "strobe")
+        except AttributeError as e:
+            cmd.error("text='Bia did not start well. details: %s" % e)
+        except:
+            cmd.error("text='Unexpected error: [%s] %s'" % (
+                sys.exc_info()[0],
+                sys.exc_info()[1]))
 
     def setconfig(self, cmd):
         freq = cmd.cmd.keywords["freq"].values[0]
         dur = cmd.cmd.keywords["dur"].values[0]
-        self.actor.bia.putMsg(self.actor.bia.setConfig, freq=freq, dur=dur)
+        try:
+            self.actor.bia.putMsg(self.actor.bia.setConfig, freq=freq, dur=dur)
+        except AttributeError as e:
+            cmd.error("text='Bia did not start well. details: %s" % e)
+        except:
+            cmd.error("text='Unexpected error: [%s] %s'" % (
+                sys.exc_info()[0],
+                sys.exc_info()[1]))
+

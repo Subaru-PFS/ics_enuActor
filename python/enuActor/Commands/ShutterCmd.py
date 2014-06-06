@@ -3,6 +3,9 @@
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
 from opscore.utility.qstr import qstr
+import sys
+from enuActor.Devices.Error import CommErr, DeviceErr
+from enuActor.MyFSM import FysomError
 
 
 class ShutterCmd(object):
@@ -27,10 +30,26 @@ class ShutterCmd(object):
                                         )
 
     def status(self, cmd):
-        cmd.inform("text='{}'".format(self.actor.shutter.getStatus()))
+        try:
+            cmd.inform("text='{}'".format(self.actor.shutter.getStatus()))
+        except AttributeError as e:
+            cmd.error("text='Shutter did not start well. details: %s" % e)
+        except:
+            cmd.error("text='Unexpected error: %s'" % sys.exc_info()[0])
+
 
     def start(self, cmd):
-        self.actor.shutter.start_communication(cmd)
+        try:
+            self.actor.shutter.start_communication(cmd)
+        except CommErr as e: # ISSUE : I cannot catch timeout error
+            cmd.error("text='%s'" % e)
+        except:
+            cmd.error("text='Unexpected error: [%s] %s'" % (
+                    sys.exc_info()[0],
+                    sys.exc_info()[1]))
+        else:
+            cmd.inform("text='Shutter started successfully!'")
+
 
     def command(self, cmd):
         """Opens a terminal to communicate directly with device"""
@@ -43,24 +62,31 @@ class ShutterCmd(object):
 
     def set_state(self, cmd):
         state = cmd.cmd.keywords[0].name
-        getattr(self.actor.shutter.fsm, state)()
-        #self.status(cmd)
+        try:
+            getattr(self.actor.shutter.fsm, state)()
+        except AttributeError as e:
+            cmd.error("text='Shutter did not start well. details: %s" % e)
+        except FysomError as e:
+            cmd.error("text='%s'" % e)
 
     def shutter(self, cmd):
         """Parse shutter command and arguments
         :cmd: open or close shutter red or blue or both if no args
         """
         transition = cmd.cmd.keywords[0].name
-        if(len(cmd.cmd.keywords)==2):
-            shutter_id = cmd.cmd.keywords[1].name
-        elif( len(cmd.cmd.keywords)==1):
-            shutter_id = 'all'
-        else:
-            raise ValueError("Number of args exceed")
-        self.actor.shutter.putMsg(self.actor.shutter.shutter, transition)
-        #self.actor.shutter.queue.put({
-        #'function': self.actor.shutter.shutter,
-        #'args': transition,
-        #'cmd': cmd})
+        try:
+            if(len(cmd.cmd.keywords)==2):
+                shutter_id = cmd.cmd.keywords[1].name
+            elif( len(cmd.cmd.keywords)==1):
+                shutter_id = 'all'
+            else:
+                raise ValueError("Number of args exceed")
+            self.actor.shutter.putMsg(self.actor.shutter.shutter, transition)
+        except AttributeError as e:
+            cmd.error("text='Shutter did not start well. details: %s" % e)
+        except:
+            cmd.error("text='Unexpected error: [%s] %s'" % (
+                    sys.exc_info()[0],
+                    sys.exc_info()[1]))
 
 
