@@ -1,0 +1,14 @@
+<map id="inheritance0180ae68d1" name="inheritance0180ae68d1">
+<area shape="rect" id="node1" href="#enuActor.Devices.Error.CfgFileErr" title="Docstring for CommErr." alt="" coords="125,98,201,122"/>
+<area shape="rect" id="node2" href="#enuActor.Devices.Error.RuleError" title="Define rule and how it is displaied" alt="" coords="6,144,79,168"/>
+<area shape="rect" id="node3" href="#enuActor.Devices.Error.CommErr" title="CommErr are all the error related to the communication" alt="" coords="125,144,202,168"/>
+<area shape="rect" id="node6" href="#enuActor.Devices.Error.DeviceErr" title="DeviceErr are all the error related to the device and controller." alt="" coords="125,190,202,214"/>
+<area shape="rect" id="node4" href="#enuActor.Devices.Device.Device" title="All device (Shutter, BIA,...) should inherit this class" alt="" coords="247,52,314,75"/>
+<area shape="rect" id="node8" href="#enuActor.Devices.Device.OperationDevice" title="Device in operation mode:" alt="" coords="362,6,481,29"/>
+<area shape="rect" id="node9" href="#enuActor.Devices.Device.SimulationDevice" title="Device in simulation mode:" alt="" coords="359,52,484,75"/>
+<area shape="rect" id="node11" title="SW Device: Red EXchange Mechanism" alt="" coords="388,98,455,122"/>
+<area shape="rect" id="node5" href="enuActor.html#enuActor.QThread.QThread" title="QThread" alt="" coords="128,52,199,75"/>
+<area shape="rect" id="node7" href="#enuActor.Devices.Device.DualModeDevice" title="Switch between class following the device mode" alt="" coords="529,29,650,53"/>
+<area shape="rect" id="node12" href="#enuActor.Devices.shutter.Shutter" title="SW device: Shutter" alt="" coords="696,29,763,53"/>
+<area shape="rect" id="node10" title="A class that represents a thread of control." alt="" coords="9,52,76,75"/>
+</map>

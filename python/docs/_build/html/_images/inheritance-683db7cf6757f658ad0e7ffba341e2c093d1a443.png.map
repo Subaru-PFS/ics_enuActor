@@ -1,0 +1,9 @@
+<map id="inheritanceab9749f11f" name="inheritanceab9749f11f">
+<area shape="rect" id="node1" href="#enuActor.Devices.Device.Device" title="All device (Shutter, BIA,...) should inherit this class" alt="" coords="238,29,307,53"/>
+<area shape="rect" id="node4" href="#enuActor.Devices.Device.OperationDevice" title="Device in operation mode:" alt="" coords="355,4,477,29"/>
+<area shape="rect" id="node5" href="#enuActor.Devices.Device.SimulationDevice" title="Device in simulation mode:" alt="" coords="352,51,479,75"/>
+<area shape="rect" id="node2" href="enuActor.html#enuActor.QThread.QThread" title="QThread" alt="" coords="120,29,192,53"/>
+<area shape="rect" id="node3" href="#enuActor.Devices.Device.DualModeDevice" title="Switch between class following the device mode" alt="" coords="525,29,648,53"/>
+<area shape="rect" id="node7" href="#enuActor.Devices.shutter.Shutter" title="SW device: Shutter" alt="" coords="694,29,763,53"/>
+<area shape="rect" id="node6" title="A class that represents a thread of control." alt="" coords="5,29,74,53"/>
+</map>
