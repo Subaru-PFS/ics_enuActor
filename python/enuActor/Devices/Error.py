@@ -47,13 +47,12 @@ class DeviceErr(RuleError):
     """ DeviceErr are all the error related to the device and controller.
         When a DeviceErr occures the current state of the FSM go to fail."""
 
-    def __init__(self, device, reason, lvl=RuleError.PRIORITY_DEFAULT):
+    def __init__(self, reason, device = 'device', lvl=RuleError.PRIORITY_DEFAULT):
         RuleError.__init__(self, reason, lvl=RuleError.PRIORITY_DEFAULT)
+        self.device = device
 
     def __str__(self):
-        return  "[{} {}] '{}'".format(
+        return  "[%s %s] '%s'" % (
                 self.device,
                 self._priority,
                 self._reason)
-
-

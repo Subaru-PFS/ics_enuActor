@@ -50,7 +50,7 @@ class Device(QThread):
             'communication': 'devices_communication.cfg',
             'parameters': 'devices_parameters.cfg'
             }
-    available_link = ['TTL', 'SERIAL', 'ETHERNET']
+    available_link = ['TTL', 'SERIAL', 'ETHERNET', 'NOTSPECIFIED']
 
     def __init__(self, actor=None, cfg_path = None):
         QThread.__init__(self, actor, self.__class__)
@@ -121,7 +121,7 @@ class Device(QThread):
         self.check_status()
 
     def getStatus(self):
-        """return status of shutter (FSM)
+        """return status of Device (FSM)
 
         :returns: ``'LOADED'``, ``'IDLE'``, ``'BUSY'``, ...
         """
@@ -138,7 +138,8 @@ class Device(QThread):
     ############################
 
     def load_cfg(self, device):
-        """Load configuration file of the device.
+        """Load configuration file of the device:
+        * load data file to self._cfg ad self._param
 
         :param device: name of the device (``'SHUTTER'``, ``'BIA'``, ...)
         :type device: str.
@@ -164,7 +165,7 @@ class Device(QThread):
                     "%s is not defined in LINK parameter section" % device)
         elif links[device.lower()] not in Device.available_link:
             raise Error.CfgFileErr(\
-                    "%s is not an available LINK" % links[device])
+                    "%s is not an available LINK" % links[device.lower()])
         else:
             self.device = device.lower()
             self.link = links[device.lower()]
@@ -277,7 +278,7 @@ class OperationDevice(Device):
             self.connection = self.start_ethernet()
         elif self.link == 'TTL':
             raise NotImplementedError
-        else:
+        elif self.link != 'NOTSPECIFIED':
             raise Error.CfgFileErr("LINK section error in config file :\n\
 LINK: %s\nCfgFile: %s\n " % (self.link, self._cfg))
         self.startFSM()
@@ -348,7 +349,7 @@ LINK: %s\nCfgFile: %s\n " % (self.link, self._cfg))
         if self.link == 'SERIAL':
             if input_buff is not None:
                 cmpt = 0
-                while buff == '' or cmpt < 3:
+                while buff == '' and cmpt < 3:
                     # try 3 times if no response
                     try:
                         self.connection.write(input_buff)
@@ -357,6 +358,7 @@ LINK: %s\nCfgFile: %s\n " % (self.link, self._cfg))
                     time.sleep(0.3)
                     while self.connection.inWaiting() > 0:
                         buff += self.connection.read(1)
+                    print "trying again (%i)..." % cmpt
                     cmpt += 1
                 if buff == '':
                     raise Error.CommErr("No response from serial port")

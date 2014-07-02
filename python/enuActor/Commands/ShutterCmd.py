@@ -37,7 +37,6 @@ class ShutterCmd(object):
         except:
             cmd.error("text='Unexpected error: %s'" % sys.exc_info()[0])
 
-
     def start(self, cmd):
         try:
             self.actor.shutter.start_communication(cmd)

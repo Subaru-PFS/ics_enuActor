@@ -148,7 +148,6 @@ class Shutter(DualModeDevice):
         except ValueError, e:
             raise Error.CommErr("Error bad type return from serial\
 : [%s, %s]" % (ret[0], ret[1]))
-
         #return status byte 1
         mask = map(int, list(ret[1]))
         mask.reverse()
