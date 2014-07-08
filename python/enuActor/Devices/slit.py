@@ -76,7 +76,7 @@ class Slit(DualModeDevice):
         self._hexapodCoordinateSytemSet('Tool', *posCoord)
 
 
-    def moveTo(self, baseline='absolute', posCoord=None):
+    def moveTo(self, baseline, posCoord=None):
         """@todo: Docstring for moveTo.
 
         :param posCoord: [x, y, z, u, v, w] or nothing if home
@@ -84,7 +84,11 @@ class Slit(DualModeDevice):
         """
         if posCoord == None:
             posCoord = self.getHome()
-        self._hexapodMoveAbsolute('Work', *posCoord)
+        if baseline == 'absolute':
+           self._hexapodMoveAbsolute(*posCoord)
+        elif baseline == 'relative' :
+           self._hexapodMoveRelative('Tool', *posCoord)
+
 
     def op_start_communication(self):
         self.load_cfg(self.device)
@@ -166,10 +170,18 @@ class Slit(DualModeDevice):
                 coordSystem,
                 x, y, z, u, v, w)
 
-    def _hexapodMoveAbsolute(self, coordSystem, x, y, z, u, v, w):
-        print x, y, z, u, v,w
+    def _hexapodMoveAbsolute(self, x, y, z, u, v, w):
+        """ ..note: coordSystem not specified because has to be 'Work'"""
         return self.errorChecker(
                 self.myxps.HexapodMoveAbsolute,
+                self.socketId,
+                self.groupName,
+                'Work',
+                x, y, z, u, v, w)
+
+    def _hexapodMoveRelative(self, coordSystem, x, y, z, u, v, w):
+        return self.errorChecker(
+                self.myxps.HexapodMoveIncremental,
                 self.socketId,
                 self.groupName,
                 coordSystem,

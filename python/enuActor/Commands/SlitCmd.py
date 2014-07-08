@@ -139,7 +139,7 @@ class SlitCmd(object):
         V = cmd.cmd.keywords["V"].values[0]
         W = cmd.cmd.keywords["W"].values[0]
         try:
-            self.actor.slit.moveTo(baseline = baseline, posCoord = [X, Y, Z, U, V, W])
+            self.actor.slit.moveTo(baseline, posCoord = [X, Y, Z, U, V, W])
         except Exception, e:
             cmd.error("text= '%s'" % e)
         else:
