@@ -17,12 +17,15 @@ class SlitCmd(object):
             ('slit', 'start', self.start), # TODO
             ('slit', '<cmd>', self.command), # TODO
             ('slit', '@(simulated|operation)', self.set_mode),# TODO
-            ('slit', 'GetHome', self.slit),# TODO
-            ('slit', 'GoHome', self.slit),# TODO
-            #('slit', 'SetHome <X> <Y> <Z> <U> <V> <W>', self.slit),# TODO
-            #('slit', 'SetHome CURRENT', self.slit),# TODO
-            #('slit', 'MoveTo <X> <Y> <Z> <U> <V> <W> @(absolute|relative)',
-                #self.slit),# TODO
+            ('slit', 'GetHome', self.getHome),# TODO
+            ('slit', 'GoHome', self.goHome),# TODO
+            ('slit', 'SetHome <X> <Y> <Z> <U> <V> <W>',
+                self.setHome),# TODO
+            ('slit', 'SetHome CURRENT', self.setHomeCurrent),# TODO
+            ('slit', 'MoveTo absolute <X> <Y> <Z> <U> <V> <W>',
+                self.moveTo),# TODO
+            ('slit', 'MoveTo relative <X> <Y> <Z> <U> <V> <W>',
+                self.moveTo),# TODO
             #('slit', 'dither axis <X> <Y> <Z>', self.slit),# TODO
             #('slit', 'dither axis', self.slit),# TODO
             #('slit', 'focus axis <X> <Y> <Z>', self.slit),# TODO
@@ -40,13 +43,13 @@ class SlitCmd(object):
 
         # Define typed command arguments for the above commands.
         self.keys = keys.KeysDictionary("slit_slit", (1, 1),
-                #keys.Key("cmd", types.Float(), help="Command ascii"),
-                #keys.Key("X", types.Float(), help="X coordinate"),
-                #keys.Key("Y", types.Float(), help="Y coordinate"),
-                #keys.Key("Z", types.Float(), help="Z coordinate"),
-                #keys.Key("U", types.Float(), help="U coordinate"),
-                #keys.Key("V", types.Float(), help="V coordinate"),
-                #keys.Key("W", types.Float(), help="W coordinate"),
+                keys.Key("cmd", types.Float(), help="Command ascii"),
+                keys.Key("X", types.Float(), help="X coordinate"),
+                keys.Key("Y", types.Float(), help="Y coordinate"),
+                keys.Key("Z", types.Float(), help="Z coordinate"),
+                keys.Key("U", types.Float(), help="U coordinate"),
+                keys.Key("V", types.Float(), help="V coordinate"),
+                keys.Key("W", types.Float(), help="W coordinate"),
                 #keys.Key("dither", types.Float(),
                     #help="Number of pixel along dither axis"),
                 #keys.Key("focus", types.Float(),
@@ -97,6 +100,59 @@ class SlitCmd(object):
             cmd.error("text= Can't go to this state: %s -x-> %s'" %
             (self.actor.slit.fsm.current, state.upper()))
 
-    def slit(self, cmd):
-        """Not Implemented Yet"""
-        pass
+    def getHome(self, cmd):
+        try:
+            homePosition = self.actor.slit.getHome()
+            cmd.inform("text= 'Home position : %s'" % homePosition)
+        except Exception, e:
+            cmd.error("text= %s" % e)
+
+    def setHome(self, cmd):
+        X = cmd.cmd.keywords["X"].values[0]
+        Y = cmd.cmd.keywords["Y"].values[0]
+        Z = cmd.cmd.keywords["Z"].values[0]
+        U = cmd.cmd.keywords["U"].values[0]
+        V = cmd.cmd.keywords["V"].values[0]
+        W = cmd.cmd.keywords["W"].values[0]
+        try:
+            self.actor.slit.setHome(posCoord = [X, Y, Z, U, V, W])
+        except Exception, e:
+            cmd.error("text= '%s'" % e)
+        else:
+            cmd.inform("text= 'setHome done successfully !!'")
+
+    def setHomeCurrent(self, cmd):
+        try:
+            self.actor.slit.setHome()
+        except Exception, e:
+            cmd.error("text= '%s'" % e)
+        else:
+            cmd.inform("text= 'setHome done successfully !!'")
+
+    def moveTo(self, cmd):
+        # Remove "MoveTo"
+        baseline = cmd.cmd.keywords[1].name
+        X = cmd.cmd.keywords["X"].values[0]
+        Y = cmd.cmd.keywords["Y"].values[0]
+        Z = cmd.cmd.keywords["Z"].values[0]
+        U = cmd.cmd.keywords["U"].values[0]
+        V = cmd.cmd.keywords["V"].values[0]
+        W = cmd.cmd.keywords["W"].values[0]
+        try:
+            self.actor.slit.moveTo(baseline = baseline, posCoord = [X, Y, Z, U, V, W])
+        except Exception, e:
+            cmd.error("text= '%s'" % e)
+        else:
+            cmd.inform("text= 'moveTo done successfully !!'")
+
+
+
+    def goHome(self, cmd):
+        try:
+            self.actor.slit.moveTo()
+        except Exception, e:
+            cmd.error("text= '%s'" % e)
+        else:
+            cmd.inform("text= 'goHome done successfully !!'")
+
+

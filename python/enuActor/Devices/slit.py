@@ -25,7 +25,6 @@ class Slit(DualModeDevice):
     """
 
     def __init__(self, actor=None):
-        """@todo: to be defined1. """
         super(Slit, self).__init__(actor)
         self.currPos = None
         self.groupName = 'HEXAPOD'
@@ -41,6 +40,10 @@ class Slit(DualModeDevice):
         :raises: @todo
 
         """
+        if self.mode == 'simulated':
+            super(Slit, self).initialise()
+            return
+
         if self.socketId == -1:
             raise Error.CommErr('Connection to Hexapod failed,\
                     Check Ip & port')
@@ -64,7 +67,24 @@ class Slit(DualModeDevice):
         """
         if posCoord is None:
             posCoord = self._getCurrentPosition()
-        self._hexapodCoordinateSytemSet('Tool', **posCoord)
+            curHome = self.getHome()
+            print posCoord
+            print curHome
+            #newhome = posCoord + curHome
+            posCoord = [sum(x) for x in zip(posCoord, curHome)]
+            print posCoord
+        self._hexapodCoordinateSytemSet('Tool', *posCoord)
+
+
+    def moveTo(self, baseline='absolute', posCoord=None):
+        """@todo: Docstring for moveTo.
+
+        :param posCoord: [x, y, z, u, v, w] or nothing if home
+        :raises: :class: `~.Error.DeviceError`, :class:`~.Error.CommErr`
+        """
+        if posCoord == None:
+            posCoord = self.getHome()
+        self._hexapodMoveAbsolute('Work', *posCoord)
 
     def op_start_communication(self):
         self.load_cfg(self.device)
@@ -140,9 +160,19 @@ class Slit(DualModeDevice):
 
     def _hexapodCoordinateSytemSet(self, coordSystem, x, y, z, u, v, w):
         return self.errorChecker(
-                self.myxps.HexapodCoordinateSystemGet,
+                self.myxps.HexapodCoordinateSystemSet,
                 self.socketId,
                 self.groupName,
+                coordSystem,
+                x, y, z, u, v, w)
+
+    def _hexapodMoveAbsolute(self, coordSystem, x, y, z, u, v, w):
+        print x, y, z, u, v,w
+        return self.errorChecker(
+                self.myxps.HexapodMoveAbsolute,
+                self.socketId,
+                self.groupName,
+                coordSystem,
                 x, y, z, u, v, w)
 
     def errorChecker(self, func, *args):
