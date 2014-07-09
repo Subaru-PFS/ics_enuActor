@@ -138,11 +138,13 @@ class Slit(DualModeDevice):
 
         """
         def fget(self):
+            if self._magnification is None:
+                raise Exception("Magnification not defined yet.")
             return self._magnification
 
         def fset(self, value):
-            if self._dither_axis is None:
-                raise Exception("Magnification not defined yet.")
+            if value <= 0:
+                raise Exception("Wrong magnification value (<=0).")
             self._magnification = value
         return locals()
 
@@ -161,6 +163,9 @@ class Slit(DualModeDevice):
             return self._dither_axis
 
         def fset(self, value):
+            if value == [0, 0, 0]:
+                raise Exception("Wrong axis value: (0, 0, 0)\
+is not a direction")
             self._dither_axis = value
         return locals()
 
@@ -179,6 +184,9 @@ class Slit(DualModeDevice):
             return self._focus_axis
 
         def fset(self, value):
+            if value == [0, 0, 0]:
+                raise Exception("Wrong axis value: (0, 0, 0)\
+is not a direction")
             self._focus_axis = value
         return locals()
 

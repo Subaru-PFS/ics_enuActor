@@ -13,7 +13,7 @@ class SlitCmd(object):
     def __init__(self, actor):
         self.actor = actor
         self.vocab = [
-            ('test', '<test>', self.test),
+            #('test', '<test>', self.test),
             ('slit', 'status', self.status), # TODO
             ('slit', 'start', self.start), # TODO
             ('slit', '<cmd>', self.command), # TODO
@@ -31,9 +31,10 @@ class SlitCmd(object):
             ('slit', 'dither axis', self.getDither),# TODO
             ('slit', 'focus axis <X> <Y> <Z>', self.setFocus),# TODO
             ('slit', 'focus axis', self.getFocus),# TODO
-            #('slit', 'dither', self.slit),# TODO
-            #('slit', '<dither>', self.slit),# TODO
-            #('slit', '<magnification>', self.slit),# TODO
+            ('slit', 'dither', self.slit),# TODO
+            ('slit', '<dither>', self.slit),# TODO
+            ('slit', '<magnification>', self.setMagnification),# TODO
+            ('slit', 'magnification', self.getMagnification),# TODO
             #('slit', 'focus', self.slit),# TODO
             #('slit', '<focus>', self.slit),# TODO
             ('slit', '@(off|load|busy|idle|SafeStop|fail|init)',
@@ -44,7 +45,7 @@ class SlitCmd(object):
 
         # Define typed command arguments for the above commands.
         self.keys = keys.KeysDictionary("slit_slit", (1, 1),
-                keys.Key("test", types.Coordinate(), help=""),
+                #keys.Key("test", types.Coordinate(), help=""),
                 keys.Key("cmd", types.Float(), help="Command ascii"),
                 keys.Key("X", types.Float(), help="X coordinate"),
                 keys.Key("Y", types.Float(), help="Y coordinate"),
@@ -94,6 +95,7 @@ class SlitCmd(object):
     def set_mode(self, cmd):
         mode = cmd.cmd.keywords[0].name
         self.actor.slit.mode = mode
+        cmd.inform("text='mode simulation enabled'")
 
     def set_state(self, cmd):
         state = cmd.cmd.keywords[0].name
@@ -169,14 +171,14 @@ class SlitCmd(object):
                     ])
         except Exception, e:
             cmd.error("text='%s'" % e)
+        else:
+            cmd.inform("text= 'set dither done!'")
 
     def getDither(self, cmd):
         try:
-            axis = self.actor.slit.dither_axis
+            cmd.inform("text=='%s'" % self.actor.slit.dither_axis)
         except Exception, e:
             cmd.error("text='%s'" % e)
-        else:
-            cmd.inform("text='%s'" % axis)
 
     def setFocus(self, cmd):
         try:
@@ -189,13 +191,27 @@ class SlitCmd(object):
                     ])
         except Exception, e:
             cmd.error("text='%s'" % e)
+        else:
+            cmd.inform("text= 'set focus done!'")
 
     def getFocus(self, cmd):
         try:
-            axis = self.actor.slit.focus_axis
+            cmd.inform("text='%s'" % self.actor.slit.focus_axis)
+        except Exception, e:
+            cmd.error("text='%s'" % e)
+
+    def setMagnification(self, cmd):
+        try:
+            self.actor.slit.magnification =\
+                    cmd.cmd.keywords["magnification"].values[0]
         except Exception, e:
             cmd.error("text='%s'" % e)
         else:
-            cmd.inform("text='%s'" % axis)
+            cmd.inform("text= 'set magnification done!'")
 
-
+    def getMagnification(self, cmd):
+        try:
+            cmd.inform("text='Magnification = %s'" %
+                    self.actor.slit.magnification)
+        except Exception, e:
+            cmd.error("text='%s'" % e)
