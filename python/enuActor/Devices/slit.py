@@ -39,7 +39,9 @@ class Slit(DualModeDevice):
         self._dither_axis = None
         self._focus_axis = None
         self._magnification = None
-
+        self._dithering_value = None
+        self._focus_value = None
+        self._home = None
 
     def initialise(self):
         """ Initialise shutter.
@@ -59,6 +61,8 @@ class Slit(DualModeDevice):
         self._initialize()
         self._homeSearch()
         self.check_status()
+        self.setHome(self._home)
+        self.moveTo(self._home) # param home defined because earn time
 
     #############
     #  HEXAPOD  #
@@ -79,12 +83,10 @@ class Slit(DualModeDevice):
         if posCoord is None:
             posCoord = self._getCurrentPosition()
             curHome = self.getHome()
-            print posCoord
-            print curHome
             #newhome = posCoord + curHome
             posCoord = [sum(x) for x in zip(posCoord, curHome)]
-            print posCoord
         self._hexapodCoordinateSytemSet('Tool', *posCoord)
+        self._home = self.getHome()
 
 
     def moveTo(self, reference, posCoord=None):
@@ -116,8 +118,8 @@ class Slit(DualModeDevice):
         :raises: @todo
 
         """
-        axis = np.array(self)
-        dithering = length * axis * self._magnification
+        axis = np.array(self.dither_axis + [0] * 3)
+        dithering = length * axis * self.magnification
         self._hexapodMoveIncremental('Work', *dithering)
 
     def focus(self, length):
@@ -128,7 +130,7 @@ class Slit(DualModeDevice):
         :raises: @todo
 
         """
-        axis = np.array(self.focus_axis)
+        axis = np.array(self.focus_axis + [0] * 3)
         through_focus = axis * length
         self._hexapodMoveIncremental('Work', *through_focus)
 
@@ -192,11 +194,73 @@ is not a direction")
 
     focus_axis = property(**focus_axis())
 
+    def dithering_value():
+        """Accessor to dithering_value attribute for dithering function
+
+        :raises: Exception (not init yet).
+        """
+        def fget(self):
+            if self._dithering_value is None:
+                raise Exception("Dithering value not defined yet.")
+            return self._dithering_value
+
+        def fset(self, value):
+            if value <=0:
+                raise Exception("Wrong dithering value (<=0).")
+            self._dithering_value = value
+        return locals()
+
+    dithering_value = property(**dithering_value())
+
+    def focus_value():
+        """Accessor to focus_value attribute for focusing function
+
+        :returns: @todo
+
+        """
+        def fget(self):
+            if self._focus_value is None:
+                raise Exception("Focus value not defined yet.")
+            return self._focus_value
+
+        def fset(self, value):
+            if value <=0:
+                raise Exception("Wrong focus value (<=0).")
+            self._focus_value = value
+        return locals()
+
+    focus_value = property(**focus_value())
+
     ############
     #  DEVICE  #
     ############
     def op_start_communication(self):
         self.load_cfg(self.device)
+        try:
+            self.dither_axis = map(float, self._param['dither_axis'].split(','))
+        except Exception, e:
+            raise Error.CfgFileErr("Wrong value dither_axis (%s)" % e)
+        try:
+            self.focus_axis = map(float, self._param['focus_axis'].split(','))
+        except Exception, e:
+            raise Error.CfgFileErr("Wrong value focus_axis (%s)" % e)
+        try:
+            self.magnification = float(self._param['magnification'])
+        except Exception, e:
+            raise Error.CfgFileErr("Wrong value magnification (%s)" % e)
+        try:
+            self.focus_value = float(self._param['focus_value'])
+        except Exception, e:
+            raise Error.CfgFileErr("Wrong value focus_value")
+        try:
+            self.dithering_value = float(self._param['dithering_value'])
+        except Exception, e:
+            raise Error.CfgFileErr("Wrong value dithering_value")
+        try:
+            self._home = map(float, self._param['home'].split(','))
+        except Exception, e:
+            raise Error.CfgFileErr("Wrong value home (%s)" % e)
+
         self.myxps = hxp_drivers.XPS()
         self.socketId = self.myxps.TCP_ConnectToServer(
             self._cfg['ip'],

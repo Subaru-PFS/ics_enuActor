@@ -14,31 +14,31 @@ class SlitCmd(object):
         self.actor = actor
         self.vocab = [
             #('test', '<test>', self.test),
-            ('slit', 'status', self.status), # TODO
-            ('slit', 'start', self.start), # TODO
-            ('slit', '<cmd>', self.command), # TODO
-            ('slit', '@(simulated|operation)', self.set_mode),# TODO
-            ('slit', 'GetHome', self.getHome),# TODO
-            ('slit', 'GoHome', self.goHome),# TODO
+            ('slit', 'status', self.status),
+            ('slit', 'start', self.start),
+            ('slit', '<cmd>', self.command),
+            ('slit', '@(simulated|operation)', self.set_mode),
+            ('slit', 'GetHome', self.getHome),
+            ('slit', 'GoHome', self.goHome),
             ('slit', 'SetHome <X> <Y> <Z> <U> <V> <W>',
-                self.setHome),# TODO
-            ('slit', 'SetHome CURRENT', self.setHomeCurrent),# TODO
+                self.setHome),
+            ('slit', 'SetHome CURRENT', self.setHomeCurrent),
             ('slit', 'MoveTo absolute <X> <Y> <Z> <U> <V> <W>',
-                self.moveTo),# TODO
+                self.moveTo),
             ('slit', 'MoveTo relative <X> <Y> <Z> <U> <V> <W>',
-                self.moveTo),# TODO
-            ('slit', 'dither axis <X> <Y> <Z>', self.setDither),# TODO
-            ('slit', 'dither axis', self.getDither),# TODO
-            ('slit', 'focus axis <X> <Y> <Z>', self.setFocus),# TODO
-            ('slit', 'focus axis', self.getFocus),# TODO
-            ('slit', 'dither', self.slit),# TODO
-            ('slit', '<dither>', self.slit),# TODO
-            ('slit', '<magnification>', self.setMagnification),# TODO
-            ('slit', 'magnification', self.getMagnification),# TODO
-            #('slit', 'focus', self.slit),# TODO
-            #('slit', '<focus>', self.slit),# TODO
+                self.moveTo),
+            ('slit', 'dither axis <X> <Y> <Z>', self.setDither),
+            ('slit', 'dither axis', self.getDither),
+            ('slit', 'focus axis <X> <Y> <Z>', self.setFocus),
+            ('slit', 'focus axis', self.getFocus),
+            ('slit', 'dither', self.goDither),
+            ('slit', '<dither>', self.goDither),
+            ('slit', '<magnification>', self.setMagnification),
+            ('slit', 'magnification', self.getMagnification),
+            ('slit', 'focus', self.goFocus),
+            ('slit', '<focus>', self.goFocus),
             ('slit', '@(off|load|busy|idle|SafeStop|fail|init)',
-                self.set_state),# TODO
+                self.set_state),
             ('slit', 'stop',
              lambda x : self.actor.slit.stop()),# TODO
                 ]
@@ -53,10 +53,10 @@ class SlitCmd(object):
                 keys.Key("U", types.Float(), help="U coordinate"),
                 keys.Key("V", types.Float(), help="V coordinate"),
                 keys.Key("W", types.Float(), help="W coordinate"),
-                #keys.Key("dither", types.Float(),
-                    #help="Number of pixel along dither axis"),
-                #keys.Key("focus", types.Float(),
-                    #help="Number of pixel along focus axis"),
+                keys.Key("dither", types.Float(),
+                    help="Number of pixel along dither axis"),
+                keys.Key("focus", types.Float(),
+                    help="Number of pixel along focus axis"),
                 keys.Key("magnification", types.Float(),
                     help="magnification value"),
                                         )
@@ -215,3 +215,42 @@ class SlitCmd(object):
                     self.actor.slit.magnification)
         except Exception, e:
             cmd.error("text='%s'" % e)
+
+    def goDither(self, cmd):
+        if cmd.cmd.keywords["dither"].values == []:
+            #dithering undefined value
+            length = self.actor.slit.dithering_value
+        else:
+            #dithering with defined value
+            length = cmd.cmd.keywords["dither"].values[0]
+        try:
+            self.actor.slit.dither(length)
+        except DeviceErr, e:
+            cmd.error("text= '%s'" % e)
+        except CommErr, e:
+            cmd.error("text= '%s'" % e)
+        except Exception, e:
+            cmd.error("text= Unexpected error: '%s'" % e)
+        else:
+            cmd.inform("text='Dithering done successfully!'")
+
+    def goFocus(self, cmd):
+        if cmd.cmd.keywords["focus"].values == []:
+            #dithering undefined value
+            length = self.actor.slit.focus_value
+        else:
+            #dithering with defined value
+            length = cmd.cmd.keywords["focus"].values[0]
+        try:
+            self.actor.slit.focus(length)
+        except DeviceErr, e:
+            cmd.error("text= '%s'" % e)
+        except CommErr, e:
+            cmd.error("text= '%s'" % e)
+        except Exception, e:
+            cmd.error("text= Unexpected error: '%s'" % e)
+        else:
+            cmd.inform("text='Focus done successfully!'")
+
+
+
