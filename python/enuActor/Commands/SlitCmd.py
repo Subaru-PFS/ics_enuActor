@@ -13,6 +13,7 @@ class SlitCmd(object):
     def __init__(self, actor):
         self.actor = actor
         self.vocab = [
+            ('test', '<test>', self.test),
             ('slit', 'status', self.status), # TODO
             ('slit', 'start', self.start), # TODO
             ('slit', '<cmd>', self.command), # TODO
@@ -26,10 +27,10 @@ class SlitCmd(object):
                 self.moveTo),# TODO
             ('slit', 'MoveTo relative <X> <Y> <Z> <U> <V> <W>',
                 self.moveTo),# TODO
-            #('slit', 'dither axis <X> <Y> <Z>', self.slit),# TODO
-            #('slit', 'dither axis', self.slit),# TODO
-            #('slit', 'focus axis <X> <Y> <Z>', self.slit),# TODO
-            #('slit', 'focus axis', self.slit),# TODO
+            ('slit', 'dither axis <X> <Y> <Z>', self.setDither),# TODO
+            ('slit', 'dither axis', self.getDither),# TODO
+            ('slit', 'focus axis <X> <Y> <Z>', self.setFocus),# TODO
+            ('slit', 'focus axis', self.getFocus),# TODO
             #('slit', 'dither', self.slit),# TODO
             #('slit', '<dither>', self.slit),# TODO
             #('slit', '<magnification>', self.slit),# TODO
@@ -43,6 +44,7 @@ class SlitCmd(object):
 
         # Define typed command arguments for the above commands.
         self.keys = keys.KeysDictionary("slit_slit", (1, 1),
+                keys.Key("test", types.Coordinate(), help=""),
                 keys.Key("cmd", types.Float(), help="Command ascii"),
                 keys.Key("X", types.Float(), help="X coordinate"),
                 keys.Key("Y", types.Float(), help="Y coordinate"),
@@ -57,6 +59,9 @@ class SlitCmd(object):
                 keys.Key("magnification", types.Float(),
                     help="magnification value"),
                                         )
+
+    def test(self, cmd):
+        print cmd.cmd.keywords
 
     def status(self, cmd):
         try:
@@ -131,7 +136,7 @@ class SlitCmd(object):
 
     def moveTo(self, cmd):
         # Remove "MoveTo"
-        baseline = cmd.cmd.keywords[1].name
+        reference = cmd.cmd.keywords[1].name
         X = cmd.cmd.keywords["X"].values[0]
         Y = cmd.cmd.keywords["Y"].values[0]
         Z = cmd.cmd.keywords["Z"].values[0]
@@ -139,20 +144,58 @@ class SlitCmd(object):
         V = cmd.cmd.keywords["V"].values[0]
         W = cmd.cmd.keywords["W"].values[0]
         try:
-            self.actor.slit.moveTo(baseline, posCoord = [X, Y, Z, U, V, W])
+            self.actor.slit.moveTo(reference, posCoord = [X, Y, Z, U, V, W])
         except Exception, e:
             cmd.error("text= '%s'" % e)
         else:
             cmd.inform("text= 'moveTo done successfully !!'")
 
-
-
     def goHome(self, cmd):
         try:
-            self.actor.slit.moveTo()
+            self.actor.slit.moveTo('absolute')
         except Exception, e:
             cmd.error("text= '%s'" % e)
         else:
             cmd.inform("text= 'goHome done successfully !!'")
+
+    def setDither(self, cmd):
+        try:
+            self.actor.slit.dither_axis = map(
+                    float,
+                    [
+                        cmd.cmd.keywords["X"].values[0],
+                        cmd.cmd.keywords["Y"].values[0],
+                        cmd.cmd.keywords["Z"].values[0]
+                    ])
+        except Exception, e:
+            cmd.error("text='%s'" % e)
+
+    def getDither(self, cmd):
+        try:
+            axis = self.actor.slit.dither_axis
+        except Exception, e:
+            cmd.error("text='%s'" % e)
+        else:
+            cmd.inform("text='%s'" % axis)
+
+    def setFocus(self, cmd):
+        try:
+            self.actor.slit.focus_axis = map(
+                    float,
+                    [
+                        cmd.cmd.keywords["X"].values[0],
+                        cmd.cmd.keywords["Y"].values[0],
+                        cmd.cmd.keywords["Z"].values[0]
+                    ])
+        except Exception, e:
+            cmd.error("text='%s'" % e)
+
+    def getFocus(self, cmd):
+        try:
+            axis = self.actor.slit.focus_axis
+        except Exception, e:
+            cmd.error("text='%s'" % e)
+        else:
+            cmd.inform("text='%s'" % axis)
 
 

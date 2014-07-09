@@ -26,12 +26,20 @@ class Slit(DualModeDevice):
 
     def __init__(self, actor=None):
         super(Slit, self).__init__(actor)
+        # Device attributes
         self.currPos = None
+        self.link_busy = False
+
+        # Hexapod Attributes
         self.groupName = 'HEXAPOD'
-        self.check_status_busy = 0
         self.myxps = None
         self.socketId = None
-        self.link_busy = False
+
+        # Slit Attributes
+        self._dither_axis = None
+        self._focus_axis = None
+        self._magnification = None
+
 
     def initialise(self):
         """ Initialise shutter.
@@ -52,6 +60,9 @@ class Slit(DualModeDevice):
         self._homeSearch()
         self.check_status()
 
+    #############
+    #  HEXAPOD  #
+    #############
     def getHome(self):
         """@todo: Docstring for getHome.
         :returns: [x, y, z, u, v, w]
@@ -76,28 +87,116 @@ class Slit(DualModeDevice):
         self._hexapodCoordinateSytemSet('Tool', *posCoord)
 
 
-    def moveTo(self, baseline, posCoord=None):
+    def moveTo(self, reference, posCoord=None):
         """@todo: Docstring for moveTo.
 
+        :para reference: 'absolute' or 'relative'
         :param posCoord: [x, y, z, u, v, w] or nothing if home
         :raises: :class: `~.Error.DeviceError`, :class:`~.Error.CommErr`
         """
         if posCoord == None:
             posCoord = self.getHome()
-        if baseline == 'absolute':
-           self._hexapodMoveAbsolute(*posCoord)
-        elif baseline == 'relative' :
-           self._hexapodMoveRelative('Tool', *posCoord)
+        if reference == 'absolute':
+            self._hexapodMoveAbsolute(*posCoord)
+        elif reference == 'relative' :
+           self._hexapodMoveIncremental('Tool', *posCoord)
 
+    ############################
+    #  DITHER & THROUGH FOCUS  #
+    ############################
+    def dither(self, length):
+        """Move in dither (dither_axis) to length pixel.\
+                Size of pixel is 34.64 :math:`\mu{}m` on\
+                the slit.
+                .. math::
+                                Slit = G . Pixel_size
 
+        :param length: length in pixel
+        :returns: @todo
+        :raises: @todo
+
+        """
+        axis = np.array(self)
+        dithering = length * axis * self._magnification
+        self._hexapodMoveIncremental('Work', *dithering)
+
+    def focus(self, length):
+        """Move in focus (focus_axis) to length pixel
+
+        :param length: @todo
+        :returns: @todo
+        :raises: @todo
+
+        """
+        axis = np.array(self.focus_axis)
+        through_focus = axis * length
+        self._hexapodMoveIncremental('Work', *through_focus)
+
+    def magnification():
+        """Change magnification.
+        :param G: magnification
+
+        """
+        def fget(self):
+            return self._magnification
+
+        def fset(self, value):
+            if self._dither_axis is None:
+                raise Exception("Magnification not defined yet.")
+            self._magnification = value
+        return locals()
+
+    magnification = property(**magnification())
+
+    def dither_axis():
+        """Accessor to dither_axis attribute
+
+        :param axis: [X, Y, Z] in pixel
+        :raises: Exception (not init yet)
+
+        """
+        def fget(self):
+            if self._dither_axis is None:
+                raise Exception("Dither axis not defined yet.")
+            return self._dither_axis
+
+        def fset(self, value):
+            self._dither_axis = value
+        return locals()
+
+    dither_axis = property(**dither_axis())
+
+    def focus_axis():
+        """Accessor to focus_axis attribute
+
+        :param axis: [X, Y, Z] in :math:`\mu{}m`
+        :raises: Exception (not init yet).
+
+        """
+        def fget(self):
+            if self._focus_axis is None:
+                raise Exception("Focus axis not defined yet.")
+            return self._focus_axis
+
+        def fset(self, value):
+            self._focus_axis = value
+        return locals()
+
+    focus_axis = property(**focus_axis())
+
+    ############
+    #  DEVICE  #
+    ############
     def op_start_communication(self):
         self.load_cfg(self.device)
         self.myxps = hxp_drivers.XPS()
         self.socketId = self.myxps.TCP_ConnectToServer(
-                self._cfg['ip'],
-                int(self._cfg['port']),
-                int(self._cfg['timeout'])
-                )
+            self._cfg['ip'],
+            int(self._cfg['port']),
+            int(self._cfg['timeout'])
+            )
+        if self.socketId == -1:
+            raise Error.CommErr("Connection to Hexapod failed check IP & Port")
         super(Slit, self).op_start_communication()
 
     def op_check_status(self):
@@ -117,7 +216,6 @@ class Slit(DualModeDevice):
     #############
     #  Parsers  #
     #############
-
     def _getCurrentPosition(self):
         return self.errorChecker(
                 self.myxps.GroupPositionCurrentGet,
@@ -179,7 +277,7 @@ class Slit(DualModeDevice):
                 'Work',
                 x, y, z, u, v, w)
 
-    def _hexapodMoveRelative(self, coordSystem, x, y, z, u, v, w):
+    def _hexapodMoveIncremental(self, coordSystem, x, y, z, u, v, w):
         return self.errorChecker(
                 self.myxps.HexapodMoveIncremental,
                 self.socketId,
