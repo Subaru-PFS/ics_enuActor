@@ -28,6 +28,14 @@ enuActor.Commands.ShutterCmd module
     :undoc-members:
     :show-inheritance:
 
+enuActor.Commands.SlitCmd module
+--------------------------------
+
+.. automodule:: enuActor.Commands.SlitCmd
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 
 Module contents
 ---------------

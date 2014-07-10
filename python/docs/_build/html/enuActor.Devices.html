@@ -26,10 +26,12 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <script type="text/javascript" src="_static/jquery.cookie.js"></script>
     <script type="text/javascript" src="_static/cloud.js"></script>
     <link rel="top" title="enuActor  documentation" href="index.html" />
     <link rel="up" title="enuActor package" href="enuActor.html" />
+    <link rel="next" title="enuActor.Devices.utils package" href="enuActor.Devices.utils.html" />
     <link rel="prev" title="enuActor.Commands package" href="enuActor.Commands.html" /> 
         <meta name="viewport" content="width=device-width, initial-scale=1">
   </head>
@@ -45,6 +47,9 @@
         <li class="right" >
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> &nbsp; &nbsp;</li>
+        <li class="right" >
+          <a href="enuActor.Devices.utils.html" title="enuActor.Devices.utils package"
+             accesskey="N">next</a> &nbsp; &nbsp;</li>
         <li class="right" >
           <a href="enuActor.Commands.html" title="enuActor.Commands package"
              accesskey="P">previous</a> &nbsp; &nbsp;</li>
@@ -63,6 +68,22 @@
             
   <div class="section" id="enuactor-devices-package">
 <h1>enuActor.Devices package<a class="headerlink" href="#enuactor-devices-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="subpackages">
+<h2>Subpackages<a class="headerlink" href="#subpackages" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="enuActor.Devices.utils.html">enuActor.Devices.utils package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="enuActor.Devices.utils.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="enuActor.Devices.utils.html#module-enuActor.Devices.utils.hxp_drivers">enuActor.Devices.utils.hxp_drivers module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="enuActor.Devices.utils.html#module-enuActor.Devices.utils">Module contents</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="enuActor.Devices.utils.html#utils">Utils</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
 <div class="section" id="submodules">
 <h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
 </div>
@@ -682,6 +703,221 @@ When a DeviceErr occures the current state of the FSM go to fail.</p>
 </dd></dl>
 
 </div>
+<div class="section" id="module-enuActor.Devices.slit">
+<span id="enuactor-devices-slit-module"></span><h2>enuActor.Devices.slit module<a class="headerlink" href="#module-enuActor.Devices.slit" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="enuActor.Devices.slit.Slit">
+<em class="property">class </em><tt class="descclassname">enuActor.Devices.slit.</tt><tt class="descname">Slit</tt><big>(</big><em>actor=None</em><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/slit.html#Slit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.slit.Slit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#enuActor.Devices.Device.DualModeDevice" title="enuActor.Devices.Device.DualModeDevice"><tt class="xref py py-class docutils literal"><span class="pre">enuActor.Devices.Device.DualModeDevice</span></tt></a></p>
+<p>SW device: Fiber Slit Positionning Sub Assembly</p>
+<dl class="docutils">
+<dt>Attributes:</dt>
+<dd><ul class="first last simple">
+<li>currPos : current position of the slit</li>
+</ul>
+</dd>
+</dl>
+<dl class="method">
+<dt id="enuActor.Devices.slit.Slit.dither">
+<tt class="descname">dither</tt><big>(</big><em>length</em><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/slit.html#Slit.dither"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.slit.Slit.dither" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="docutils">
+<dt>Move in dither (dither_axis) to length pixel.                Size of pixel is 34.64 <span class="math">\(\mu{}m\)</span> on                the slit.</dt>
+<dd><div class="first last math">
+\[dither = G * PixelSize\]</div>
+</dd>
+</dl>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>length</strong> &#8211; length in pixel</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">&#64;todo</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body">&#64;todo</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="enuActor.Devices.slit.Slit.dither_axis">
+<tt class="descname">dither_axis</tt><a class="reference internal" href="_modules/enuActor/Devices/slit.html#Slit.dither_axis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.slit.Slit.dither_axis" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="enuActor.Devices.slit.Slit.dithering_value">
+<tt class="descname">dithering_value</tt><a class="reference internal" href="_modules/enuActor/Devices/slit.html#Slit.dithering_value"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.slit.Slit.dithering_value" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="enuActor.Devices.slit.Slit.errorChecker">
+<tt class="descname">errorChecker</tt><big>(</big><em>func</em>, <em>*args</em><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/slit.html#Slit.errorChecker"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.slit.Slit.errorChecker" title="Permalink to this definition">¶</a></dt>
+<dd><p>Kind of decorator who check error after routine.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">value receive from TCP</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><table class="first last docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">class:</th><td class="field-body"><cite>~.Error.DeviceError</cite>, <a class="reference internal" href="#enuActor.Devices.Error.CommErr" title="enuActor.Devices.Error.CommErr"><tt class="xref py py-class docutils literal"><span class="pre">CommErr</span></tt></a></td>
+</tr>
+</tbody>
+</table>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="enuActor.Devices.slit.Slit.focus">
+<tt class="descname">focus</tt><big>(</big><em>length</em><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/slit.html#Slit.focus"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.slit.Slit.focus" title="Permalink to this definition">¶</a></dt>
+<dd><p>Move in focus (focus_axis) to length pixel</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>length</strong> &#8211; &#64;todo</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">&#64;todo</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body">&#64;todo</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="enuActor.Devices.slit.Slit.focus_axis">
+<tt class="descname">focus_axis</tt><a class="reference internal" href="_modules/enuActor/Devices/slit.html#Slit.focus_axis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.slit.Slit.focus_axis" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="enuActor.Devices.slit.Slit.focus_value">
+<tt class="descname">focus_value</tt><a class="reference internal" href="_modules/enuActor/Devices/slit.html#Slit.focus_value"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.slit.Slit.focus_value" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="enuActor.Devices.slit.Slit.getHome">
+<tt class="descname">getHome</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/slit.html#Slit.getHome"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.slit.Slit.getHome" title="Permalink to this definition">¶</a></dt>
+<dd><p>&#64;todo: Docstring for getHome.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">[x, y, z, u, v, w]</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><table class="first last docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">class:</th><td class="field-body"><cite>~.Error.DeviceError</cite>, <a class="reference internal" href="#enuActor.Devices.Error.CommErr" title="enuActor.Devices.Error.CommErr"><tt class="xref py py-class docutils literal"><span class="pre">CommErr</span></tt></a></td>
+</tr>
+</tbody>
+</table>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="enuActor.Devices.slit.Slit.initialise">
+<tt class="descname">initialise</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/slit.html#Slit.initialise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.slit.Slit.initialise" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialise shutter.
+Here just trigger the FSM to INITIALISING and IDLE</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">&#64;todo</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body">&#64;todo</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="enuActor.Devices.slit.Slit.magnification">
+<tt class="descname">magnification</tt><a class="reference internal" href="_modules/enuActor/Devices/slit.html#Slit.magnification"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.slit.Slit.magnification" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="enuActor.Devices.slit.Slit.moveTo">
+<tt class="descname">moveTo</tt><big>(</big><em>reference</em>, <em>posCoord=None</em><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/slit.html#Slit.moveTo"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.slit.Slit.moveTo" title="Permalink to this definition">¶</a></dt>
+<dd><p>&#64;todo: Docstring for moveTo.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Para reference:</th><td class="field-body"><p class="first">&#8216;absolute&#8217; or &#8216;relative&#8217;</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>posCoord</strong> &#8211; [x, y, z, u, v, w] or nothing if home</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body"><table class="first last docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">class:</th><td class="field-body"><cite>~.Error.DeviceError</cite>, <a class="reference internal" href="#enuActor.Devices.Error.CommErr" title="enuActor.Devices.Error.CommErr"><tt class="xref py py-class docutils literal"><span class="pre">CommErr</span></tt></a></td>
+</tr>
+</tbody>
+</table>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="enuActor.Devices.slit.Slit.op_check_status">
+<tt class="descname">op_check_status</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/slit.html#Slit.op_check_status"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.slit.Slit.op_check_status" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check status of hexapod and position
+:raises: :class: <cite>~.Error.DeviceError</cite>, <a class="reference internal" href="#enuActor.Devices.Error.CommErr" title="enuActor.Devices.Error.CommErr"><tt class="xref py py-class docutils literal"><span class="pre">CommErr</span></tt></a></p>
+</dd></dl>
+
+<dl class="method">
+<dt id="enuActor.Devices.slit.Slit.op_start_communication">
+<tt class="descname">op_start_communication</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/slit.html#Slit.op_start_communication"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.slit.Slit.op_start_communication" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="enuActor.Devices.slit.Slit.setHome">
+<tt class="descname">setHome</tt><big>(</big><em>posCoord=None</em><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/slit.html#Slit.setHome"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.slit.Slit.setHome" title="Permalink to this definition">¶</a></dt>
+<dd><p>&#64;todo: Docstring for setHome.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>posCoord</strong> &#8211; [x, y, z, u, v, w] or nothing if current</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><table class="first last docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">class:</th><td class="field-body"><cite>~.Error.DeviceError</cite>, <a class="reference internal" href="#enuActor.Devices.Error.CommErr" title="enuActor.Devices.Error.CommErr"><tt class="xref py py-class docutils literal"><span class="pre">CommErr</span></tt></a></td>
+</tr>
+</tbody>
+</table>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
 <div class="section" id="module-enuActor.Devices">
 <span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-enuActor.Devices" title="Permalink to this headline">¶</a></h2>
 <p>## :RivCreateContent
@@ -887,11 +1123,13 @@ When a DeviceErr occures the current state of the FSM go to fail.</p>
     <h3><a href="index.html">Page contents</a></h3>
     <ul>
 <li><a class="reference internal" href="#">enuActor.Devices package</a><ul>
+<li><a class="reference internal" href="#subpackages">Subpackages</a></li>
 <li><a class="reference internal" href="#submodules">Submodules</a></li>
 <li><a class="reference internal" href="#module-enuActor.Devices.Device">enuActor.Devices.Device module</a></li>
 <li><a class="reference internal" href="#module-enuActor.Devices.Error">enuActor.Devices.Error module</a></li>
 <li><a class="reference internal" href="#module-enuActor.Devices.bia">enuActor.Devices.bia module</a></li>
 <li><a class="reference internal" href="#module-enuActor.Devices.shutter">enuActor.Devices.shutter module</a></li>
+<li><a class="reference internal" href="#module-enuActor.Devices.slit">enuActor.Devices.slit module</a></li>
 <li><a class="reference internal" href="#module-enuActor.Devices">Module contents</a><ul>
 <li><a class="reference internal" href="#convention-naming">Convention naming</a></li>
 <li><a class="reference internal" href="#the-state-machine">The State Machine</a></li>
@@ -917,6 +1155,11 @@ When a DeviceErr occures the current state of the FSM go to fail.</p>
     <h4>Previous page</h4>
     <p class="topless"><a href="enuActor.Commands.html"
                           title="Previous page">&larr; enuActor.Commands package</a></p>
+  </div>
+  <div class="sphinxnext">
+    <h4>Next page</h4>
+    <p class="topless"><a href="enuActor.Devices.utils.html"
+                          title="Next page">&rarr; enuActor.Devices.utils package</a></p>
   </div>
   <h3>This Page</h3>
   <ul class="this-page-menu">
@@ -951,6 +1194,9 @@ When a DeviceErr occures the current state of the FSM go to fail.</p>
         <li class="right" >
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> &nbsp; &nbsp;</li>
+        <li class="right" >
+          <a href="enuActor.Devices.utils.html" title="enuActor.Devices.utils package"
+             >next</a> &nbsp; &nbsp;</li>
         <li class="right" >
           <a href="enuActor.Commands.html" title="enuActor.Commands package"
              >previous</a> &nbsp; &nbsp;</li>

@@ -1,6 +1,13 @@
 enuActor.Devices package
 ========================
 
+Subpackages
+-----------
+
+.. toctree::
+
+    enuActor.Devices.utils
+
 Submodules
 ----------
 
@@ -32,6 +39,14 @@ enuActor.Devices.shutter module
 -------------------------------
 
 .. automodule:: enuActor.Devices.shutter
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+enuActor.Devices.slit module
+----------------------------
+
+.. automodule:: enuActor.Devices.slit
     :members:
     :undoc-members:
     :show-inheritance:
