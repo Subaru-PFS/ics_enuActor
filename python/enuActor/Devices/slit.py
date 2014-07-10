@@ -43,12 +43,13 @@ class Slit(DualModeDevice):
         self._focus_value = None
         self._home = None
 
+    #@transition('init', 'idle')
     def initialise(self):
         """ Initialise shutter.
         Here just trigger the FSM to INITIALISING and IDLE
+
         :returns: @todo
         :raises: @todo
-
         """
         if self.mode == 'simulated':
             super(Slit, self).initialise()
@@ -60,15 +61,17 @@ class Slit(DualModeDevice):
         self._kill()
         self._initialize()
         self._homeSearch()
-        self.check_status()
         self.setHome(self._home)
-        self.moveTo(self._home) # param home defined because earn time
+        self._hexapodMoveAbsolute(*self._home)
+        self.check_status()
+        print 'init done!'
 
     #############
     #  HEXAPOD  #
     #############
     def getHome(self):
         """@todo: Docstring for getHome.
+
         :returns: [x, y, z, u, v, w]
         :raises: :class: `~.Error.DeviceError`, :class:`~.Error.CommErr`
         """
@@ -86,9 +89,8 @@ class Slit(DualModeDevice):
             #newhome = posCoord + curHome
             posCoord = [sum(x) for x in zip(posCoord, curHome)]
         self._hexapodCoordinateSytemSet('Tool', *posCoord)
-        self._home = self.getHome()
 
-
+    @transition('busy')
     def moveTo(self, reference, posCoord=None):
         """@todo: Docstring for moveTo.
 
@@ -106,12 +108,13 @@ class Slit(DualModeDevice):
     ############################
     #  DITHER & THROUGH FOCUS  #
     ############################
+    @transition('busy')
     def dither(self, length):
         """Move in dither (dither_axis) to length pixel.\
                 Size of pixel is 34.64 :math:`\mu{}m` on\
                 the slit.
                 .. math::
-                                Slit = G . Pixel_size
+                                dither = G * PixelSize
 
         :param length: length in pixel
         :returns: @todo
@@ -122,13 +125,13 @@ class Slit(DualModeDevice):
         dithering = length * axis * self.magnification
         self._hexapodMoveIncremental('Work', *dithering)
 
+    @transition('busy')
     def focus(self, length):
         """Move in focus (focus_axis) to length pixel
 
         :param length: @todo
         :returns: @todo
         :raises: @todo
-
         """
         axis = np.array(self.focus_axis + [0] * 3)
         through_focus = axis * length
@@ -136,8 +139,9 @@ class Slit(DualModeDevice):
 
     def magnification():
         """Change magnification.
-        :param G: magnification
 
+        :param G: magnification
+        :raises: Exception (not init yet)
         """
         def fget(self):
             if self._magnification is None:
@@ -157,7 +161,6 @@ class Slit(DualModeDevice):
 
         :param axis: [X, Y, Z] in pixel
         :raises: Exception (not init yet)
-
         """
         def fget(self):
             if self._dither_axis is None:
@@ -178,7 +181,6 @@ is not a direction")
 
         :param axis: [X, Y, Z] in :math:`\mu{}m`
         :raises: Exception (not init yet).
-
         """
         def fget(self):
             if self._focus_axis is None:
@@ -216,7 +218,6 @@ is not a direction")
         """Accessor to focus_value attribute for focusing function
 
         :returns: @todo
-
         """
         def fget(self):
             if self._focus_value is None:
@@ -359,6 +360,7 @@ is not a direction")
 
     def errorChecker(self, func, *args):
         """ Kind of decorator who check error after routine.
+
         :returns: value receive from TCP
         :raises: :class: `~.Error.DeviceError`, :class:`~.Error.CommErr`
         """

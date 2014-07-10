@@ -19,13 +19,13 @@ path = here + '/cfg/'
 MAP = {
 'initial' : 'none',
 'events': [
-    {'name': 'load', 'src': ['IDLE', 'FAIL', 'none'], 'dst': 'LOADED'},
+    {'name': 'load', 'src': ['IDLE', 'FAILED', 'none'], 'dst': 'LOADED'},
     {'name': 'init', 'src': 'LOADED', 'dst': 'INITIALISING'},
     {'name': 'idle', 'src': ['IDLE', 'INITIALISING', 'BUSY'],'dst': 'IDLE'},
     {'name': 'busy', 'src': ['BUSY', 'IDLE'], 'dst': 'BUSY'},
     {'name': 'off', 'src': 'LOADED', 'dst': 'SHUT_DOWN'},
-    {'name': 'fail','src': ['none', 'FAIL', 'LOADED', 'INITIALISING', 'IDLE', 'BUSY', 'SAFE_OFF'],
-    'dst': 'FAIL'},
+    {'name': 'fail','src': ['none', 'FAILED', 'LOADED', 'INITIALISING', 'IDLE', 'BUSY', 'SAFE_OFF'],
+    'dst': 'FAILED'},
     {'name': 'SafeStop', 'src': 'IDLE', 'dst': 'SAFE_OFF'},
     {'name': 'ShutDown', 'src': 'LOADED', 'dst': 'SHUT_DOWN'}
     ],
@@ -113,11 +113,9 @@ class Device(QThread):
 
     def initialise(self):
         """Overriden by subclasses:
-         * (Re)Load parameters from config files
          * Check communication & status
 
         """
-        self.load_cfg(self.device)
         self.check_status()
 
     def getStatus(self):
@@ -131,7 +129,7 @@ class Device(QThread):
     #callbacks: init, safe_off, shut_down
     @transition('fail')
     def fail(self, reason):
-        print "%s_FAIL : %s" % (self.device, reason)
+        print "%s_FAILED : %s" % (self.device, reason)
 
     ############################
     #  COMMUNICATION HANDLING  #

@@ -4,7 +4,6 @@
 #######################################################################
 #                 Back-Illumination SW device module                  #
 #######################################################################
-
 try:
     from enuActor.QThread import *
     from Device import *

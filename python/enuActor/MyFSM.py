@@ -232,7 +232,7 @@ class Fysom(object):
 #######################################################################
 
 
-def transition(during_state, after_state=None):
+def transition(during_state=None, after_state=None):
     """Decorator enabling the function to trigger state of the FSM.
 
     :param during_state: event at beginning of the function
@@ -242,8 +242,13 @@ def transition(during_state, after_state=None):
 
     """
     def wrapper(func):
+        from Devices import Error
         def wrapped_func(self, *args):
-            self.fsm.trigger(during_state)
+            if during_state is not None:
+                self.fsm.trigger(during_state)
+            elif after_state is None:
+                raise Exception("No args:\
+at least 1 arg during_state or after_state.")
             try:
                 res = func(self, *args)
                 if after_state is not None:

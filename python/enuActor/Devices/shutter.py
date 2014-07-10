@@ -112,7 +112,7 @@ class Shutter(DualModeDevice):
                 self.fail("%s" % e)
             raise e
         if self.currPos == "undef.":
-            self.fsm.fail()
+            self.fail("Position undef.")
         status += self.currPos
         for sb in l_sb:
             time.sleep(0.3)
@@ -122,7 +122,7 @@ class Shutter(DualModeDevice):
                     'MASK_ERROR_SB_%i' % sb))) > 0:
                     error = ', '.join(np.array(getattr(Shutter,\
     'STATUS_BYTE_%i' % sb))[mask[sb - 1] == 1])
-                    #self.fsm.fail()
+                    #self.fail("%s" % error)
                 elif self.fsm.current in ['INITIALISING', 'BUSY']:
                     self.fsm.idle()
                 elif self.fsm.current == 'none':

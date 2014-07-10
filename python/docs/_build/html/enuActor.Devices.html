@@ -77,7 +77,7 @@
 <dt>Attributes:</dt>
 <dd><ul class="first last simple">
 <li>link : <tt class="docutils literal"><span class="pre">TTL</span></tt>, <tt class="docutils literal"><span class="pre">SERIAL</span></tt> or <tt class="docutils literal"><span class="pre">ETHERNET</span></tt></li>
-<li>ser : serial object from serial module &#64;todo: change into link object</li>
+<li>connection : object for link connection</li>
 <li>mode : <tt class="docutils literal"><span class="pre">operation</span></tt> or <tt class="docutils literal"><span class="pre">simulated</span></tt></li>
 <li>cfg_path : path of the communication and parameter config files                 It should contains <em>devices_communication.cfg</em> and                 <em>devices_parameters.cfg</em> file.</li>
 </ul>
@@ -85,7 +85,7 @@
 </dl>
 <dl class="attribute">
 <dt id="enuActor.Devices.Device.Device.available_link">
-<tt class="descname">available_link</tt><em class="property"> = ['TTL', 'SERIAL', 'ETHERNET']</em><a class="headerlink" href="#enuActor.Devices.Device.Device.available_link" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">available_link</tt><em class="property"> = ['TTL', 'SERIAL', 'ETHERNET', 'NOTSPECIFIED']</em><a class="headerlink" href="#enuActor.Devices.Device.Device.available_link" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="attribute">
@@ -101,7 +101,7 @@
 <dl class="method">
 <dt id="enuActor.Devices.Device.Device.getStatus">
 <tt class="descname">getStatus</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/Device.html#Device.getStatus"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.Device.Device.getStatus" title="Permalink to this definition">¶</a></dt>
-<dd><p>return status of shutter (FSM)</p>
+<dd><p>return status of Device (FSM)</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -132,24 +132,16 @@ Process while device is idling.</p>
 <dl class="method">
 <dt id="enuActor.Devices.Device.Device.initialise">
 <tt class="descname">initialise</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/Device.html#Device.initialise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.Device.Device.initialise" title="Permalink to this definition">¶</a></dt>
-<dd><dl class="docutils">
-<dt>Overriden by subclasses:</dt>
-<dd><ul class="first last simple">
-<li>(Re)Load parameters from config files</li>
-<li>Check communication</li>
-</ul>
-</dd>
-</dl>
-<div class="admonition-todo admonition" id="index-0">
-<p class="first admonition-title">Todo</p>
-<p class="last">Add load cfg file routine</p>
-</div>
+<dd><p>Overriden by subclasses:
+* (Re)Load parameters from config files
+* Check communication &amp; status</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="enuActor.Devices.Device.Device.load_cfg">
 <tt class="descname">load_cfg</tt><big>(</big><em>device</em><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/Device.html#Device.load_cfg"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.Device.Device.load_cfg" title="Permalink to this definition">¶</a></dt>
-<dd><p>Load configuration file of the device.</p>
+<dd><p>Load configuration file of the device:
+* load data file to self._cfg ad self._param</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -411,8 +403,8 @@ or in the header of <tt class="xref py py-func docutils literal"><span class="pr
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>self_position</strong> (<em>str, int, float, iterable (list, tuple,...)</em>) &#8211; position(s) from current device class (&#8216;*&#8217; for all position)</li>
-<li><strong>target_position</strong> (<em>str, int, float, iterable.</em>) &#8211; position from target device class. (&#8216;*&#8217; for all position)</li>
+<li><strong>self_position</strong> (<em>str, int, float, iterable (list, tuple,...)</em>) &#8211; position(s) from current device class            (&#8216;*&#8217; for all position)</li>
+<li><strong>target_position</strong> (<em>str, int, float, iterable.</em>) &#8211; position from target device class.            (&#8216;*&#8217; for all position)</li>
 <li><strong>target</strong> &#8211; target device class</li>
 </ul>
 </td>
@@ -442,7 +434,7 @@ between PC and Device.</p>
 
 <dl class="exception">
 <dt id="enuActor.Devices.Error.DeviceErr">
-<em class="property">exception </em><tt class="descclassname">enuActor.Devices.Error.</tt><tt class="descname">DeviceErr</tt><big>(</big><em>device</em>, <em>reason</em>, <em>lvl=1</em><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/Error.html#DeviceErr"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.Error.DeviceErr" title="Permalink to this definition">¶</a></dt>
+<em class="property">exception </em><tt class="descclassname">enuActor.Devices.Error.</tt><tt class="descname">DeviceErr</tt><big>(</big><em>reason</em>, <em>device='device'</em>, <em>lvl=1</em><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/Error.html#DeviceErr"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.Error.DeviceErr" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#enuActor.Devices.Error.RuleError" title="enuActor.Devices.Error.RuleError"><tt class="xref py py-class docutils literal"><span class="pre">enuActor.Devices.Error.RuleError</span></tt></a></p>
 <p>DeviceErr are all the error related to the device and controller.
 When a DeviceErr occures the current state of the FSM go to fail.</p>
@@ -527,7 +519,7 @@ When a DeviceErr occures the current state of the FSM go to fail.</p>
 <p class="first admonition-title">Note</p>
 <p class="last">Default parameters are located in                <em>cfg/devices_parameters.cfg</em> file. This function only                change default parameters of session.</p>
 </div>
-<div class="admonition-todo admonition" id="index-1">
+<div class="admonition-todo admonition" id="index-0">
 <p class="first admonition-title">Todo</p>
 <p class="last">Check values and types</p>
 </div>
@@ -842,42 +834,42 @@ When a DeviceErr occures the current state of the FSM go to fail.</p>
 </map>
 </p>
 <p>Shutter is open or close ...</p>
-<div class="admonition-todo admonition" id="index-2">
+<div class="admonition-todo admonition" id="index-1">
 <p class="first admonition-title">Todo</p>
 <p class="last">add more details</p>
 </div>
 </div>
 <div class="section" id="bia">
 <h4>BIA<a class="headerlink" href="#bia" title="Permalink to this headline">¶</a></h4>
-<div class="admonition-todo admonition" id="index-3">
+<div class="admonition-todo admonition" id="index-2">
 <p class="first admonition-title">Todo</p>
 <p class="last">add more details</p>
 </div>
 </div>
 <div class="section" id="rexm">
 <h4>REXM<a class="headerlink" href="#rexm" title="Permalink to this headline">¶</a></h4>
-<div class="admonition-todo admonition" id="index-4">
+<div class="admonition-todo admonition" id="index-3">
 <p class="first admonition-title">Todo</p>
 <p class="last">add more details</p>
 </div>
 </div>
 <div class="section" id="iisource">
 <h4>IISOURCE<a class="headerlink" href="#iisource" title="Permalink to this headline">¶</a></h4>
-<div class="admonition-todo admonition" id="index-5">
+<div class="admonition-todo admonition" id="index-4">
 <p class="first admonition-title">Todo</p>
 <p class="last">add more details</p>
 </div>
 </div>
 <div class="section" id="enu">
 <h4>ENU<a class="headerlink" href="#enu" title="Permalink to this headline">¶</a></h4>
-<div class="admonition-todo admonition" id="index-6">
+<div class="admonition-todo admonition" id="index-5">
 <p class="first admonition-title">Todo</p>
 <p class="last">add more details</p>
 </div>
 </div>
 <div class="section" id="fpsa">
 <h4>FPSA<a class="headerlink" href="#fpsa" title="Permalink to this headline">¶</a></h4>
-<div class="admonition-todo admonition" id="index-7">
+<div class="admonition-todo admonition" id="index-6">
 <p class="first admonition-title">Todo</p>
 <p class="last">add more details</p>
 </div>

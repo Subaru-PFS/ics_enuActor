@@ -99,7 +99,7 @@
 
 <span class="sd">        Attributes:</span>
 <span class="sd">         * link : ``TTL``, ``SERIAL`` or ``ETHERNET``</span>
-<span class="sd">         * ser : serial object from serial module @todo: change into link object</span>
+<span class="sd">         * connection : object for link connection</span>
 <span class="sd">         * mode : ``operation`` or ``simulated``</span>
 <span class="sd">         * cfg_path : path of the communication and parameter config files\</span>
 <span class="sd">                 It should contains *devices_communication.cfg* and\</span>
@@ -110,7 +110,7 @@
             <span class="s">&#39;communication&#39;</span><span class="p">:</span> <span class="s">&#39;devices_communication.cfg&#39;</span><span class="p">,</span>
             <span class="s">&#39;parameters&#39;</span><span class="p">:</span> <span class="s">&#39;devices_parameters.cfg&#39;</span>
             <span class="p">}</span>
-    <span class="n">available_link</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;TTL&#39;</span><span class="p">,</span> <span class="s">&#39;SERIAL&#39;</span><span class="p">,</span> <span class="s">&#39;ETHERNET&#39;</span><span class="p">]</span>
+    <span class="n">available_link</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;TTL&#39;</span><span class="p">,</span> <span class="s">&#39;SERIAL&#39;</span><span class="p">,</span> <span class="s">&#39;ETHERNET&#39;</span><span class="p">,</span> <span class="s">&#39;NOTSPECIFIED&#39;</span><span class="p">]</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">actor</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">cfg_path</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
         <span class="n">QThread</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">actor</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="p">)</span>
@@ -122,17 +122,18 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_param</span> <span class="o">=</span> <span class="bp">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_cfg</span> <span class="o">=</span> <span class="bp">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">link</span> <span class="o">=</span> <span class="bp">None</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">ser</span> <span class="o">=</span> <span class="bp">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">connection</span> <span class="o">=</span> <span class="bp">None</span>
 
         <span class="c"># Device attributes</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">started</span> <span class="o">=</span> <span class="bp">False</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">=</span> <span class="s">&quot;operation&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">lastActionCmd</span> <span class="o">=</span> <span class="bp">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">MAP</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">MAP</span><span class="p">)</span> <span class="c"># referenced</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">MAP</span><span class="p">[</span><span class="s">&#39;callbacks&#39;</span><span class="p">][</span><span class="s">&#39;oninit&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">initialise</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">MAP</span><span class="p">[</span><span class="s">&#39;callbacks&#39;</span><span class="p">][</span><span class="s">&#39;onload&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">e</span><span class="p">:</span>\
             <span class="bp">self</span><span class="o">.</span><span class="n">load_cfg</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fsm</span> <span class="o">=</span> <span class="n">Fysom</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">MAP</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
 
 <div class="viewcode-block" id="Device.handleTimeout"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.Device.handleTimeout">[docs]</a>    <span class="k">def</span> <span class="nf">handleTimeout</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -159,7 +160,6 @@
 
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">started</span> <span class="o">=</span> <span class="bp">True</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">fsm</span> <span class="o">=</span> <span class="n">Fysom</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">MAP</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">fsm</span><span class="o">.</span><span class="n">startup</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">fsm</span><span class="o">.</span><span class="n">onchangestate</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">printstateonchange</span>
 </div>
@@ -174,16 +174,14 @@
 <div class="viewcode-block" id="Device.initialise"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.Device.initialise">[docs]</a>    <span class="k">def</span> <span class="nf">initialise</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Overriden by subclasses:</span>
 <span class="sd">         * (Re)Load parameters from config files</span>
-<span class="sd">         * Check communication</span>
-
-<span class="sd">        .. todo:: Add load cfg file routine</span>
+<span class="sd">         * Check communication &amp; status</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">load_cfg</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">handleTimeout</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">check_status</span><span class="p">()</span>
 </div>
 <div class="viewcode-block" id="Device.getStatus"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.Device.getStatus">[docs]</a>    <span class="k">def</span> <span class="nf">getStatus</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;return status of shutter (FSM)</span>
+        <span class="sd">&quot;&quot;&quot;return status of Device (FSM)</span>
 
 <span class="sd">        :returns: ``&#39;LOADED&#39;``, ``&#39;IDLE&#39;``, ``&#39;BUSY&#39;``, ...</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -200,7 +198,8 @@
     <span class="c">############################</span>
 </div>
 <div class="viewcode-block" id="Device.load_cfg"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.Device.load_cfg">[docs]</a>    <span class="k">def</span> <span class="nf">load_cfg</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Load configuration file of the device.</span>
+        <span class="sd">&quot;&quot;&quot;Load configuration file of the device:</span>
+<span class="sd">        * load data file to self._cfg ad self._param</span>
 
 <span class="sd">        :param device: name of the device (``&#39;SHUTTER&#39;``, ``&#39;BIA&#39;``, ...)</span>
 <span class="sd">        :type device: str.</span>
@@ -226,7 +225,7 @@
                     <span class="s">&quot;</span><span class="si">%s</span><span class="s"> is not defined in LINK parameter section&quot;</span> <span class="o">%</span> <span class="n">device</span><span class="p">)</span>
         <span class="k">elif</span> <span class="n">links</span><span class="p">[</span><span class="n">device</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">Device</span><span class="o">.</span><span class="n">available_link</span><span class="p">:</span>
             <span class="k">raise</span> <span class="n">Error</span><span class="o">.</span><span class="n">CfgFileErr</span><span class="p">(</span>\
-                    <span class="s">&quot;</span><span class="si">%s</span><span class="s"> is not an available LINK&quot;</span> <span class="o">%</span> <span class="n">links</span><span class="p">[</span><span class="n">device</span><span class="p">])</span>
+                    <span class="s">&quot;</span><span class="si">%s</span><span class="s"> is not an available LINK&quot;</span> <span class="o">%</span> <span class="n">links</span><span class="p">[</span><span class="n">device</span><span class="o">.</span><span class="n">lower</span><span class="p">()])</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="n">device</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">link</span> <span class="o">=</span> <span class="n">links</span><span class="p">[</span><span class="n">device</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span>
@@ -284,7 +283,9 @@
         <span class="k">print</span> <span class="s">&quot;[Simulation] </span><span class="si">%s</span><span class="s">: start ttl&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">device</span>
 </div>
 <div class="viewcode-block" id="SimulationDevice.sim_send"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.SimulationDevice.sim_send">[docs]</a>    <span class="k">def</span> <span class="nf">sim_send</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_buff</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
-        <span class="k">print</span> <span class="s">&quot;[Simulation] </span><span class="si">%s</span><span class="s">: sending &#39;</span><span class="si">%s</span><span class="s">&#39;&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">input_buff</span><span class="p">)</span>
+        <span class="kn">import</span> <span class="nn">sys</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&quot;[Simulation] </span><span class="si">%s</span><span class="s">: sending &#39;</span><span class="si">%s</span><span class="s">&#39;&quot;</span> <span class="o">%</span>
+                <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">input_buff</span><span class="p">))</span>
 </div>
 <div class="viewcode-block" id="SimulationDevice.sim_check_status"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.SimulationDevice.sim_check_status">[docs]</a>    <span class="k">def</span> <span class="nf">sim_check_status</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="c">#print &quot;[Simulation] %s: checking status&quot; % self.device</span>
@@ -319,9 +320,6 @@
 
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">load_cfg</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s">&quot;simulated&quot;</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">startFSM</span><span class="p">()</span>
-            <span class="k">print</span> <span class="s">&quot;[simulated]&quot;</span>
         <span class="c"># Load parameter link</span>
         <span class="k">if</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&#39;device&#39;</span><span class="p">):</span>
             <span class="k">if</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&#39;configFile&#39;</span><span class="p">):</span>
@@ -331,15 +329,16 @@
         <span class="c"># Start communication</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">link</span> <span class="o">==</span> <span class="s">&#39;SERIAL&#39;</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&#39;startCmd&#39;</span><span class="p">):</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">ser</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">start_serial</span><span class="p">(</span><span class="n">kwargs</span><span class="p">[</span><span class="s">&#39;startCmd&#39;</span><span class="p">])</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">connection</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">start_serial</span><span class="p">(</span><span class="n">kwargs</span><span class="p">[</span><span class="s">&#39;startCmd&#39;</span><span class="p">])</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">ser</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">start_serial</span><span class="p">()</span>
-            <span class="c">#self.connection = self.ser #TODO: to be changed</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">connection</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">start_serial</span><span class="p">()</span>
+                <span class="c"># check connection</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">check_status</span><span class="p">()</span>
         <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">link</span> <span class="o">==</span> <span class="s">&#39;ETHERNET&#39;</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">connection</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">start_ethernet</span><span class="p">()</span>
         <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">link</span> <span class="o">==</span> <span class="s">&#39;TTL&#39;</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">NotImplementedError</span>
-        <span class="k">else</span><span class="p">:</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">link</span> <span class="o">!=</span> <span class="s">&#39;NOTSPECIFIED&#39;</span><span class="p">:</span>
             <span class="k">raise</span> <span class="n">Error</span><span class="o">.</span><span class="n">CfgFileErr</span><span class="p">(</span><span class="s">&quot;LINK section error in config file :</span><span class="se">\n\</span>
 <span class="s">LINK: </span><span class="si">%s</span><span class="se">\n</span><span class="s">CfgFile: </span><span class="si">%s</span><span class="se">\n</span><span class="s"> &quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">link</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cfg</span><span class="p">))</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">startFSM</span><span class="p">()</span>
@@ -353,7 +352,7 @@
 
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="kn">import</span> <span class="nn">serial</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">ser</span> <span class="o">=</span> <span class="n">serial</span><span class="o">.</span><span class="n">Serial</span><span class="p">(</span>
+        <span class="n">connection</span> <span class="o">=</span> <span class="n">serial</span><span class="o">.</span><span class="n">Serial</span><span class="p">(</span>
             <span class="n">port</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cfg</span><span class="p">[</span><span class="s">&#39;port&#39;</span><span class="p">],</span>
             <span class="n">baudrate</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_cfg</span><span class="p">[</span><span class="s">&#39;baudrate&#39;</span><span class="p">]),</span>
             <span class="n">parity</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cfg</span><span class="p">[</span><span class="s">&#39;parity&#39;</span><span class="p">],</span>
@@ -362,13 +361,13 @@
             <span class="n">timeout</span> <span class="o">=</span> <span class="mi">1</span>
         <span class="p">)</span>
 
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ser</span><span class="o">.</span><span class="n">isOpen</span> <span class="ow">is</span> <span class="bp">False</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">ser</span><span class="o">.</span><span class="n">open</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">connection</span><span class="o">.</span><span class="n">isOpen</span> <span class="ow">is</span> <span class="bp">False</span><span class="p">:</span>
+            <span class="n">connection</span><span class="o">.</span><span class="n">open</span><span class="p">()</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="o">.</span><span class="mi">2</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">ser</span><span class="o">.</span><span class="n">flushInput</span><span class="p">()</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">ser</span><span class="o">.</span><span class="n">flushOutput</span><span class="p">()</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ser</span>
+            <span class="n">connection</span><span class="o">.</span><span class="n">flushInput</span><span class="p">()</span>
+            <span class="n">connection</span><span class="o">.</span><span class="n">flushOutput</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">connection</span>
 </div>
 <div class="viewcode-block" id="OperationDevice.op_start_ethernet"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.OperationDevice.op_start_ethernet">[docs]</a>    <span class="k">def</span> <span class="nf">op_start_ethernet</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;@todo: Docstring for start_ethernet.</span>
@@ -409,13 +408,18 @@
         <span class="n">buff</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">link</span> <span class="o">==</span> <span class="s">&#39;SERIAL&#39;</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">input_buff</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
-                <span class="k">try</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">ser</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">input_buff</span><span class="p">)</span>
-                <span class="k">except</span> <span class="n">serial</span><span class="o">.</span><span class="n">SerialException</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
-                    <span class="k">raise</span> <span class="n">Error</span><span class="o">.</span><span class="n">CommErr</span><span class="p">(</span><span class="s">&quot;[</span><span class="si">%s</span><span class="s">, </span><span class="si">%s</span><span class="s">]&quot;</span><span class="o">%</span> <span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">errno</span><span class="p">,</span> <span class="n">e</span><span class="o">.</span><span class="n">message</span><span class="p">))</span>
-                <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.3</span><span class="p">)</span>
-                <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">ser</span><span class="o">.</span><span class="n">inWaiting</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-                    <span class="n">buff</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ser</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">cmpt</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="k">while</span> <span class="n">buff</span> <span class="o">==</span> <span class="s">&#39;&#39;</span> <span class="ow">and</span> <span class="n">cmpt</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">:</span>
+                    <span class="c"># try 3 times if no response</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">connection</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">input_buff</span><span class="p">)</span>
+                    <span class="k">except</span> <span class="n">serial</span><span class="o">.</span><span class="n">SerialException</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="n">Error</span><span class="o">.</span><span class="n">CommErr</span><span class="p">(</span><span class="s">&quot;[</span><span class="si">%s</span><span class="s">, </span><span class="si">%s</span><span class="s">]&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">errno</span><span class="p">,</span> <span class="n">e</span><span class="o">.</span><span class="n">message</span><span class="p">))</span>
+                    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.3</span><span class="p">)</span>
+                    <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">connection</span><span class="o">.</span><span class="n">inWaiting</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="n">buff</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">connection</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+                    <span class="k">print</span> <span class="s">&quot;trying again (</span><span class="si">%i</span><span class="s">)...&quot;</span> <span class="o">%</span> <span class="n">cmpt</span>
+                    <span class="n">cmpt</span> <span class="o">+=</span> <span class="mi">1</span>
                 <span class="k">if</span> <span class="n">buff</span> <span class="o">==</span> <span class="s">&#39;&#39;</span><span class="p">:</span>
                     <span class="k">raise</span> <span class="n">Error</span><span class="o">.</span><span class="n">CommErr</span><span class="p">(</span><span class="s">&quot;No response from serial port&quot;</span><span class="p">)</span>
                 <span class="k">else</span><span class="p">:</span>
@@ -494,9 +498,11 @@
 <span class="sd">    .. note:: Choice of iterable is exclusive either\</span>
 <span class="sd">    ``self_position`` or ``target_position``</span>
 
-<span class="sd">    :param self_position: position(s) from current device class (&#39;*&#39; for all position)</span>
+<span class="sd">    :param self_position: position(s) from current device class\</span>
+<span class="sd">            (&#39;*&#39; for all position)</span>
 <span class="sd">    :type self_position: str, int, float, iterable (list, tuple,...)</span>
-<span class="sd">    :param target_position: position from target device class. (&#39;*&#39; for all position)</span>
+<span class="sd">    :param target_position: position from target device class.\</span>
+<span class="sd">            (&#39;*&#39; for all position)</span>
 <span class="sd">    :type target_position: str, int, float, iterable.</span>
 <span class="sd">    :param target: target device class</span>
 
@@ -513,7 +519,7 @@
                     <span class="n">condition2</span> <span class="o">=</span> <span class="n">target_currPos</span> <span class="o">==</span> <span class="n">target_position</span>
                 <span class="k">for</span> <span class="n">position</span> <span class="ow">in</span> <span class="n">self_position</span><span class="p">:</span>
                     <span class="k">if</span> <span class="n">position</span> <span class="ow">in</span> <span class="n">args</span> <span class="ow">and</span> <span class="n">condition2</span><span class="p">:</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">fail</span><span class="p">(</span><span class="s">&quot;WTF !!!!&quot;</span><span class="p">)</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">fail</span><span class="p">(</span><span class="s">&quot;Interlock !!!&quot;</span><span class="p">)</span>
                         <span class="k">return</span>
             <span class="k">elif</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">target_position</span><span class="p">,</span> <span class="s">&#39;__iter__&#39;</span><span class="p">):</span>
                 <span class="c">#target_position is iterable</span>
@@ -521,11 +527,11 @@
                     <span class="n">condition1</span> <span class="o">=</span> <span class="n">self_position</span> <span class="ow">in</span> <span class="n">args</span>
                 <span class="k">for</span> <span class="n">position</span> <span class="ow">in</span> <span class="n">target_position</span><span class="p">:</span>
                     <span class="k">if</span> <span class="n">condition1</span> <span class="ow">and</span> <span class="n">target_currPos</span> <span class="o">==</span> <span class="n">position</span><span class="p">:</span>
-                                <span class="bp">self</span><span class="o">.</span><span class="n">fail</span><span class="p">(</span><span class="s">&quot;WTF !!!!&quot;</span><span class="p">)</span>
-                                <span class="k">return</span> <span class="mi">0</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">fail</span><span class="p">(</span><span class="s">&quot;Interlock !!!&quot;</span><span class="p">)</span>
+                                <span class="k">return</span>
             <span class="k">elif</span> <span class="n">condition1</span> <span class="ow">and</span> <span class="n">target_currPos</span> <span class="o">==</span> <span class="n">target_position</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">fail</span><span class="p">(</span><span class="s">&quot;WTF !!!!&quot;</span><span class="p">)</span>
-                <span class="k">return</span> <span class="mi">0</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">fail</span><span class="p">(</span><span class="s">&quot;Interlock !!!&quot;</span><span class="p">)</span>
+                <span class="k">return</span>
             <span class="k">return</span> <span class="n">func</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">wrapped_func</span>
     <span class="k">return</span> <span class="n">wrapper</span></div>

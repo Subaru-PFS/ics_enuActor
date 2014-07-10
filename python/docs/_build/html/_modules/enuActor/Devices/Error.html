@@ -107,15 +107,16 @@
     <span class="sd">&quot;&quot;&quot; DeviceErr are all the error related to the device and controller.</span>
 <span class="sd">        When a DeviceErr occures the current state of the FSM go to fail.&quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">device</span><span class="p">,</span> <span class="n">reason</span><span class="p">,</span> <span class="n">lvl</span><span class="o">=</span><span class="n">RuleError</span><span class="o">.</span><span class="n">PRIORITY_DEFAULT</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">reason</span><span class="p">,</span> <span class="n">device</span> <span class="o">=</span> <span class="s">&#39;device&#39;</span><span class="p">,</span> <span class="n">lvl</span><span class="o">=</span><span class="n">RuleError</span><span class="o">.</span><span class="n">PRIORITY_DEFAULT</span><span class="p">):</span>
         <span class="n">RuleError</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">reason</span><span class="p">,</span> <span class="n">lvl</span><span class="o">=</span><span class="n">RuleError</span><span class="o">.</span><span class="n">PRIORITY_DEFAULT</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="n">device</span>
 
     <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span>  <span class="s">&quot;[{} {}] &#39;{}&#39;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+        <span class="k">return</span>  <span class="s">&quot;[</span><span class="si">%s</span><span class="s"> </span><span class="si">%s</span><span class="s">] &#39;</span><span class="si">%s</span><span class="s">&#39;&quot;</span> <span class="o">%</span> <span class="p">(</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">,</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_priority</span><span class="p">,</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_reason</span><span class="p">)</span>
-</pre></div></div>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_reason</span><span class="p">)</span></div>
+</pre></div>
 
           </div>
         </div>
