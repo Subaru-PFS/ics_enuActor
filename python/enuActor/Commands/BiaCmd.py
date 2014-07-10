@@ -21,7 +21,8 @@ class BiaCmd(object):
             ('bia', 'on strobe <freq> <dur>', self.strobe_freq_dur),
             ('bia', 'on strobe <freq> <dur> <int>', self.strobe_freq_dur_int),
             ('bia', 'on strobe', self.strobeByDefault),
-            ('bia', '@(off|load|busy|idle|SafeStop|fail|init)', self.set_state),
+            ('bia', '@(off|load|busy|idle|SafeStop|fail)', self.set_state),
+            ('bia', 'init', self.init),
             ('bia', 'SetConfig <freq> <dur> <int>', self.setconfig),
             ('bia', 'stop',
              lambda x : self.actor.bia.stop()),
@@ -34,6 +35,9 @@ class BiaCmd(object):
                 keys.Key("dur", types.Int(), help="Duration for strobe mode"),
                 keys.Key("int", types.Int(), help="Intensity of light"),
                                         )
+
+    def init(self, cmd):
+        self.actor.bia.initialise()
 
     def status(self, cmd):
         try:

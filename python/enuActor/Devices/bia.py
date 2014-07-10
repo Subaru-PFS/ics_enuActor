@@ -31,6 +31,7 @@ class Bia(DualModeDevice):
     #  About Device functions  #
     ############################
 
+    @transition('init', 'idle')
     def initialise(self):
         """Initialise Bia :
          * Load *cfg/device_parameters.cfg* file

@@ -37,9 +37,9 @@ class SlitCmd(object):
             ('slit', 'magnification', self.getMagnification),
             ('slit', 'focus', self.goFocus),
             ('slit', '<focus>', self.goFocus),
-            ('slit', '@(off|load|busy|idle|SafeStop|fail|init)',
+            ('slit', '@(off|load|busy|idle|SafeStop|fail)',
                 self.set_state),
-            #('slit', 'init', self.init),
+            ('slit', 'init', self.init),
             ('slit', 'stop',
              lambda x : self.actor.slit.stop()),# TODO
                 ]
@@ -62,8 +62,8 @@ class SlitCmd(object):
                     help="magnification value"),
                                         )
 
-    #def init(self, cmd):
-        #self.actor.slit.initialise()
+    def init(self, cmd):
+        self.actor.slit.initialise()
 
     def test(self, cmd):
         print cmd.cmd.keywords

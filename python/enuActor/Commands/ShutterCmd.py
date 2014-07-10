@@ -19,7 +19,8 @@ class ShutterCmd(object):
             ('shutter', '@(simulated|operation)', self.set_mode),
             ('shutter', '@(open|close|reset) @(red|blue)', self.shutter),
             ('shutter', '@(open|close|reset)', self.shutter),
-            ('shutter', '@(off|load|busy|idle|SafeStop|fail|init)', self.set_state),
+            ('shutter', '@(off|load|busy|idle|SafeStop|fail)', self.set_state),
+            ('shutter', 'init', self.init),
             ('shutter', 'stop',
              lambda x : self.actor.shutter.stop()),
         ]
@@ -28,6 +29,9 @@ class ShutterCmd(object):
         self.keys = keys.KeysDictionary("shutter_shutter", (1, 1),
                 keys.Key("cmd", types.String(), help="Command ascii"),
                                         )
+
+    def init(self, cmd):
+        self.actor.shutter.initialise()
 
     def status(self, cmd):
         try:

@@ -43,7 +43,7 @@ class Slit(DualModeDevice):
         self._focus_value = None
         self._home = None
 
-    #@transition('init', 'idle')
+    @transition('init', 'idle')
     def initialise(self):
         """ Initialise shutter.
         Here just trigger the FSM to INITIALISING and IDLE
@@ -56,15 +56,18 @@ class Slit(DualModeDevice):
             return
 
         if self.socketId == -1:
+            self.fsm.failed()
             raise Error.CommErr('Connection to Hexapod failed,\
                     Check Ip & port')
         self._kill()
+        print "initialising hxp ..."
         self._initialize()
+        print "seeking home ..."
         self._homeSearch()
         self.setHome(self._home)
+        print "going to home ..."
         self._hexapodMoveAbsolute(*self._home)
         self.check_status()
-        print 'init done!'
 
     #############
     #  HEXAPOD  #

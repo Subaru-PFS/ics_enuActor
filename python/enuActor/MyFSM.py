@@ -243,20 +243,20 @@ def transition(during_state=None, after_state=None):
     """
     def wrapper(func):
         from Devices import Error
-        def wrapped_func(self, *args):
+        def wrapped_func(self, *args, **kwargs):
             if during_state is not None:
                 self.fsm.trigger(during_state)
             elif after_state is None:
                 raise Exception("No args:\
 at least 1 arg during_state or after_state.")
             try:
-                res = func(self, *args)
+                res = func(self, *args, **kwargs)
                 if after_state is not None:
                     self.fsm.trigger(after_state)
                 return res
             except Error.DeviceErr, e:
                 self.fsm.fail()
-                raise e
+                raise "transition decorator:%s" % e
         return wrapped_func
     return wrapper
 

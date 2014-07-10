@@ -70,7 +70,6 @@ class Device(QThread):
         self.mode = "operation"
         self.lastActionCmd = None
         self.MAP = copy.deepcopy(MAP) # referenced
-        self.MAP['callbacks']['oninit'] = lambda e: self.initialise()
         self.MAP['callbacks']['onload'] = lambda e:\
             self.load_cfg(self.__class__.__name__)
         self.fsm = Fysom(self.MAP)
@@ -86,7 +85,7 @@ class Device(QThread):
         """
         if self.started:
             self.check_status()
-            if self.fsm.current in ['INITIALISING', 'BUSY']:
+            if self.fsm.current in ['BUSY']:
                 self.fsm.idle()
             elif self.fsm.current == 'none':
                 self.fsm.load()
@@ -111,6 +110,7 @@ class Device(QThread):
         """
         print 'state :%s %s' % (self.device, e.dst)
 
+    @transition('init', 'idle')
     def initialise(self):
         """Overriden by subclasses:
          * Check communication & status
