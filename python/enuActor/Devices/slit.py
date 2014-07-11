@@ -51,14 +51,6 @@ class Slit(DualModeDevice):
         :returns: @todo
         :raises: @todo
         """
-        if self.mode == 'simulated':
-            super(Slit, self).initialise()
-            return
-
-        if self.socketId == -1:
-            self.fsm.failed()
-            raise Error.CommErr('Connection to Hexapod failed,\
-                    Check Ip & port')
         self._kill()
         print "initialising hxp ..."
         self._initialize()
@@ -106,7 +98,8 @@ class Slit(DualModeDevice):
         if reference == 'absolute':
             self._hexapodMoveAbsolute(*posCoord)
         elif reference == 'relative' :
-           self._hexapodMoveIncremental('Tool', *posCoord)
+            self._hexapodMoveIncremental('Tool', *posCoord)
+        self.lastActionCmd = posCoord
 
     ############################
     #  DITHER & THROUGH FOCUS  #
@@ -127,6 +120,7 @@ class Slit(DualModeDevice):
         axis = np.array(self.dither_axis + [0] * 3)
         dithering = length * axis * self.magnification
         self._hexapodMoveIncremental('Work', *dithering)
+        self.lastActionCmd = [sum(x) for x in zip(dithering , self.currPos)]
 
     @transition('busy')
     def focus(self, length):
@@ -139,6 +133,7 @@ class Slit(DualModeDevice):
         axis = np.array(self.focus_axis + [0] * 3)
         through_focus = axis * length
         self._hexapodMoveIncremental('Work', *through_focus)
+        self.lastActionCmd = [sum(x) for x in zip(through_focus , self.currPos)]
 
     def magnification():
         """Change magnification.
@@ -238,7 +233,12 @@ is not a direction")
     ############
     #  DEVICE  #
     ############
-    def op_start_communication(self):
+    def OnLoad(self):
+        """Override callback of load transition (FSM):
+            load all parameter from cfg file
+        :raises: :class:`~.Error.CfgFileError`
+
+        """
         self.load_cfg(self.device)
         try:
             self.dither_axis = map(float, self._param['dither_axis'].split(','))
@@ -265,6 +265,8 @@ is not a direction")
         except Exception, e:
             raise Error.CfgFileErr("Wrong value home (%s)" % e)
 
+    def op_start_communication(self):
+        print "Connecting to HXP..."
         self.myxps = hxp_drivers.XPS()
         self.socketId = self.myxps.TCP_ConnectToServer(
             self._cfg['ip'],
@@ -286,80 +288,112 @@ is not a direction")
             status_code = self._getStatus()
             status = self._getStatusString(int(status_code))
             # check position
-            self.currPos = '[x, y, z, u, v, w] = %s' %\
-                    self._getCurrentPosition()
+            self.currPos = self._getCurrentPosition()
 
     #############
     #  Parsers  #
     #############
     def _getCurrentPosition(self):
-        return self.errorChecker(
-                self.myxps.GroupPositionCurrentGet,
-                self.socketId,
-                self.groupName,
-                6)
+        if self.mode == 'operation':
+            return self.errorChecker(
+                    self.myxps.GroupPositionCurrentGet,
+                    self.socketId,
+                    self.groupName,
+                    6)
+        else:
+            return self.currPos
 
     def _getStatus(self):
-        return self.errorChecker(
-                self.myxps.GroupStatusGet,
-                self.socketId,
-                self.groupName)[0]
+        if self.mode == 'operation':
+            return self.errorChecker(
+                    self.myxps.GroupStatusGet,
+                    self.socketId,
+                    self.groupName)[0]
+        else:
+            return NotImplemented
 
     def _getStatusString(self, code):
-        return self.errorChecker(
-                self.myxps.GroupStatusStringGet,
-                self.socketId,
-                code)
+        if self.mode == 'operation':
+            return self.errorChecker(
+                    self.myxps.GroupStatusStringGet,
+                    self.socketId,
+                    code)
+        else:
+            return NotImplemented
 
     def _kill(self):
-        return self.errorChecker(
-                self.myxps.GroupKill,
-                self.socketId,
-                self.groupName)
+        if self.mode == 'operation':
+            return self.errorChecker(
+                    self.myxps.GroupKill,
+                    self.socketId,
+                    self.groupName)
 
     def _initialize(self):
-        return self.errorChecker(
-                self.myxps.GroupInitialize,
-                self.socketId,
-                self.groupName)
+        if self.mode == 'operation':
+            return self.errorChecker(
+                    self.myxps.GroupInitialize,
+                    self.socketId,
+                    self.groupName)
 
     def _homeSearch(self):
-        return self.errorChecker(
-                self.myxps.GroupHomeSearch,
-                self.socketId,
-                self.groupName)
+        if self.mode == 'operation':
+            return self.errorChecker(
+                    self.myxps.GroupHomeSearch,
+                    self.socketId,
+                    self.groupName)
 
     def _hexapodCoordinateSytemGet(self, coordSystem):
-        return self.errorChecker(
-                self.myxps.HexapodCoordinateSystemGet,
-                self.socketId,
-                self.groupName,
-                coordSystem)
+        if self.mode == 'operation':
+            return self.errorChecker(
+                    self.myxps.HexapodCoordinateSystemGet,
+                    self.socketId,
+                    self.groupName,
+                    coordSystem)
+        else:
+            return self._home # TODO: take care of reference : 'Work' or 'Base'
 
     def _hexapodCoordinateSytemSet(self, coordSystem, x, y, z, u, v, w):
-        return self.errorChecker(
-                self.myxps.HexapodCoordinateSystemSet,
-                self.socketId,
-                self.groupName,
-                coordSystem,
-                x, y, z, u, v, w)
+        if self.mode == 'operation':
+            return self.errorChecker(
+                    self.myxps.HexapodCoordinateSystemSet,
+                    self.socketId,
+                    self.groupName,
+                    coordSystem,
+                    x, y, z, u, v, w)
+        self._home = [x, y, z, u, v, w]
 
     def _hexapodMoveAbsolute(self, x, y, z, u, v, w):
-        """ ..note: coordSystem not specified because has to be 'Work'"""
-        return self.errorChecker(
-                self.myxps.HexapodMoveAbsolute,
-                self.socketId,
-                self.groupName,
-                'Work',
-                x, y, z, u, v, w)
+        """
+        ..todo: Add algorithm for simulation mode
+        ..note: coordSystem not specified because has to be 'Work'
+
+        """
+        if self.mode == 'operation':
+            return self.errorChecker(
+                    self.myxps.HexapodMoveAbsolute,
+                    self.socketId,
+                    self.groupName,
+                    'Work',
+                    x, y, z, u, v, w)
+        else:
+            self.currPos = [x, y, z, u, v, w]
 
     def _hexapodMoveIncremental(self, coordSystem, x, y, z, u, v, w):
-        return self.errorChecker(
-                self.myxps.HexapodMoveIncremental,
-                self.socketId,
-                self.groupName,
-                coordSystem,
-                x, y, z, u, v, w)
+        """
+        ..todo: Add algorithm for simulation mode
+
+        """
+        if self.mode == 'operation':
+            return self.errorChecker(
+                    self.myxps.HexapodMoveIncremental,
+                    self.socketId,
+                    self.groupName,
+                    coordSystem,
+                    x, y, z, u, v, w)
+        else:
+            # TODO: add rotation algo
+            self.currPos =\
+                    [sum(x) for x in zip(self.currPos, [x, y, z, u, v, w])]
 
     def errorChecker(self, func, *args):
         """ Kind of decorator who check error after routine.

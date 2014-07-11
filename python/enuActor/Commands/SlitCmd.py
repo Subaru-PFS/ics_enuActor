@@ -126,7 +126,8 @@ class SlitCmd(object):
         V = cmd.cmd.keywords["V"].values[0]
         W = cmd.cmd.keywords["W"].values[0]
         try:
-            self.actor.slit.setHome(posCoord = [X, Y, Z, U, V, W])
+            self.actor.slit.setHome(posCoord =
+                    map(float, [X, Y, Z, U, V, W]))
         except Exception, e:
             cmd.error("text= '%s'" % e)
         else:
@@ -150,7 +151,8 @@ class SlitCmd(object):
         V = cmd.cmd.keywords["V"].values[0]
         W = cmd.cmd.keywords["W"].values[0]
         try:
-            self.actor.slit.moveTo(reference, posCoord = [X, Y, Z, U, V, W])
+            self.actor.slit.moveTo(reference, posCoord =
+                    map(float, [X, Y, Z, U, V, W]))
         except Exception, e:
             cmd.error("text= '%s'" % e)
         else:

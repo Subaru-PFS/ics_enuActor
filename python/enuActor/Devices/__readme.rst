@@ -1,19 +1,19 @@
 """
- :RivCreateContent
+## :RivCreateContent
 * Contents:
 
   + 1 `Convention naming`_
   + 2 `The State Machine`_
   + 3 `The Devices`_
 
-    + 3.1 Device_
-    + 3.2 Error_
-    + 3.3 Shutter_
-    + 3.4 BIA_
-    + 3.5 REXM_
-    + 3.6 IISOURCE_
-    + 3.7 ENU_
-    + 3.8 FPSA_
+    + 3.1 Shutter_
+    + 3.2 BIA_
+    + 3.3 REXM_
+    + 3.4 IISOURCE_
+    + 3.5 ENU_
+    + 3.6 FPSA_
+
+
 
 Convention naming
 -----------------
@@ -122,3 +122,4 @@ FPSA
 .. todo:: add more details
 
 """
+

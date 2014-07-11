@@ -24,7 +24,7 @@ MAP = {
     {'name': 'idle', 'src': ['IDLE', 'INITIALISING', 'BUSY'],'dst': 'IDLE'},
     {'name': 'busy', 'src': ['BUSY', 'IDLE'], 'dst': 'BUSY'},
     {'name': 'off', 'src': 'LOADED', 'dst': 'SHUT_DOWN'},
-    {'name': 'fail','src': ['none', 'FAILED', 'LOADED', 'INITIALISING', 'IDLE', 'BUSY', 'SAFE_OFF'],
+    {'name': 'failed','src': ['none', 'FAILED', 'LOADED', 'INITIALISING', 'IDLE', 'BUSY', 'SAFE_OFF'],
     'dst': 'FAILED'},
     {'name': 'SafeStop', 'src': 'IDLE', 'dst': 'SAFE_OFF'},
     {'name': 'ShutDown', 'src': 'LOADED', 'dst': 'SHUT_DOWN'}
@@ -70,8 +70,7 @@ class Device(QThread):
         self.mode = "operation"
         self.lastActionCmd = None
         self.MAP = copy.deepcopy(MAP) # referenced
-        self.MAP['callbacks']['onload'] = lambda e:\
-            self.load_cfg(self.__class__.__name__)
+        self.MAP['callbacks']['onload'] = lambda e: self.OnLoad()
         self.fsm = Fysom(self.MAP)
         self.start()
 
@@ -117,6 +116,12 @@ class Device(QThread):
 
         """
         self.check_status()
+
+    def OnLoad(self):
+        """ Virtual callback method for FSM (should be overriden if used)
+
+        """
+        raise NotImplementedError
 
     def getStatus(self):
         """return status of Device (FSM)
@@ -224,6 +229,10 @@ class SimulationDevice(Device):
         import sys
         sys.stdout.write("[Simulation] %s: sending '%s'" %
                 (self.device, input_buff))
+
+    @transition('init', 'idle')
+    def sim_initialise(self):
+        self.load_cfg(self.__class__.__name__)
 
     def sim_check_status(self):
         #print "[Simulation] %s: checking status" % self.device
@@ -406,6 +415,10 @@ class DualModeDevice(OperationDevice, SimulationDevice):
                 'simulated': self.sim_check_status,
                 'operation': self.op_check_status   # be carefull here
                 }
+        #self._init_map = {
+                #'simulated': super(DualModeDevice, self).initialise,
+                #'operation': self.initialise
+                #}
 
     def start_communication(self, *args, **kwargs):
         self._start_communication_map[self.mode]()
@@ -424,6 +437,9 @@ class DualModeDevice(OperationDevice, SimulationDevice):
 
     def check_status(self):
         return self._check_status_map[self.mode]()
+
+    #def initialise(self):
+        #return self._init_map[self.mode]()
 
 
 #######################################################################
