@@ -78,8 +78,6 @@ class Shutter(DualModeDevice):
     def initialise(self):
         """ Initialise shutter.
         Here just trigger the FSM to INITIALISING and IDLE
-        :returns: @todo
-        :raises: @todo
 
         """
         self.load_cfg(self.device)
@@ -87,8 +85,6 @@ class Shutter(DualModeDevice):
 
     def terminal(self):
         """launch terminal connection to shutter device
-
-        :returns: @todo
 
         """
         return NotImplementedError

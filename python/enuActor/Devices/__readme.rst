@@ -1,74 +1,65 @@
 """
-## :RivCreateContent
+#: :RivCreateContent
+
 * Contents:
 
-  + 1 `Convention naming`_
-  + 2 `The State Machine`_
-  + 3 `The Devices`_
+  + 1 `The Devices`_
 
-    + 3.1 Shutter_
-    + 3.2 BIA_
-    + 3.3 REXM_
-    + 3.4 IISOURCE_
-    + 3.5 ENU_
-    + 3.6 FPSA_
-
-
-
-Convention naming
------------------
-
-The aim of this interface is to follow this naming convention at large:
-
-``enu <device> <command> [arguments [= value]]``
-
-Also others convention are defined like those for motorized devices:
- * ``enu <motorized-device> SetHome = [value|CURRENT]``: Set Home position to value or current position
- * ``enu <motorized-device> GetGome``: Get Home position
- * ``enu <motorized-device> GoHome`` : Go to Home
-
-Here are devices classified :
-
-=====    ========     ===========    =======     ====     =====
- NON MOTORIZED                 MOTORIZED
------------------     -----------------------------------------
-BIA      IISOURCE     Environment    Shutter     REXM     FPS
-=====    ========     ===========    =======     ====     =====
-todo       todo          todo          todo      todo     todo
-=====    ========     ===========    =======     ====     =====
-
-
-.. note:: Shutter is a motorized device but the SW device won't provide motorized features.
-
-The State Machine
------------------
-
-.. image:: ../../state_diagram.png
-   :alt: FSM should be here
-   :align: center
+    + 1.1 Device_
+    + 1.2 Error_
+    + 1.3 Shutter_
+    + 1.4 BIA_
+    + 1.5 REXM_
+    + 1.6 IISOURCE_
+    + 1.7 ENU_
+    + 1.8 FPSA_
 
 The Devices
 -----------
 
-.. inheritance-diagram:: enuActor.Devices.Device enuActor.Devices.shutter enuActor.Devices.rexm enuActor.Devices.Error
-    :parts: 1
+Devices package is composed of 1 module/class ``Device`` and 1 module/class per device (Shutter, Bia, Slit, ...).
+It also contain an error class.
 
 Device
 ^^^^^^
+
 .. inheritance-diagram:: enuActor.Devices.Device
     :parts: 1
 
-behaves like an interface for each device such as:
+**Device** class has been created to deal with general behaviour of a device (close to an abstract class).
+So each device class (:class:`~.bia.Bia`, :class:`~.shutter.Shutter`, ...) inherit them.
+Furthermore, as you can see above :class:`~.Device.Device` inherit from QThread and so possess all its properties
+such as a state machine attribute:
 
-Composed of different common parts for each device:
-    * FSM :
-        * Here the common state table is defined
-        * Start the FSM
-        * Diplay rule when state change
-        * Each device should implement an ``initialise`` method which correspod to the INITIALISATION state of the FSM.
-    * Communication handling :
-        * Load communication & parameter config file
-        * Send message following protocol
+.. topic:: State Machine
+
+   .. image:: ../../state_diagram.png
+      :alt: FSM should be here
+      :align: center
+
+So **Device** class will handle main functions:
+    + Communication:
+      - load communication and parameter config files
+      - start a communication (create a socket, start a serial communication, ...)
+      - check status (periodically check by sending data)
+      - send message following protocol
+    + State machine:
+      - create the common rule of the state machine
+      - display state on change
+      - callback on specific state
+
+.. todo:: Talk about :class:`~.Device.SimulationDevice` and :class:`~.Device.OperationDevice`
+
+Two different config files are defines in **cfg** directory.
+
++-----------------------------------------------------------------------+--------------------------------------------------------------------+
+| `devices_communication.cfg`                                           | `devices_parameters.cfg`                                           |
++-----------------------------------------------------------------------+--------------------------------------------------------------------+
+| .. literalinclude:: ../enuActor/Devices/cfg/devices_communication.cfg | .. literalinclude:: ../enuActor/Devices/cfg/devices_parameters.cfg |
+|     :language: sh                                                     |     :language: sh                                                  |
+|                                                                       |                                                                    |
++-----------------------------------------------------------------------+--------------------------------------------------------------------+
+
 
 Error
 ^^^^^
@@ -100,9 +91,6 @@ BIA
 
 REXM
 ^^^^
-
-.. inheritance-diagram:: enuActor.Devices.rexm
-    :parts: 1
 
 .. todo:: add more details
 

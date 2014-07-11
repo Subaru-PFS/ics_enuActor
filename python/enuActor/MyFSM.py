@@ -12,7 +12,6 @@ class FysomError(Exception):
 
 
 class Fysom(object):
-
     '''
         Wraps the complete finite state machine operations.
     '''
@@ -241,8 +240,10 @@ def transition(during_state=None, after_state=None):
     :raises: :class:`~.Error.DeviceErr`
 
     """
+    from functools import wraps
     def wrapper(func):
         from Devices import Error
+        @wraps(func) # for docstring
         def wrapped_func(self, *args, **kwargs):
             if during_state is not None:
                 self.fsm.trigger(during_state)

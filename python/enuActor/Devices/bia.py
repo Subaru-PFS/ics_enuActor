@@ -33,11 +33,9 @@ class Bia(DualModeDevice):
 
     @transition('init', 'idle')
     def initialise(self):
-        """Initialise Bia :
-         * Load *cfg/device_parameters.cfg* file
-         * ...todo
-        :returns: @todo
-        :raises: @todo
+        """Initialise Bia.
+
+        .. note:: Should be improved after getting hardware status
 
         """
         #TODO: to improve
@@ -54,10 +52,8 @@ class Bia(DualModeDevice):
         .. todo:: Check values and types
 
         :param freq: frequency of strobe mode in *Hz*
-        :param dur: duration of strobe mode in :math:`mu`s
+        :param dur: duration of strobe mode in :math:`\mu{}s`
         :param intensity: intensity of light
-        :returns: @todo
-        :raises: @todo
 
         """
         #TODO: check values and types

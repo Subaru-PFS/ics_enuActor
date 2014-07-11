@@ -1,4 +1,5 @@
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python
+# encoding: utf-8
 #
 # enuActor documentation build configuration file, created by
 # sphinx-quickstart on Mon May 26 08:50:28 2014.
@@ -11,11 +12,14 @@
 #
 # All configuration values have a default; values that are commented out
 # serve to show the default.
-
+import mock
 import sys
 import os
+
+#Theme modules
 import sphinx_bootstrap_theme
 import cloud_sptheme as csp
+import sphinx_rtd_theme
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -38,8 +42,20 @@ extensions = [
     'sphinx.ext.todo',
 ]
 
-
 todo_include_todos = True
+
+# Mock exclude import of extern packages
+MOCK_MODULES = ['actorcore', 'actorcore.Actor', 'actorcore.Actor.Actor',
+    'opscore', 'opscore.protocols',
+    'opscore.protocols.keys', 'opscore.protocols.types', 'opscore.utility',
+    'opscore.utility.qstr']
+
+for mod_name in MOCK_MODULES:
+    sys.modules[mod_name] = mock.Mock()
+
+
+# Exclude modules
+#exclude_patterns = ['_build', '**Devices**']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -109,22 +125,22 @@ pygments_style = 'sphinx'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'cloud'
+html_theme = 'bootstrap' #cloud
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-html_theme_options = {"roottarget": "index"}
+html_theme_options = {'bootswatch_theme': "cosmo"}#{"rightsidebar": True,}
 
 # Add any path that contain custom themes here, relative to this directory.
-html_theme_path = [csp.get_theme_dir()]# ,sphinx_bootstrap_theme.get_html_theme_path()]
+html_theme_path = sphinx_bootstrap_theme.get_html_theme_path()#[csp.get_theme_dir()]
 
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
-#html_title = None
+html_title = "ENtrance Unit actor"
 
 # A shorter title for the navigation bar.  Default is the same as html_title.
-#html_short_title = None
+#html_short_title = ENUActor
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
@@ -138,7 +154,7 @@ html_theme_path = [csp.get_theme_dir()]# ,sphinx_bootstrap_theme.get_html_theme_
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+#html_static_path = ['_static']
 
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied
@@ -337,3 +353,4 @@ epub_exclude_files = ['search.html']
 
 # If false, no index is generated.
 #epub_use_index = True
+

@@ -1,18 +1,16 @@
-
-
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>enuActor.Devices.Device &mdash; enuActor  documentation</title>
+    <title>enuActor.Devices.Device &mdash; ENtrance Unit actor</title>
     
-    <link rel="stylesheet" href="../../../_static/cloud.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/basic.css" type="text/css" />
     <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
-    <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Noticia+Text|Open+Sans|Droid+Sans+Mono" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/bootswatch-3.1.0/cosmo/bootstrap.min.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/bootstrap-sphinx.css" type="text/css" />
     
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
@@ -27,37 +25,95 @@
     <script type="text/javascript" src="../../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../../_static/doctools.js"></script>
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <script type="text/javascript" src="../../../_static/jquery.cookie.js"></script>
-    <script type="text/javascript" src="../../../_static/cloud.js"></script>
-    <link rel="top" title="enuActor  documentation" href="../../../index.html" />
-    <link rel="up" title="Module code" href="../../index.html" /> 
-        <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script type="text/javascript" src="../../../_static/js/jquery-1.11.0.min.js"></script>
+    <script type="text/javascript" src="../../../_static/js/jquery-fix.js"></script>
+    <script type="text/javascript" src="../../../_static/bootstrap-3.1.0/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="../../../_static/bootstrap-sphinx.js"></script>
+    <link rel="top" title="ENtrance Unit actor" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" />
+<meta charset='utf-8'>
+<meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1'>
+<meta name="apple-mobile-web-app-capable" content="yes">
+
   </head>
   <body>
-    <div class="relbar-top">
-        
-    <div class="related">
-      <h3>Navigation</h3>
-      <ul>
-        <li class="right" style="margin-right: 10px">
-          <a href="../../../genindex.html" title="General Index"
-             accesskey="I">index</a></li>
-        <li class="right" >
-          <a href="../../../py-modindex.html" title="Python Module Index"
-             >modules</a> &nbsp; &nbsp;</li>
-    <li><a href="../../../index.html">enuActor  documentation</a> &raquo;</li>
 
-          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
-      </ul>
-    </div>
-    </div>
-  
+  <div id="navbar" class="navbar navbar-default navbar-fixed-top">
+    <div class="container">
+      <div class="navbar-header">
+        <!-- .btn-navbar is used as the toggle for collapsed navbar content -->
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".nav-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" href="../../../index.html">
+          enuActor</a>
+        <span class="navbar-text navbar-version pull-left"><b></b></span>
+      </div>
 
-    <div class="document">
-      <div class="documentwrapper">
-        <div class="bodywrapper">
-          <div class="body">
+        <div class="collapse navbar-collapse nav-collapse">
+          <ul class="nav navbar-nav">
+            <li class="divider-vertical"></li>
             
+            
+              <li class="dropdown globaltoc-container">
+  <a role="button"
+     id="dLabelGlobalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="../../../index.html">Site <b class="caret"></b></a>
+  <ul class="dropdown-menu globaltoc"
+      role="menu"
+      aria-labelledby="dLabelGlobalToc"><ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../enuActor.html">enuActor package</a></li>
+</ul>
+</ul>
+</li>
+              
+                <li class="dropdown">
+  <a role="button"
+     id="dLabelLocalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="#">Page <b class="caret"></b></a>
+  <ul class="dropdown-menu localtoc"
+      role="menu"
+      aria-labelledby="dLabelLocalToc"></ul>
+</li>
+              
+            
+            
+              
+                
+              
+            
+            
+            
+            
+              <li class="hidden-sm"></li>
+            
+          </ul>
+
+          
+            
+<form class="navbar-form navbar-right" action="../../../search.html" method="get">
+ <div class="form-group">
+  <input type="text" name="q" class="form-control" placeholder="Search" />
+ </div>
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+          
+        </div>
+    </div>
+  </div>
+
+<div class="container">
+  <div class="row">
+    <div class="col-md-12">
+      
   <h1>Source code for enuActor.Devices.Device</h1><div class="highlight"><pre>
 <span class="c">#!/usr/bin/env python</span>
 <span class="c"># encoding: utf-8</span>
@@ -80,13 +136,13 @@
 <span class="n">MAP</span> <span class="o">=</span> <span class="p">{</span>
 <span class="s">&#39;initial&#39;</span> <span class="p">:</span> <span class="s">&#39;none&#39;</span><span class="p">,</span>
 <span class="s">&#39;events&#39;</span><span class="p">:</span> <span class="p">[</span>
-    <span class="p">{</span><span class="s">&#39;name&#39;</span><span class="p">:</span> <span class="s">&#39;load&#39;</span><span class="p">,</span> <span class="s">&#39;src&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s">&#39;IDLE&#39;</span><span class="p">,</span> <span class="s">&#39;FAIL&#39;</span><span class="p">,</span> <span class="s">&#39;none&#39;</span><span class="p">],</span> <span class="s">&#39;dst&#39;</span><span class="p">:</span> <span class="s">&#39;LOADED&#39;</span><span class="p">},</span>
+    <span class="p">{</span><span class="s">&#39;name&#39;</span><span class="p">:</span> <span class="s">&#39;load&#39;</span><span class="p">,</span> <span class="s">&#39;src&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s">&#39;IDLE&#39;</span><span class="p">,</span> <span class="s">&#39;FAILED&#39;</span><span class="p">,</span> <span class="s">&#39;none&#39;</span><span class="p">],</span> <span class="s">&#39;dst&#39;</span><span class="p">:</span> <span class="s">&#39;LOADED&#39;</span><span class="p">},</span>
     <span class="p">{</span><span class="s">&#39;name&#39;</span><span class="p">:</span> <span class="s">&#39;init&#39;</span><span class="p">,</span> <span class="s">&#39;src&#39;</span><span class="p">:</span> <span class="s">&#39;LOADED&#39;</span><span class="p">,</span> <span class="s">&#39;dst&#39;</span><span class="p">:</span> <span class="s">&#39;INITIALISING&#39;</span><span class="p">},</span>
     <span class="p">{</span><span class="s">&#39;name&#39;</span><span class="p">:</span> <span class="s">&#39;idle&#39;</span><span class="p">,</span> <span class="s">&#39;src&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s">&#39;IDLE&#39;</span><span class="p">,</span> <span class="s">&#39;INITIALISING&#39;</span><span class="p">,</span> <span class="s">&#39;BUSY&#39;</span><span class="p">],</span><span class="s">&#39;dst&#39;</span><span class="p">:</span> <span class="s">&#39;IDLE&#39;</span><span class="p">},</span>
     <span class="p">{</span><span class="s">&#39;name&#39;</span><span class="p">:</span> <span class="s">&#39;busy&#39;</span><span class="p">,</span> <span class="s">&#39;src&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s">&#39;BUSY&#39;</span><span class="p">,</span> <span class="s">&#39;IDLE&#39;</span><span class="p">],</span> <span class="s">&#39;dst&#39;</span><span class="p">:</span> <span class="s">&#39;BUSY&#39;</span><span class="p">},</span>
     <span class="p">{</span><span class="s">&#39;name&#39;</span><span class="p">:</span> <span class="s">&#39;off&#39;</span><span class="p">,</span> <span class="s">&#39;src&#39;</span><span class="p">:</span> <span class="s">&#39;LOADED&#39;</span><span class="p">,</span> <span class="s">&#39;dst&#39;</span><span class="p">:</span> <span class="s">&#39;SHUT_DOWN&#39;</span><span class="p">},</span>
-    <span class="p">{</span><span class="s">&#39;name&#39;</span><span class="p">:</span> <span class="s">&#39;fail&#39;</span><span class="p">,</span><span class="s">&#39;src&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s">&#39;none&#39;</span><span class="p">,</span> <span class="s">&#39;FAIL&#39;</span><span class="p">,</span> <span class="s">&#39;LOADED&#39;</span><span class="p">,</span> <span class="s">&#39;INITIALISING&#39;</span><span class="p">,</span> <span class="s">&#39;IDLE&#39;</span><span class="p">,</span> <span class="s">&#39;BUSY&#39;</span><span class="p">,</span> <span class="s">&#39;SAFE_OFF&#39;</span><span class="p">],</span>
-    <span class="s">&#39;dst&#39;</span><span class="p">:</span> <span class="s">&#39;FAIL&#39;</span><span class="p">},</span>
+    <span class="p">{</span><span class="s">&#39;name&#39;</span><span class="p">:</span> <span class="s">&#39;failed&#39;</span><span class="p">,</span><span class="s">&#39;src&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s">&#39;none&#39;</span><span class="p">,</span> <span class="s">&#39;FAILED&#39;</span><span class="p">,</span> <span class="s">&#39;LOADED&#39;</span><span class="p">,</span> <span class="s">&#39;INITIALISING&#39;</span><span class="p">,</span> <span class="s">&#39;IDLE&#39;</span><span class="p">,</span> <span class="s">&#39;BUSY&#39;</span><span class="p">,</span> <span class="s">&#39;SAFE_OFF&#39;</span><span class="p">],</span>
+    <span class="s">&#39;dst&#39;</span><span class="p">:</span> <span class="s">&#39;FAILED&#39;</span><span class="p">},</span>
     <span class="p">{</span><span class="s">&#39;name&#39;</span><span class="p">:</span> <span class="s">&#39;SafeStop&#39;</span><span class="p">,</span> <span class="s">&#39;src&#39;</span><span class="p">:</span> <span class="s">&#39;IDLE&#39;</span><span class="p">,</span> <span class="s">&#39;dst&#39;</span><span class="p">:</span> <span class="s">&#39;SAFE_OFF&#39;</span><span class="p">},</span>
     <span class="p">{</span><span class="s">&#39;name&#39;</span><span class="p">:</span> <span class="s">&#39;ShutDown&#39;</span><span class="p">,</span> <span class="s">&#39;src&#39;</span><span class="p">:</span> <span class="s">&#39;LOADED&#39;</span><span class="p">,</span> <span class="s">&#39;dst&#39;</span><span class="p">:</span> <span class="s">&#39;SHUT_DOWN&#39;</span><span class="p">}</span>
     <span class="p">],</span>
@@ -131,9 +187,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">=</span> <span class="s">&quot;operation&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">lastActionCmd</span> <span class="o">=</span> <span class="bp">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">MAP</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">MAP</span><span class="p">)</span> <span class="c"># referenced</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">MAP</span><span class="p">[</span><span class="s">&#39;callbacks&#39;</span><span class="p">][</span><span class="s">&#39;oninit&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">initialise</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">MAP</span><span class="p">[</span><span class="s">&#39;callbacks&#39;</span><span class="p">][</span><span class="s">&#39;onload&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">e</span><span class="p">:</span>\
-            <span class="bp">self</span><span class="o">.</span><span class="n">load_cfg</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">MAP</span><span class="p">[</span><span class="s">&#39;callbacks&#39;</span><span class="p">][</span><span class="s">&#39;onload&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">OnLoad</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">fsm</span> <span class="o">=</span> <span class="n">Fysom</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">MAP</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
 
@@ -147,7 +201,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">started</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">check_status</span><span class="p">()</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">fsm</span><span class="o">.</span><span class="n">current</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&#39;INITIALISING&#39;</span><span class="p">,</span> <span class="s">&#39;BUSY&#39;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">fsm</span><span class="o">.</span><span class="n">current</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&#39;BUSY&#39;</span><span class="p">]:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">fsm</span><span class="o">.</span><span class="n">idle</span><span class="p">()</span>
             <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">fsm</span><span class="o">.</span><span class="n">current</span> <span class="o">==</span> <span class="s">&#39;none&#39;</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">fsm</span><span class="o">.</span><span class="n">load</span><span class="p">()</span>
@@ -172,14 +226,19 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">print</span> <span class="s">&#39;state :</span><span class="si">%s</span><span class="s"> </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">e</span><span class="o">.</span><span class="n">dst</span><span class="p">)</span>
 </div>
+    <span class="nd">@transition</span><span class="p">(</span><span class="s">&#39;init&#39;</span><span class="p">,</span> <span class="s">&#39;idle&#39;</span><span class="p">)</span>
 <div class="viewcode-block" id="Device.initialise"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.Device.initialise">[docs]</a>    <span class="k">def</span> <span class="nf">initialise</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Overriden by subclasses:</span>
-<span class="sd">         * (Re)Load parameters from config files</span>
 <span class="sd">         * Check communication &amp; status</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">load_cfg</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">check_status</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="Device.OnLoad"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.Device.OnLoad">[docs]</a>    <span class="k">def</span> <span class="nf">OnLoad</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Virtual callback method for FSM (should be overriden if used)</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span>
 </div>
 <div class="viewcode-block" id="Device.getStatus"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.Device.getStatus">[docs]</a>    <span class="k">def</span> <span class="nf">getStatus</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;return status of Device (FSM)</span>
@@ -192,7 +251,7 @@
     <span class="c">#callbacks: init, safe_off, shut_down</span></div>
     <span class="nd">@transition</span><span class="p">(</span><span class="s">&#39;fail&#39;</span><span class="p">)</span>
 <div class="viewcode-block" id="Device.fail"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.Device.fail">[docs]</a>    <span class="k">def</span> <span class="nf">fail</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">reason</span><span class="p">):</span>
-        <span class="k">print</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">_FAIL : </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">reason</span><span class="p">)</span>
+        <span class="k">print</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">_FAILED : </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">reason</span><span class="p">)</span>
 
     <span class="c">############################</span>
     <span class="c">#  COMMUNICATION HANDLING  #</span>
@@ -287,6 +346,10 @@
         <span class="kn">import</span> <span class="nn">sys</span>
         <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&quot;[Simulation] </span><span class="si">%s</span><span class="s">: sending &#39;</span><span class="si">%s</span><span class="s">&#39;&quot;</span> <span class="o">%</span>
                 <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">input_buff</span><span class="p">))</span>
+</div>
+    <span class="nd">@transition</span><span class="p">(</span><span class="s">&#39;init&#39;</span><span class="p">,</span> <span class="s">&#39;idle&#39;</span><span class="p">)</span>
+<div class="viewcode-block" id="SimulationDevice.sim_initialise"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.SimulationDevice.sim_initialise">[docs]</a>    <span class="k">def</span> <span class="nf">sim_initialise</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">load_cfg</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
 </div>
 <div class="viewcode-block" id="SimulationDevice.sim_check_status"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.SimulationDevice.sim_check_status">[docs]</a>    <span class="k">def</span> <span class="nf">sim_check_status</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="c">#print &quot;[Simulation] %s: checking status&quot; % self.device</span>
@@ -469,6 +532,10 @@
                 <span class="s">&#39;simulated&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">sim_check_status</span><span class="p">,</span>
                 <span class="s">&#39;operation&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">op_check_status</span>   <span class="c"># be carefull here</span>
                 <span class="p">}</span>
+        <span class="c">#self._init_map = {</span>
+                <span class="c">#&#39;simulated&#39;: super(DualModeDevice, self).initialise,</span>
+                <span class="c">#&#39;operation&#39;: self.initialise</span>
+                <span class="c">#}</span>
 
 <div class="viewcode-block" id="DualModeDevice.start_communication"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.DualModeDevice.start_communication">[docs]</a>    <span class="k">def</span> <span class="nf">start_communication</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_start_communication_map</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">]()</span>
@@ -487,6 +554,9 @@
 </div>
 <div class="viewcode-block" id="DualModeDevice.check_status"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.Device.DualModeDevice.check_status">[docs]</a>    <span class="k">def</span> <span class="nf">check_status</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_check_status_map</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">]()</span>
+
+    <span class="c">#def initialise(self):</span>
+        <span class="c">#return self._init_map[self.mode]()</span>
 
 
 <span class="c">#######################################################################</span>
@@ -509,7 +579,9 @@
 
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c"># TODO: Another way than &quot;self_position in args&quot;</span>
+    <span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">wraps</span>
     <span class="k">def</span> <span class="nf">wrapper</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
+        <span class="nd">@wraps</span><span class="p">(</span><span class="n">func</span><span class="p">)</span> <span class="c"># for docstring</span>
         <span class="k">def</span> <span class="nf">wrapped_func</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
             <span class="n">target_currPos</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="p">,</span> <span class="n">target</span><span class="p">),</span> <span class="s">&quot;currPos&quot;</span><span class="p">)</span>
             <span class="n">condition1</span> <span class="o">=</span> <span class="n">self_position</span> <span class="o">==</span> <span class="s">&#39;*&#39;</span>
@@ -538,50 +610,21 @@
     <span class="k">return</span> <span class="n">wrapper</span></div>
 </pre></div>
 
-          </div>
-        </div>
-      </div>
-      <div class="sphinxsidebar">
-        <div class="sphinxsidebarwrapper">
-<div id="searchbox" style="display: none">
-  <h3>Quick search</h3>
-    <form class="search" action="../../../search.html" method="get">
-      <input type="text" name="q" />
-      <input type="submit" value="Go" />
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
-    </form>
-    <p class="searchtip" style="font-size: 90%">
-    Enter search terms or a module, class or function name.
-    </p>
+    </div>
+      
+  </div>
 </div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
-        </div>
-      </div>
-      <div class="clearer"></div>
-    </div>
-    <div class="relbar-bottom">
-        
-    <div class="related">
-      <h3>Navigation</h3>
-      <ul>
-        <li class="right" style="margin-right: 10px">
-          <a href="../../../genindex.html" title="General Index"
-             >index</a></li>
-        <li class="right" >
-          <a href="../../../py-modindex.html" title="Python Module Index"
-             >modules</a> &nbsp; &nbsp;</li>
-    <li><a href="../../../index.html">enuActor  documentation</a> &raquo;</li>
-
-          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
-      </ul>
-    </div>
-    </div>
-
-    <div class="footer">
-        &copy; Copyright 2014, Pégot-Ogier Thomas.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
-    </div>
-    <!-- cloud_sptheme 1.4 -->
+<footer class="footer">
+  <div class="container">
+    <p class="pull-right">
+      <a href="#">Back to top</a>
+      
+    </p>
+    <p>
+        &copy; Copyright 2014, Pégot-Ogier Thomas.<br/>
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.2.2.<br/>
+    </p>
+  </div>
+</footer>
   </body>
 </html>

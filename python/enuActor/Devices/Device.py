@@ -462,7 +462,9 @@ def interlock(self_position, target_position, target):
 
     """
     # TODO: Another way than "self_position in args"
+    from functools import wraps
     def wrapper(func):
+        @wraps(func) # for docstring
         def wrapped_func(self, *args):
             target_currPos = getattr(getattr(self.actor, target), "currPos")
             condition1 = self_position == '*'

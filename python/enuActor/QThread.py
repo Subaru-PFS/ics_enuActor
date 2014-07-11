@@ -113,7 +113,6 @@ class QThread(threading.Thread):
                     print emsg
                     tback("DeviceThread", e)
 
-
 class QMsg(object):
     DEFAULT_PRIORITY = 5
 

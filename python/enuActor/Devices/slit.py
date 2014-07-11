@@ -65,7 +65,7 @@ class Slit(DualModeDevice):
     #  HEXAPOD  #
     #############
     def getHome(self):
-        """@todo: Docstring for getHome.
+        """getHome.
 
         :returns: [x, y, z, u, v, w]
         :raises: :class: `~.Error.DeviceError`, :class:`~.Error.CommErr`
@@ -73,7 +73,8 @@ class Slit(DualModeDevice):
         return self._hexapodCoordinateSytemGet('Tool')
 
     def setHome(self, posCoord=None):
-        """@todo: Docstring for setHome.
+        """setHome.
+        setHome to posCoord or to current if posCoord is None
 
         :param posCoord: [x, y, z, u, v, w] or nothing if current
         :raises: :class: `~.Error.DeviceError`, :class:`~.Error.CommErr`
@@ -87,9 +88,10 @@ class Slit(DualModeDevice):
 
     @transition('busy')
     def moveTo(self, reference, posCoord=None):
-        """@todo: Docstring for moveTo.
+        """MoveTo.
+        Move to posCoord or to home if posCoord is None
 
-        :para reference: 'absolute' or 'relative'
+        :param reference: 'absolute' or 'relative'
         :param posCoord: [x, y, z, u, v, w] or nothing if home
         :raises: :class: `~.Error.DeviceError`, :class:`~.Error.CommErr`
         """
@@ -113,9 +115,6 @@ class Slit(DualModeDevice):
                                 dither = G * PixelSize
 
         :param length: length in pixel
-        :returns: @todo
-        :raises: @todo
-
         """
         axis = np.array(self.dither_axis + [0] * 3)
         dithering = length * axis * self.magnification
@@ -127,8 +126,6 @@ class Slit(DualModeDevice):
         """Move in focus (focus_axis) to length pixel
 
         :param length: @todo
-        :returns: @todo
-        :raises: @todo
         """
         axis = np.array(self.focus_axis + [0] * 3)
         through_focus = axis * length
@@ -215,7 +212,6 @@ is not a direction")
     def focus_value():
         """Accessor to focus_value attribute for focusing function
 
-        :returns: @todo
         """
         def fget(self):
             if self._focus_value is None:
@@ -236,6 +232,7 @@ is not a direction")
     def OnLoad(self):
         """Override callback of load transition (FSM):
             load all parameter from cfg file
+
         :raises: :class:`~.Error.CfgFileError`
 
         """
@@ -364,7 +361,6 @@ is not a direction")
 
     def _hexapodMoveAbsolute(self, x, y, z, u, v, w):
         """
-        ..todo: Add algorithm for simulation mode
         ..note: coordSystem not specified because has to be 'Work'
 
         """
