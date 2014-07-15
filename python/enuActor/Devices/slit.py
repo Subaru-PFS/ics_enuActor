@@ -231,12 +231,14 @@ is not a direction")
     ############
     def OnLoad(self):
         """Override callback of load transition (FSM):
-            load all parameter from cfg file
+            load all parameter from cfg file.
+
+        .. warning: It does not load communication parameters
 
         :raises: :class:`~.Error.CfgFileError`
 
         """
-        self.load_cfg(self.device)
+        #self.load_cfg(self.device)
         try:
             self.dither_axis = map(float, self._param['dither_axis'].split(','))
         except Exception, e:
@@ -264,15 +266,17 @@ is not a direction")
 
     def op_start_communication(self):
         print "Connecting to HXP..."
+        self.load_cfg(self.device)
         self.myxps = hxp_drivers.XPS()
         self.socketId = self.myxps.TCP_ConnectToServer(
-            self._cfg['ip'],
+            str(self._cfg['ip']),
             int(self._cfg['port']),
             int(self._cfg['timeout'])
-            )
+        )
         if self.socketId == -1:
             raise Error.CommErr("Connection to Hexapod failed check IP & Port")
-        super(Slit, self).op_start_communication()
+        else:
+            self.startFSM()
 
     def op_check_status(self):
         """Check status of hexapod and position
@@ -390,6 +394,7 @@ is not a direction")
             # TODO: add rotation algo
             self.currPos =\
                     [sum(x) for x in zip(self.currPos, [x, y, z, u, v, w])]
+            print self.currPos
 
     def errorChecker(self, func, *args):
         """ Kind of decorator who check error after routine.

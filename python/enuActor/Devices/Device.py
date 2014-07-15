@@ -120,6 +120,7 @@ class Device(QThread):
     def OnLoad(self):
         """ Virtual callback method for FSM (should be overriden if used)
 
+        .. note: called after ``op_start_communication`` or by load transition
         """
         raise NotImplementedError
 
