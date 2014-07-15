@@ -101,7 +101,7 @@ class Slit(DualModeDevice):
             self._hexapodMoveAbsolute(*posCoord)
         elif reference == 'relative' :
             self._hexapodMoveIncremental('Tool', *posCoord)
-        self.lastActionCmd = posCoord
+        self.currSimPos = posCoord
 
     ############################
     #  DITHER & THROUGH FOCUS  #
@@ -119,7 +119,7 @@ class Slit(DualModeDevice):
         axis = np.array(self.dither_axis + [0] * 3)
         dithering = length * axis * self.magnification
         self._hexapodMoveIncremental('Work', *dithering)
-        self.lastActionCmd = [sum(x) for x in zip(dithering , self.currPos)]
+        self.currSimPos = [sum(x) for x in zip(dithering , self.currPos)]
 
     @transition('busy')
     def focus(self, length):
@@ -130,7 +130,7 @@ class Slit(DualModeDevice):
         axis = np.array(self.focus_axis + [0] * 3)
         through_focus = axis * length
         self._hexapodMoveIncremental('Work', *through_focus)
-        self.lastActionCmd = [sum(x) for x in zip(through_focus , self.currPos)]
+        self.currSimPos = [sum(x) for x in zip(through_focus , self.currPos)]
 
     def magnification():
         """Change magnification.
@@ -279,7 +279,7 @@ is not a direction")
             self.startFSM()
 
     def op_check_status(self):
-        """Check status of hexapod and position
+        """Check status of hexapod
         :raises: :class: `~.Error.DeviceError`, :class:`~.Error.CommErr`
         """
 
@@ -288,6 +288,12 @@ is not a direction")
             # check status
             status_code = self._getStatus()
             status = self._getStatusString(int(status_code))
+
+    def op_check_position(self):
+        """Check position of hexapod
+        :raises: :class: `~.Error.DeviceError`, :class:`~.Error.CommErr`
+        """
+        if self.fsm.current not in ['none', 'LOADED', 'INITIALISING']:
             # check position
             self.currPos = self._getCurrentPosition()
 

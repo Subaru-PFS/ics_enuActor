@@ -24,7 +24,7 @@ MAP = {
     {'name': 'idle', 'src': ['IDLE', 'INITIALISING', 'BUSY'],'dst': 'IDLE'},
     {'name': 'busy', 'src': ['BUSY', 'IDLE'], 'dst': 'BUSY'},
     {'name': 'off', 'src': 'LOADED', 'dst': 'SHUT_DOWN'},
-    {'name': 'failed','src': ['none', 'FAILED', 'LOADED', 'INITIALISING', 'IDLE', 'BUSY', 'SAFE_OFF'],
+    {'name': 'fail','src': ['none', 'FAILED', 'LOADED', 'INITIALISING', 'IDLE', 'BUSY', 'SAFE_OFF'],
     'dst': 'FAILED'},
     {'name': 'SafeStop', 'src': 'IDLE', 'dst': 'SAFE_OFF'},
     {'name': 'ShutDown', 'src': 'LOADED', 'dst': 'SHUT_DOWN'}
@@ -68,7 +68,7 @@ class Device(QThread):
         self.device = self.__class__.__name__
         self.started = False
         self.mode = "operation"
-        self.lastActionCmd = None
+        self.currSimPos = None
         self.MAP = copy.deepcopy(MAP) # referenced
         self.MAP['callbacks']['onload'] = lambda e: self.OnLoad()
         self.fsm = Fysom(self.MAP)
@@ -84,6 +84,7 @@ class Device(QThread):
         """
         if self.started:
             self.check_status()
+            self.check_position()
             if self.fsm.current in ['BUSY']:
                 self.fsm.idle()
             elif self.fsm.current == 'none':
@@ -122,7 +123,7 @@ class Device(QThread):
 
         .. note: called after ``op_start_communication`` or by load transition
         """
-        raise NotImplementedError
+        return NotImplemented
 
     def getStatus(self):
         """return status of Device (FSM)
@@ -236,9 +237,13 @@ class SimulationDevice(Device):
         self.load_cfg(self.__class__.__name__)
 
     def sim_check_status(self):
-        #print "[Simulation] %s: checking status" % self.device
-        if self.lastActionCmd is not None:
-            self.currPos = self.lastActionCmd
+        pass
+
+    def sim_check_position(self):
+        if self.currSimPos is not None:
+            self.currPos = self.currSimPos
+
+
 
 
 class OperationDevice(Device):
@@ -416,6 +421,10 @@ class DualModeDevice(OperationDevice, SimulationDevice):
                 'simulated': self.sim_check_status,
                 'operation': self.op_check_status   # be carefull here
                 }
+        self._check_position_map = {
+                'simulated': self.sim_check_position,
+                'operation': self.op_check_position   # be carefull here
+                }
         #self._init_map = {
                 #'simulated': super(DualModeDevice, self).initialise,
                 #'operation': self.initialise
@@ -438,6 +447,9 @@ class DualModeDevice(OperationDevice, SimulationDevice):
 
     def check_status(self):
         return self._check_status_map[self.mode]()
+
+    def check_position(self):
+        return self._check_position_map[self.mode]()
 
     #def initialise(self):
         #return self._init_map[self.mode]()

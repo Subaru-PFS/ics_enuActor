@@ -41,6 +41,7 @@ class Bia(DualModeDevice):
         #TODO: to improve
         self.load_cfg(self.device)
         self.check_status()
+        self.check_position()
 
     def setConfig(self, freq=None, dur=None, intensity=None):
         """It specifies parameters for light and strobe mode.
@@ -76,7 +77,7 @@ class Bia(DualModeDevice):
         :raises: :class:`~.Error.CommErr`, :class:`~.Error.DeviceErr`
 
         """
-        self.lastActionCmd = transition
+        self.currSimPos = transition
         try:
             if transition == 'on':
                 self.send('a\r\n')
@@ -106,10 +107,21 @@ class Bia(DualModeDevice):
         self.check_status()
 
     def op_check_status(self):
-        """ *Can not check status yet*  """
-        # TODO: to be changed whan input received
+        """ Check status.
+
+        .. warning: Can not check status yet (waiting for input)
+        """
+        # TODO: to be changed whn input received
         # Same as sim_check_status
-        if self.lastActionCmd is not None:
-            self.currPos = self.lastActionCmd
+        pass
+
+    def op_check_position(self):
+        """ Check position.
+
+        .. warning: Can not check postion yet (waiting for input)
+        """
+        if self.currSimPos is not None:
+            self.currPos = self.currSimPos
+
 
 

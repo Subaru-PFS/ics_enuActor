@@ -45,7 +45,7 @@ class Shutter(DualModeDevice):
     def __init__(self, actor=None):
         """Inherit QThread and start the Thread (with FSM)"""
         super(Shutter, self).__init__(actor)
-        self.currPos = "close"     #current position
+        self.currPos = None     #current position
         self.shutter_id = None      #current id
 
     @interlock("open", ["on", "strobe"], "bia")
@@ -59,7 +59,7 @@ class Shutter(DualModeDevice):
         :raises: :class:`~.Error.CommErr`, :class:`~.Error.DeviceErr`
 
         """
-        self.lastActionCmd = transition
+        self.currSimPos = transition
         try:
             if transition == 'open':
                 self.send('os\r\n')
@@ -82,6 +82,8 @@ class Shutter(DualModeDevice):
         """
         self.load_cfg(self.device)
         self.check_status()
+        self.currSimPos = "closed"
+        self.check_position()
 
     def terminal(self):
         """launch terminal connection to shutter device
@@ -100,6 +102,27 @@ class Shutter(DualModeDevice):
         """
         l_sb = [1, 3, 5, 4, 6]
         mask = [None] * 6
+        for sb in l_sb:
+            time.sleep(0.3)
+            mask[sb - 1] = self.parseStatusByte(sb)
+            if self.started:
+                if sum(mask[sb -1] * np.asarray(getattr(Shutter,
+                    'MASK_ERROR_SB_%i' % sb))) > 0:
+                    error = ', '.join(np.array(getattr(Shutter,\
+    'STATUS_BYTE_%i' % sb))[mask[sb - 1] == 1])
+                    self.fail("%s" % error)
+                elif self.fsm.current in ['INITIALISING', 'BUSY']:
+                    self.fsm.idle()
+                elif self.fsm.current == 'none':
+                    self.fsm.load()
+        return mask
+
+    def op_check_position(self):
+        """Check position from Shutter controller
+
+        :raises: :class:`~.Error.DeviceErr`
+
+        """
         status = ''
         try:
             ss = int(self.send('ss\r\n')[0])
@@ -109,23 +132,8 @@ class Shutter(DualModeDevice):
                 self.fail("%s" % e)
             raise e
         if self.currPos == "undef.":
-            self.fail("Position undef.")
-        status += self.currPos
-        for sb in l_sb:
-            time.sleep(0.3)
-            mask[sb - 1] = self.parseStatusByte(sb)
-            if self.started:
-                if sum(mask[sb -1] * np.asarray(getattr(Shutter,
-                    'MASK_ERROR_SB_%i' % sb))) > 0:
-                    error = ', '.join(np.array(getattr(Shutter,\
-    'STATUS_BYTE_%i' % sb))[mask[sb - 1] == 1])
-                    #self.fail("%s" % error)
-                elif self.fsm.current in ['INITIALISING', 'BUSY']:
-                    self.fsm.idle()
-                elif self.fsm.current == 'none':
-                    self.fsm.load()
-        self.status = status
-        return mask
+            raise Error.DeviceErr("Position undef.")
+
 
     def parseStatusByte(self, sb):
         """Send status byte command and parse reply of device
