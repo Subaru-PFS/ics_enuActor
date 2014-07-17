@@ -216,6 +216,7 @@ class SimulationDevice(Device):
 
     def sim_start_communication(self, *args, **kwargs):
         print "[Simulation] %s: start communication" % self.device
+        self.load_cfg(self.device)
         self.startFSM()
 
     def sim_start_serial(self, input_buff=None):
@@ -459,48 +460,45 @@ class DualModeDevice(OperationDevice, SimulationDevice):
 #                          Interlock routine                          #
 #######################################################################
 
-def interlock(self_position, target_position, target):
-    """Interlock between self device and target device
+def interlock(func):
+    """Interlock
 
-    .. note:: Choice of iterable is exclusive either\
-    ``self_position`` or ``target_position``
-
-    :param self_position: position(s) from current device class\
-            ('*' for all position)
-    :type self_position: str, int, float, iterable (list, tuple,...)
-    :param target_position: position from target device class.\
-            ('*' for all position)
-    :type target_position: str, int, float, iterable.
-    :param target: target device class
-
+    :raises: NotImplementedError
     """
-    # TODO: Another way than "self_position in args"
     from functools import wraps
-    def wrapper(func):
-        @wraps(func) # for docstring
-        def wrapped_func(self, *args):
-            target_currPos = getattr(getattr(self.actor, target), "currPos")
-            condition1 = self_position == '*'
-            condition2 = target_position == '*'
-            if hasattr(self_position, '__iter__'):
-                #self_position is iterable
-                if condition2 is False:
-                    condition2 = target_currPos == target_position
-                for position in self_position:
-                    if position in args and condition2:
-                        self.fail("Interlock !!!")
+    @wraps(func) # for docstring
+    def wrapped_func(self, *args, **kwargs):
+        if self.device == 'bia':
+            target_currPos = getattr(getattr(self.actor, 'shutter'), "currPos")
+            if func.func_name == 'bia':
+                if target_currPos == 'open' and args[0] == 'on'\
+                        or kwargs.has_key('strobe'):
+                            print("Interlock !!!")
+                            return
+                else:
+                    return func(self, *args, **kwargs)
+            else:
+                raise NotImplementedError
+        elif self.device == 'shutter':
+            target_currPos = getattr(getattr(self.actor, 'bia'), "currPos")
+            if target_currPos in ['on', 'strobe']:
+                if func.func_name == 'initialise':
+                    self.fail('interlock !!!')
+                    return
+                elif func.func_name == 'shutter':
+                    if args[0] == 'open':
+                        print("Interlock !!!")
                         return
-            elif hasattr(target_position, '__iter__'):
-                #target_position is iterable
-                if condition1 is False:
-                    condition1 = self_position in args
-                for position in target_position:
-                    if condition1 and target_currPos == position:
-                                self.fail("Interlock !!!")
-                                return
-            elif condition1 and target_currPos == target_position:
-                self.fail("Interlock !!!")
-                return
-            return func(self, *args)
-        return wrapped_func
-    return wrapper
+                    else:
+                        return func(self, *args, **kwargs)
+                else:
+                    raise NotImplementedError
+            elif target_currPos == 'off':
+                return func(self, *args, **kwargs)
+            else:
+                raise NotImplementedError
+        else:
+            raise NotImplementedError
+    return wrapped_func
+
+

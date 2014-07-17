@@ -48,7 +48,7 @@ class Shutter(DualModeDevice):
         self.currPos = None     #current position
         self.shutter_id = None      #current id
 
-    @interlock("open", ["on", "strobe"], "bia")
+    @interlock
     @transition('busy', 'idle')
     def shutter(self, transition):
         """Operation open/close shutter red or blue
@@ -73,7 +73,7 @@ class Shutter(DualModeDevice):
         except Error.CommErr, e:
             raise e
 
-    @interlock("*", ["on", "strobe"], "bia")
+    @interlock
     @transition('init', 'idle')
     def initialise(self):
         """ Initialise shutter.

@@ -23,6 +23,8 @@ class Bia(DualModeDevice):
         * currPos : current position of the BIA
     """
 
+    positions = ['on', 'off', 'strobe']
+
     def __init__(self, actor=None):
         super(Bia, self).__init__(actor)
         self.currPos = "off"
@@ -62,7 +64,7 @@ class Bia(DualModeDevice):
         self._param["duration"] = dur
         self._param["intensity"] = intensity
 
-    @interlock(["on", "strobe"], "open", "shutter")
+    @interlock
     @transition('busy', 'idle')
     def bia(self, transition, strobe=None):
         """Operation on/off bia
