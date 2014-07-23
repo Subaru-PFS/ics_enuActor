@@ -17,8 +17,7 @@ class EnuCmd(object):
     def ping(self, cmd):
         """Query the actor for liveness/happiness."""
 
-        cmd.warn("text='I am an empty and fake actor'")
-        cmd.finish("text='Present and (probably) well'")
+        cmd.finish("text='Enu Actor: o/'")
 
     def status(self, cmd):
         """Report camera status and actor version. """

@@ -84,7 +84,7 @@ class Slit(DualModeDevice):
             curHome = self.getHome()
             #newhome = posCoord + curHome
             posCoord = [sum(x) for x in zip(posCoord, curHome)]
-        self._hexapodCoordinateSytemSet('Tool', *posCoord)
+        self._hexapodCoordinateSytemSet('Work', *posCoord)
 
     @transition('busy')
     def moveTo(self, reference, posCoord=None):
@@ -100,7 +100,7 @@ class Slit(DualModeDevice):
         if reference == 'absolute':
             self._hexapodMoveAbsolute(*posCoord)
         elif reference == 'relative' :
-            self._hexapodMoveIncremental('Tool', *posCoord)
+            self._hexapodMoveIncremental('Work', *posCoord)
         self.currSimPos = posCoord
 
     ############################
