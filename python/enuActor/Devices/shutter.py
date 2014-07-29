@@ -91,7 +91,10 @@ class Shutter(DualModeDevice):
         """
         return NotImplementedError
 
-    def op_check_status(self):
+    def OnLoad(self):
+        self.check_status()
+
+    def check_status(self):
         """Check status byte 1, 3, 4, 5 and 6 from Shutter controller\
             and return current list of status byte.
 
@@ -117,7 +120,7 @@ class Shutter(DualModeDevice):
                     self.fsm.load()
         return mask
 
-    def op_check_position(self):
+    def check_position(self):
         """Check position from Shutter controller
 
         :raises: :class:`~.Error.DeviceErr`

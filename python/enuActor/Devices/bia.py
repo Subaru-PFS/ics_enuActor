@@ -108,7 +108,10 @@ class Bia(DualModeDevice):
             raise Error.CommErr(e)
         self.check_status()
 
-    def op_check_status(self):
+    def OnLoad(self):
+        self.check_status()
+
+    def check_status(self):
         """ Check status.
 
         .. warning: Can not check status yet (waiting for input)
@@ -117,7 +120,7 @@ class Bia(DualModeDevice):
         # Same as sim_check_status
         pass
 
-    def op_check_position(self):
+    def check_position(self):
         """ Check position.
 
         .. warning: Can not check postion yet (waiting for input)

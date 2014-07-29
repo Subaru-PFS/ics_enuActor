@@ -32,8 +32,46 @@ MAP = {
  'callbacks': {}
 }
 
+class DeviceThread(QThread):
 
-class Device(QThread):
+    """Docstring for DeviceThread. """
+
+    def __init__(self, actor=None):
+        """@todo: to be defined1.
+
+        :param actor: @todo
+
+        """
+        QThread.__init__(self, actor, self.__class__)
+        self.device = self.__class__.__name__
+        self.start()
+
+    def getStatus(self):
+        """return status of Device (FSM)
+
+        :returns: ``'LOADED'``, ``'IDLE'``, ``'BUSY'``, ...
+        """
+        return "%s status [%s, %s]" % (self.device.upper(),
+                self.fsm.current, self.currPos)
+
+    def handleTimeout(self):
+        """Override method :meth:`.QThread.handleTimeout`.
+        Process while device is idling.
+
+        :returns: @todo
+        :raises: :class:`~.Error.CommErr`
+
+        """
+        if self.started:
+            self.check_status()
+            self.check_position()
+            if self.fsm.current in ['BUSY']:
+                self.fsm.idle()
+            elif self.fsm.current == 'none':
+                self.fsm.load()
+
+
+class Device(object):
 
     """All device (Shutter, BIA,...) should inherit this class
 
@@ -52,8 +90,7 @@ class Device(QThread):
             }
     available_link = ['TTL', 'SERIAL', 'ETHERNET', 'NOTSPECIFIED']
 
-    def __init__(self, actor=None, cfg_path = None):
-        QThread.__init__(self, actor, self.__class__)
+    def __init__(self, device, actor=None, cfg_path = None):
 
         # Communication attributes
         self._cfg_files = copy.deepcopy(Device.cfg_files)
@@ -65,30 +102,13 @@ class Device(QThread):
         self.connection = None
 
         # Device attributes
-        self.device = self.__class__.__name__
+        self.device = device
         self.started = False
         self.mode = "operation"
         self.currSimPos = None
         self.MAP = copy.deepcopy(MAP) # referenced
         self.MAP['callbacks']['onload'] = lambda e: self.OnLoad()
         self.fsm = Fysom(self.MAP)
-        self.start()
-
-    def handleTimeout(self):
-        """Override method :meth:`.QThread.handleTimeout`.
-        Process while device is idling.
-
-        :returns: @todo
-        :raises: :class:`~.Error.CommErr`
-
-        """
-        if self.started:
-            self.check_status()
-            self.check_position()
-            if self.fsm.current in ['BUSY']:
-                self.fsm.idle()
-            elif self.fsm.current == 'none':
-                self.fsm.load()
 
     ###################
     #  STATE MACHINE  #
@@ -116,7 +136,7 @@ class Device(QThread):
          * Check communication & status
 
         """
-        self.check_status()
+        raise NotImplemented("initilise method should be overriden.")
 
     def OnLoad(self):
         """ Virtual callback method for FSM (should be overriden if used)
@@ -124,14 +144,6 @@ class Device(QThread):
         .. note: called after ``op_start_communication`` or by load transition
         """
         return NotImplemented
-
-    def getStatus(self):
-        """return status of Device (FSM)
-
-        :returns: ``'LOADED'``, ``'IDLE'``, ``'BUSY'``, ...
-        """
-        return "%s status [%s, %s]" % (self.device.upper(),
-                self.fsm.current, self.currPos)
 
     #callbacks: init, safe_off, shut_down
     @transition('fail')
@@ -211,36 +223,36 @@ class SimulationDevice(Device):
 
          Almost nothing"""
 
-    def __init__(self, actor=None, cfg_path=path):
-        super(SimulationDevice, self).__init__(actor, cfg_path)
+    def __init__(self, device, actor=None, cfg_path=path):
+        super(SimulationDevice, self).__init__(device, actor, cfg_path)
 
-    def sim_start_communication(self, *args, **kwargs):
+    def start_communication(self, *args, **kwargs):
         print "[Simulation] %s: start communication" % self.device
         self.load_cfg(self.device)
         self.startFSM()
 
-    def sim_start_serial(self, input_buff=None):
+    def start_serial(self, input_buff=None):
         print "[Simulation] %s: start serial" % self.device
 
-    def sim_start_ethernet(self):
+    def start_ethernet(self):
         print "[Simulation] %s: start ethernet" % self.device
 
-    def sim_start_ttl(self):
+    def start_ttl(self):
         print "[Simulation] %s: start ttl" % self.device
 
-    def sim_send(self, input_buff=None):
+    def send(self, input_buff=None):
         import sys
         sys.stdout.write("[Simulation] %s: sending '%s'" %
                 (self.device, input_buff))
 
     @transition('init', 'idle')
-    def sim_initialise(self):
+    def initialise(self):
         self.load_cfg(self.__class__.__name__)
 
-    def sim_check_status(self):
+    def check_status(self):
         pass
 
-    def sim_check_position(self):
+    def check_position(self):
         if self.currSimPos is not None:
             self.currPos = self.currSimPos
 
@@ -254,11 +266,11 @@ class OperationDevice(Device):
          * Communication is implemented
          * Starting, sending and receiving message is implemented"""
 
-    def __init__(self, actor=None, cfg_path=path):
-        super(OperationDevice, self).__init__(actor, cfg_path)
+    def __init__(self,device, actor=None, cfg_path=path):
+        super(OperationDevice, self).__init__(device, actor, cfg_path)
 
 
-    def op_start_communication(self, *args, **kwargs):
+    def start_communication(self, *args, **kwargs):
         """Docstring for start_communication.
 
         .. note:: Need first to specify config file and device by calling :func:`load_cfg`
@@ -287,7 +299,7 @@ class OperationDevice(Device):
             else:
                 self.connection = self.start_serial()
                 # check connection
-                self.check_status()
+                #self.check_status()
         elif self.link == 'ETHERNET':
             self.connection = self.start_ethernet()
         elif self.link == 'TTL':
@@ -297,7 +309,7 @@ class OperationDevice(Device):
 LINK: %s\nCfgFile: %s\n " % (self.link, self._cfg))
         self.startFSM()
 
-    def op_start_serial(self, input_buff=None):
+    def start_serial(self, input_buff=None):
         """Start a serial communication
 
         :param input_buff: Send at start to check communication
@@ -323,7 +335,7 @@ LINK: %s\nCfgFile: %s\n " % (self.link, self._cfg))
             connection.flushOutput()
         return connection
 
-    def op_start_ethernet(self):
+    def start_ethernet(self):
         """@todo: Docstring for start_ethernet.
 
         :returns: @todo
@@ -341,7 +353,7 @@ LINK: %s\nCfgFile: %s\n " % (self.link, self._cfg))
             raise Error.CommErr(e)
         return sock
 
-    def op_start_ttl(self):
+    def start_ttl(self):
         """@todo: Docstring for start_ttl.
 
         :returns: @todo
@@ -350,7 +362,7 @@ LINK: %s\nCfgFile: %s\n " % (self.link, self._cfg))
         """
         raise NotImplementedError
 
-    def op_send(self, input_buff=None):
+    def send(self, input_buff=None):
         """Send string to interface
 
         :param input_buff: string to send to check com.
@@ -391,69 +403,28 @@ LINK: %s\nCfgFile: %s\n " % (self.link, self._cfg))
             raise NotImplementedError
 
 
-class DualModeDevice(OperationDevice, SimulationDevice):
+class DualModeDevice(DeviceThread):
 
     """Switch between class following the device mode"""
 
     def __init__(self, actor=None):
         """@todo: to be defined1. """
         super(DualModeDevice, self).__init__(actor)
-        self._start_communication_map = {
-                'simulated': self.sim_start_communication,
-                'operation': self.op_start_communication
+        self.mode = 'operation'
+        self._map = {
+                'operation' : OperationDevice(self.device),
+                'simulated' : SimulationDevice(self.device)
                 }
-        self._start_serial_map = {
-                'simulated': self.sim_start_serial,
-                'operation': self.op_start_serial
-                }
-        self._start_ethernet_map = {
-                'simulated': self.sim_start_ethernet,
-                'operation': self.op_start_ethernet
-                }
-        self._start_ttl_map = {
-                'simulated': self.sim_start_ttl,
-                'operation': self.op_start_ttl
-                }
-        self._send_map = {
-                'simulated': self.sim_send,
-                'operation': self.op_send
-                }
-        self._check_status_map = {
-                'simulated': self.sim_check_status,
-                'operation': self.op_check_status   # be carefull here
-                }
-        self._check_position_map = {
-                'simulated': self.sim_check_position,
-                'operation': self.op_check_position   # be carefull here
-                }
-        #self._init_map = {
-                #'simulated': super(DualModeDevice, self).initialise,
-                #'operation': self.initialise
-                #}
 
-    def start_communication(self, *args, **kwargs):
-        self._start_communication_map[self.mode]()
+    def __getattr__(self, name):
+        return getattr(self._map[self.mode], name)
 
-    def start_serial(self, *args, **kwargs):
-        return self._start_serial_map[self.mode](*args, **kwargs)
+    def __getattribute__(self, name):
+        if name in ['check_status', 'check_position', 'initialise', 'start_communication']:
+            if self.mode == 'simulated':
+                return self.__getattr__(name)
+        return super(DualModeDevice, self).__getattribute__(name)
 
-    def start_ethernet(self, *args, **kwargs):
-        return self._start_ethernet_map[self.mode](*args, **kwargs)
-
-    def start_ttl(self, *args, **kwargs):
-        return self._start_ttl_map[self.mode](*args, **kwargs)
-
-    def send(self, *args, **kwargs):
-        return self._send_map[self.mode](*args, **kwargs)
-
-    def check_status(self):
-        return self._check_status_map[self.mode]()
-
-    def check_position(self):
-        return self._check_position_map[self.mode]()
-
-    #def initialise(self):
-        #return self._init_map[self.mode]()
 
 
 #######################################################################
@@ -468,7 +439,7 @@ def interlock(func):
     from functools import wraps
     @wraps(func) # for docstring
     def wrapped_func(self, *args, **kwargs):
-        if self.device == 'bia':
+        if self.device.lower() == 'bia':
             target_currPos = getattr(getattr(self.actor, 'shutter'), "currPos")
             if func.func_name == 'bia':
                 if target_currPos == 'open' and args[0] == 'on'\
@@ -479,7 +450,7 @@ def interlock(func):
                     return func(self, *args, **kwargs)
             else:
                 raise NotImplementedError
-        elif self.device == 'shutter':
+        elif self.device.lower() == 'shutter':
             target_currPos = getattr(getattr(self.actor, 'bia'), "currPos")
             if target_currPos in ['on', 'strobe']:
                 if func.func_name == 'initialise':
@@ -498,7 +469,7 @@ def interlock(func):
             else:
                 raise NotImplementedError
         else:
-            raise NotImplementedError
+            raise NotImplementedError('case : %s' % self.device)
     return wrapped_func
 
 

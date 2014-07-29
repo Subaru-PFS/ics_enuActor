@@ -264,7 +264,7 @@ is not a direction")
         except Exception, e:
             raise Error.CfgFileErr("Wrong value home (%s)" % e)
 
-    def op_start_communication(self):
+    def start_communication(self):
         print "Connecting to HXP..."
         self.load_cfg(self.device)
         self.myxps = hxp_drivers.XPS()
@@ -278,7 +278,7 @@ is not a direction")
         else:
             self.startFSM()
 
-    def op_check_status(self):
+    def check_status(self):
         """Check status of hexapod
         :raises: :class: `~.Error.DeviceError`, :class:`~.Error.CommErr`
         """
@@ -289,7 +289,7 @@ is not a direction")
             status_code = self._getStatus()
             status = self._getStatusString(int(status_code))
 
-    def op_check_position(self):
+    def check_position(self):
         """Check position of hexapod
         :raises: :class: `~.Error.DeviceError`, :class:`~.Error.CommErr`
         """
