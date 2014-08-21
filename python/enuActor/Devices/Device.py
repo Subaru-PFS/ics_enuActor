@@ -46,6 +46,23 @@ class DeviceThread(QThread):
         self.device = self.__class__.__name__
         self.start()
 
+    ###################
+    #  STATE MACHINE  #
+    ###################
+
+    @transition('init', 'idle')
+    def initialise(self):
+        """Overriden by subclasses:
+         * Check communication & status
+
+        """
+        raise NotImplemented("initilise method should be overriden.")
+
+    #callbacks: init, safe_off, shut_down
+    @transition('fail')
+    def fail(self, reason):
+        print "%s_FAILED : %s" % (self.device, reason)
+
     def getStatus(self):
         """return status of Device (FSM)
 
@@ -78,7 +95,6 @@ class Device(object):
         Attributes:
          * link : ``TTL``, ``SERIAL`` or ``ETHERNET``
          * connection : object for link connection
-         * mode : ``operation`` or ``simulated``
          * cfg_path : path of the communication and parameter config files\
                  It should contains *devices_communication.cfg* and\
                  *devices_parameters.cfg* file.
@@ -104,15 +120,11 @@ class Device(object):
         # Device attributes
         self.device = device
         self.started = False
-        self.mode = "operation"
         self.currSimPos = None
         self.MAP = copy.deepcopy(MAP) # referenced
-        self.MAP['callbacks']['onload'] = lambda e: self.OnLoad()
+        #self.MAP['callbacks']['onload'] = lambda e: self.OnLoad()
         self.fsm = Fysom(self.MAP)
 
-    ###################
-    #  STATE MACHINE  #
-    ###################
 
     def startFSM(self):
         """ Instantiate the :mod:`.MyFSM` class (create the State Machine).
@@ -130,25 +142,6 @@ class Device(object):
         """
         print 'state :%s %s' % (self.device, e.dst)
 
-    @transition('init', 'idle')
-    def initialise(self):
-        """Overriden by subclasses:
-         * Check communication & status
-
-        """
-        raise NotImplemented("initilise method should be overriden.")
-
-    def OnLoad(self):
-        """ Virtual callback method for FSM (should be overriden if used)
-
-        .. note: called after ``op_start_communication`` or by load transition
-        """
-        return NotImplemented
-
-    #callbacks: init, safe_off, shut_down
-    @transition('fail')
-    def fail(self, reason):
-        print "%s_FAILED : %s" % (self.device, reason)
 
     ############################
     #  COMMUNICATION HANDLING  #
@@ -191,6 +184,13 @@ class Device(object):
             except ConfigParser.NoSectionError, e:
                 raise Error.CfgFileErr(e)
 
+    def OnLoad(self):
+        """ Virtual callback method for FSM (should be overriden if used)
+
+        .. note: called after ``op_start_communication`` or by load transition
+        """
+        return NotImplemented
+
     def start_communication(self, *args, **kwargs):
         """To be overriden virtual method
         """
@@ -230,6 +230,7 @@ class SimulationDevice(Device):
         print "[Simulation] %s: start communication" % self.device
         self.load_cfg(self.device)
         self.startFSM()
+        self.fsm.load()
 
     def start_serial(self, input_buff=None):
         print "[Simulation] %s: start serial" % self.device
@@ -247,10 +248,7 @@ class SimulationDevice(Device):
 
     @transition('init', 'idle')
     def initialise(self):
-        self.load_cfg(self.__class__.__name__)
-
-    def check_status(self):
-        pass
+        self.load_cfg(self.device)
 
     def check_position(self):
         if self.currSimPos is not None:
@@ -410,14 +408,31 @@ class DualModeDevice(DeviceThread):
     def __init__(self, actor=None):
         """@todo: to be defined1. """
         super(DualModeDevice, self).__init__(actor)
-        self.mode = 'operation'
+        self._mode = 'operation'
         self._map = {
-                'operation' : OperationDevice(self.device),
-                'simulated' : SimulationDevice(self.device)
+                'operation' : OperationDevice,
+                'simulated' : SimulationDevice
                 }
+        self.curModeDevice = self._map[self._mode](self.device)
+
+    def mode():
+        """Mode attribute : On change instantiate
+        OperationDevice/SimulationDevice
+
+        """
+        def fget(self):
+            return self._mode
+
+        def fset(self, value):
+            if self._mode != value:
+                self.curModeDevice = self._map[value](self.device)
+            self._mode = value
+        return locals()
+
+    mode = property(**mode())
 
     def __getattr__(self, name):
-        return getattr(self._map[self.mode], name)
+        return getattr(self.curModeDevice, name)
 
     def __getattribute__(self, name):
         if name in ['check_status', 'check_position', 'initialise', 'start_communication']:

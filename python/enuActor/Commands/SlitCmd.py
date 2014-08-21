@@ -78,7 +78,7 @@ class SlitCmd(object):
 
     def start(self, cmd):
         try:
-            self.actor.slit.start_communication(cmd)
+            self.actor.slit.start_communication()
         except CommErr as e: # ISSUE : I cannot catch timeout error
             cmd.error("text='%s'" % e)
         except FysomError as e:

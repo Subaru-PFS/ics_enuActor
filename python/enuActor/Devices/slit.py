@@ -58,7 +58,7 @@ class Slit(DualModeDevice):
         self._homeSearch()
         self.setHome(self._home)
         print "going to home ..."
-        self._hexapodMoveAbsolute(*self._home)
+        self._hexapodMoveAbsolute(*[0, 0, 0, 0, 0, 0])
         self.check_status()
 
     #############
@@ -86,7 +86,7 @@ class Slit(DualModeDevice):
             posCoord = [sum(x) for x in zip(posCoord, curHome)]
         self._hexapodCoordinateSytemSet('Work', *posCoord)
 
-    @transition('busy')
+    @transition('busy', 'idle')
     def moveTo(self, reference, posCoord=None):
         """MoveTo.
         Move to posCoord or to home if posCoord is None
@@ -106,7 +106,7 @@ class Slit(DualModeDevice):
     ############################
     #  DITHER & THROUGH FOCUS  #
     ############################
-    @transition('busy')
+    @transition('busy', 'idle')
     def dither(self, length):
         """Move in dither (dither_axis) to length pixel.\
                 Size of pixel is 34.64 :math:`\mu{}m` on\
@@ -121,7 +121,7 @@ class Slit(DualModeDevice):
         self._hexapodMoveIncremental('Work', *dithering)
         self.currSimPos = [sum(x) for x in zip(dithering , self.currPos)]
 
-    @transition('busy')
+    @transition('busy', 'idle')
     def focus(self, length):
         """Move in focus (focus_axis) to length pixel
 
@@ -228,7 +228,8 @@ is not a direction")
 
     ############
     #  DEVICE  #
-    ############
+    ############o
+    @transition('load')
     def OnLoad(self):
         """Override callback of load transition (FSM):
             load all parameter from cfg file.
@@ -277,6 +278,7 @@ is not a direction")
             raise Error.CommErr("Connection to Hexapod failed check IP & Port")
         else:
             self.startFSM()
+            self.OnLoad()
 
     def check_status(self):
         """Check status of hexapod
@@ -429,6 +431,7 @@ is not a direction")
                 elif buf[0] == -108:
                     raise Error.CommErr(func.func_name +
                             'TCP/IP connection was closed by an admin')
+            self.fsm.fail()
             raise Error.DeviceErr(err)#a traiter si Device ou COmm suivant cas
         return buf[1:]
 
