@@ -83,6 +83,8 @@ class Slit(DualModeDevice):
             posCoord = self._getCurrentPosition()
             curHome = self.getHome()
             #newhome = posCoord + curHome
+            print "posCoord= %s" % posCoord
+            print "curHome= %s" % curHome
             posCoord = [sum(x) for x in zip(posCoord, curHome)]
         self._hexapodCoordinateSytemSet('Work', *posCoord)
 

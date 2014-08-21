@@ -6,6 +6,7 @@
 #######################################################################
 
 from enuActor.QThread import *
+from interlock import interlock
 import serial, time
 import Error
 from Device import *

@@ -9,6 +9,7 @@ try:
     from Device import *
 except ImportError:
     pass
+from interlock import interlock
 import serial, time
 import Error
 import numpy as np

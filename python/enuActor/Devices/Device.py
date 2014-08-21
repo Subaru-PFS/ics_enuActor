@@ -2,6 +2,7 @@
 # encoding: utf-8
 from enuActor.QThread import *
 from enuActor.MyFSM import *
+from interlock import interlock
 import serial
 import ConfigParser
 import re
@@ -32,62 +33,6 @@ MAP = {
  'callbacks': {}
 }
 
-class DeviceThread(QThread):
-
-    """Docstring for DeviceThread. """
-
-    def __init__(self, actor=None):
-        """@todo: to be defined1.
-
-        :param actor: @todo
-
-        """
-        QThread.__init__(self, actor, self.__class__)
-        self.device = self.__class__.__name__
-        self.start()
-
-    ###################
-    #  STATE MACHINE  #
-    ###################
-
-    @transition('init', 'idle')
-    def initialise(self):
-        """Overriden by subclasses:
-         * Check communication & status
-
-        """
-        raise NotImplemented("initilise method should be overriden.")
-
-    #callbacks: init, safe_off, shut_down
-    @transition('fail')
-    def fail(self, reason):
-        print "%s_FAILED : %s" % (self.device, reason)
-
-    def getStatus(self):
-        """return status of Device (FSM)
-
-        :returns: ``'LOADED'``, ``'IDLE'``, ``'BUSY'``, ...
-        """
-        return "%s status [%s, %s]" % (self.device.upper(),
-                self.fsm.current, self.currPos)
-
-    def handleTimeout(self):
-        """Override method :meth:`.QThread.handleTimeout`.
-        Process while device is idling.
-
-        :returns: @todo
-        :raises: :class:`~.Error.CommErr`
-
-        """
-        if self.started:
-            self.check_status()
-            self.check_position()
-            if self.fsm.current in ['BUSY']:
-                self.fsm.idle()
-            elif self.fsm.current == 'none':
-                self.fsm.load()
-
-
 class Device(object):
 
     """All device (Shutter, BIA,...) should inherit this class
@@ -117,14 +62,20 @@ class Device(object):
         self.link = None
         self.connection = None
 
+
         # Device attributes
         self.device = device
+        self.currPos = "undef. (bug. to be reported) "
         self.started = False
         self.currSimPos = None
         self.MAP = copy.deepcopy(MAP) # referenced
         #self.MAP['callbacks']['onload'] = lambda e: self.OnLoad()
         self.fsm = Fysom(self.MAP)
 
+    #callbacks: init, safe_off, shut_down
+    @transition('fail')
+    def fail(self, reason):
+        print "%s_FAILED : %s" % (self.device, reason)
 
     def startFSM(self):
         """ Instantiate the :mod:`.MyFSM` class (create the State Machine).
@@ -250,11 +201,12 @@ class SimulationDevice(Device):
     def initialise(self):
         self.load_cfg(self.device)
 
+    def check_status(self):
+        pass
+
     def check_position(self):
         if self.currSimPos is not None:
             self.currPos = self.currSimPos
-
-
 
 
 class OperationDevice(Device):
@@ -401,19 +353,55 @@ LINK: %s\nCfgFile: %s\n " % (self.link, self._cfg))
             raise NotImplementedError
 
 
-class DualModeDevice(DeviceThread):
+class DualModeDevice(QThread):
 
     """Switch between class following the device mode"""
 
     def __init__(self, actor=None):
         """@todo: to be defined1. """
-        super(DualModeDevice, self).__init__(actor)
+        self.device = self.__class__.__name__
+        QThread.__init__(self, actor, self.device)
+        self.start()
         self._mode = 'operation'
         self._map = {
                 'operation' : OperationDevice,
                 'simulated' : SimulationDevice
                 }
         self.curModeDevice = self._map[self._mode](self.device)
+
+    def handleTimeout(self):
+        """Override method :meth:`.QThread.handleTimeout`.
+        Process while device is idling.
+
+        :returns: @todo
+        :raises: :class:`~.Error.CommErr`
+
+        """
+        if self.started:
+            self.check_status()
+            self.check_position()
+            self.updateFactory()
+            if self.fsm.current in ['BUSY']:
+                self.fsm.idle()
+            elif self.fsm.current == 'none':
+                self.fsm.load()
+
+    def getStatus(self):
+        """return status of Device (FSM)
+
+        :returns: ``'LOADED'``, ``'IDLE'``, ``'BUSY'``, ...
+        """
+        return "%s status [%s, %s]" % (self.device.upper(),
+                self.fsm.current, self.currPos)
+
+
+    def updateFactory(self):
+        """Update attributes of curModeDevice object
+        :returns: @todo
+        :raises: @todo
+
+        """
+        self.curModeDevice.currPos = self.currPos
 
     def mode():
         """Mode attribute : On change instantiate
@@ -435,56 +423,15 @@ class DualModeDevice(DeviceThread):
         return getattr(self.curModeDevice, name)
 
     def __getattribute__(self, name):
-        if name in ['check_status', 'check_position', 'initialise', 'start_communication']:
+        if name in [
+                'check_status',
+                'check_position',
+                'start_communication',
+                'initialise'
+                ]:
             if self.mode == 'simulated':
                 return self.__getattr__(name)
         return super(DualModeDevice, self).__getattribute__(name)
 
-
-
-#######################################################################
-#                          Interlock routine                          #
-#######################################################################
-
-def interlock(func):
-    """Interlock
-
-    :raises: NotImplementedError
-    """
-    from functools import wraps
-    @wraps(func) # for docstring
-    def wrapped_func(self, *args, **kwargs):
-        if self.device.lower() == 'bia':
-            target_currPos = getattr(getattr(self.actor, 'shutter'), "currPos")
-            if func.func_name == 'bia':
-                if target_currPos == 'open' and args[0] == 'on'\
-                        or kwargs.has_key('strobe'):
-                            print("Interlock !!!")
-                            return
-                else:
-                    return func(self, *args, **kwargs)
-            else:
-                raise NotImplementedError
-        elif self.device.lower() == 'shutter':
-            target_currPos = getattr(getattr(self.actor, 'bia'), "currPos")
-            if target_currPos in ['on', 'strobe']:
-                if func.func_name == 'initialise':
-                    self.fail('interlock !!!')
-                    return
-                elif func.func_name == 'shutter':
-                    if args[0] == 'open':
-                        print("Interlock !!!")
-                        return
-                    else:
-                        return func(self, *args, **kwargs)
-                else:
-                    raise NotImplementedError
-            elif target_currPos == 'off':
-                return func(self, *args, **kwargs)
-            else:
-                raise NotImplementedError
-        else:
-            raise NotImplementedError('case : %s' % self.device)
-    return wrapped_func
 
 
