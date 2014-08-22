@@ -47,7 +47,7 @@ class Slit(DualModeDevice):
     def initialise(self):
         """ Initialise shutter.
         Here just trigger the FSM to INITIALISING and IDLE
-
+)
         :returns: @todo
         :raises: @todo
         """
@@ -56,7 +56,10 @@ class Slit(DualModeDevice):
         self._initialize()
         print "seeking home ..."
         self._homeSearch()
-        self.setHome(self._home)
+        if self._home is None:
+            raise Exception("Bug: Home not initialised")
+        else:
+            self.setHome(self._home)
         print "going to home ..."
         self._hexapodMoveAbsolute(*[0, 0, 0, 0, 0, 0])
         self.check_status()

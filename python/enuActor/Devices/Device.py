@@ -177,11 +177,14 @@ class SimulationDevice(Device):
     def __init__(self, device, actor=None, cfg_path=path):
         super(SimulationDevice, self).__init__(device, actor, cfg_path)
 
+    ###################
+    #  communication  #
+    ###################
     def start_communication(self, *args, **kwargs):
         print "[Simulation] %s: start communication" % self.device
         self.load_cfg(self.device)
         self.startFSM()
-        self.fsm.load()
+        self.OnLoad()
 
     def start_serial(self, input_buff=None):
         print "[Simulation] %s: start serial" % self.device
@@ -197,9 +200,16 @@ class SimulationDevice(Device):
         sys.stdout.write("[Simulation] %s: sending '%s'" %
                 (self.device, input_buff))
 
+    #########
+    #  FSM  #
+    #########
     @transition('init', 'idle')
     def initialise(self):
         self.load_cfg(self.device)
+
+    @transition('load')
+    def OnLoad(self):
+        pass
 
     def check_status(self):
         pass
@@ -432,6 +442,3 @@ class DualModeDevice(QThread):
             if self.mode == 'simulated':
                 return self.__getattr__(name)
         return super(DualModeDevice, self).__getattribute__(name)
-
-
-

@@ -9,7 +9,7 @@ def interlock(func):
 
     Handle interlock between bia and shutter.
     In Simulation mode interlock is not handled due to redefinition of getattribute in factory
-    class DualModeDevice.
+    class DualModeDevice: calls initialise from SimulationDevice in simulated mode. So interlock can't be handled.
 
     :raises: NotImplementedError
     """
@@ -50,5 +50,3 @@ def interlock(func):
         else:
             raise NotImplementedError('case : %s' % self.device)
     return wrapped_func
-
-
