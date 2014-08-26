@@ -43,7 +43,7 @@ class ShutterCmd(object):
 
     def start(self, cmd):
         try:
-            self.actor.shutter.start_communication(cmd)
+            self.actor.shutter.start_communication()
         except CommErr as e: # ISSUE : I cannot catch timeout error
             cmd.error("text='%s'" % e)
         except FysomError as e:
@@ -63,7 +63,8 @@ class ShutterCmd(object):
 
     def set_mode(self, cmd):
         mode = cmd.cmd.keywords[0].name
-        self.actor.shutter.mode = mode
+        self.actor.shutter.change_mode(mode)
+        cmd.inform("text='Shutter mode %s enabled'" % mode)
 
     def set_state(self, cmd):
         state = cmd.cmd.keywords[0].name

@@ -51,7 +51,7 @@ class BiaCmd(object):
     def start(self, cmd):
         try:
             cmd.inform("text='starting communication...'")
-            self.actor.bia.start_communication(cmd)
+            self.actor.bia.start_communication()
         except CommErr as e: # ISSUE : I cannot catch timeout error
             cmd.error("text='%s'" % e)
         except:
@@ -63,7 +63,8 @@ class BiaCmd(object):
 
     def set_mode(self, cmd):
         mode = cmd.cmd.keywords[0].name
-        self.actor.bia.mode = mode
+        self.actor.bia.change_mode(mode)
+        cmd.inform("text='Bia mode %s enabled'" % mode)
 
     def set_state(self, cmd):
         state = cmd.cmd.keywords[0].name

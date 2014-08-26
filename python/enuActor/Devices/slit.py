@@ -47,7 +47,7 @@ class Slit(DualModeDevice):
     def initialise(self):
         """ Initialise shutter.
         Here just trigger the FSM to INITIALISING and IDLE
-)
+
         :returns: @todo
         :raises: @todo
         """
@@ -234,7 +234,7 @@ is not a direction")
     ############
     #  DEVICE  #
     ############o
-    @transition('load')
+    @transition(after_state = 'load')
     def OnLoad(self):
         """Override callback of load transition (FSM):
             load all parameter from cfg file.
@@ -244,7 +244,7 @@ is not a direction")
         :raises: :class:`~.Error.CfgFileError`
 
         """
-        #self.load_cfg(self.device)
+        print "LOADING..."
         try:
             self.dither_axis = map(float, self._param['dither_axis'].split(','))
         except Exception, e:
@@ -271,8 +271,8 @@ is not a direction")
             raise Error.CfgFileErr("Wrong value home (%s)" % e)
 
     def start_communication(self):
+        self.startDevice() # Instantiation of Operation/SimuDevice
         print "Connecting to HXP..."
-        self.load_cfg(self.device)
         self.myxps = hxp_drivers.XPS()
         self.socketId = self.myxps.TCP_ConnectToServer(
             str(self._cfg['ip']),
@@ -290,7 +290,7 @@ is not a direction")
         :raises: :class: `~.Error.DeviceError`, :class:`~.Error.CommErr`
         """
 
-        if self.fsm.current not in ['none', 'LOADED', 'INITIALISING']:
+        if self.fsm.current not in ['none', 'INITIALISING']:
             time.sleep(.1)# have to wait else return busy socke
             # check status
             status_code = self._getStatus()
@@ -303,6 +303,8 @@ is not a direction")
         if self.fsm.current not in ['none', 'LOADED', 'INITIALISING']:
             # check position
             self.currPos = self._getCurrentPosition()
+        else:
+            self.currPos = "undef."
 
     #############
     #  Parsers  #
@@ -405,8 +407,9 @@ is not a direction")
                     x, y, z, u, v, w)
         else:
             # TODO: add rotation algo
-            self.currPos =\
-                    [sum(x) for x in zip(self.currPos, [x, y, z, u, v, w])]
+            self.currPos = [
+                    sum(x) for x in zip(self.currPos, [x, y, z, u, v, w])
+                    ]
             print self.currPos
 
     def errorChecker(self, func, *args):

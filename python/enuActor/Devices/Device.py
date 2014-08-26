@@ -33,6 +33,16 @@ MAP = {
  'callbacks': {}
 }
 
+# Configuration files in cfg directory
+cfg_files = {
+        'communication': 'devices_communication.cfg',
+        'parameters': 'devices_parameters.cfg'
+        }
+
+for it in cfg_files.iterkeys():
+    cfg_files[it] = path + cfg_files[it]
+
+
 class Device(object):
 
     """All device (Shutter, BIA,...) should inherit this class
@@ -42,40 +52,31 @@ class Device(object):
          * connection : object for link connection
          * cfg_path : path of the communication and parameter config files\
                  It should contains *devices_communication.cfg* and\
-                 *devices_parameters.cfg* file.
+                 *devices_parameters.cfg* file. *NOTIMPLEMENTED*
     """
 
-    cfg_files = {
-            'communication': 'devices_communication.cfg',
-            'parameters': 'devices_parameters.cfg'
-            }
     available_link = ['TTL', 'SERIAL', 'ETHERNET', 'NOTSPECIFIED']
 
-    def __init__(self, device, actor=None, cfg_path = None):
-
+    def __init__(self, device, cfg_path = None):
         # Communication attributes
-        self._cfg_files = copy.deepcopy(Device.cfg_files)
-        for it in Device.cfg_files.iterkeys():
-            self._cfg_files[it] = path + Device.cfg_files[it]
         self._param = None
         self._cfg = None
         self.link = None
         self.connection = None
 
-
         # Device attributes
-        self.device = device
-        self.currPos = "undef. (bug. to be reported) "
+        self.deviceName = device
+        self.currPos = "undef. (bug. to be reported)"
         self.started = False
         self.currSimPos = None
         self.MAP = copy.deepcopy(MAP) # referenced
-        #self.MAP['callbacks']['onload'] = lambda e: self.OnLoad()
+        #self.MAP['callbacks']['onload'] = lambda e: self.device.OnLoad()
         self.fsm = Fysom(self.MAP)
 
     #callbacks: init, safe_off, shut_down
     @transition('fail')
     def fail(self, reason):
-        print "%s_FAILED : %s" % (self.device, reason)
+        print "%s_FAILED : %s" % (self.deviceName, reason)
 
     def startFSM(self):
         """ Instantiate the :mod:`.MyFSM` class (create the State Machine).
@@ -91,49 +92,63 @@ class Device(object):
         :param e: event
 
         """
-        print 'state :%s %s' % (self.device, e.dst)
+        print 'state :%s %s' % (self.deviceName, e.dst)
 
 
     ############################
     #  COMMUNICATION HANDLING  #
     ############################
-
-    def load_cfg(self, device):
+    @staticmethod
+    def load_cfg(device):
         """Load configuration file of the device:
         * load data file to self._cfg ad self._param
 
         :param device: name of the device (``'SHUTTER'``, ``'BIA'``, ...)
         :type device: str.
-        :returns: dict config
+        :returns: dict config keys: 'param', 'com', 'link'
         :raises: :class:`~.Error.CfgFileErr``
 
         """
 
         # Parameters section
         config = ConfigParser.ConfigParser()
-        config.readfp(open(self._cfg_files['parameters']))
+        config.readfp(open(cfg_files['parameters']))
         try:
-            self._param = dict(config.items(device.upper()))
+            _param = dict(config.items(device.upper()))
         except ConfigParser.NoSectionError, e:
             raise Error.CfgFileErr(e)
 
         # Communication section
         config = ConfigParser.ConfigParser()
-        config.readfp(open(self._cfg_files['communication']))
+        config.readfp(open(cfg_files['communication']))
         links = dict(config.items('LINK'))
         if not links.has_key(device.lower()):
             raise Error.CfgFileErr(\
                     "%s is not defined in LINK parameter section" % device)
         elif links[device.lower()] not in Device.available_link:
             raise Error.CfgFileErr(\
+
                     "%s is not an available LINK" % links[device.lower()])
         else:
-            self.device = device.lower()
-            self.link = links[device.lower()]
+            link = links[device.lower()]
             try:
-                self._cfg = dict(config.items(device.upper()))
+                _cfg = dict(config.items(device.upper()))
             except ConfigParser.NoSectionError, e:
                 raise Error.CfgFileErr(e)
+        return {
+                'param' : _param,
+                'com': _cfg,
+                'link': link
+                }
+
+    def loadInlineCfg(self):
+        """call load config inline (splitted because of external call)
+
+        """
+        dic = self.load_cfg(self.deviceName)
+        self._param = dic['param']
+        self._cfg = dic['com']
+        self.link = dic['link']
 
     def OnLoad(self):
         """ Virtual callback method for FSM (should be overriden if used)
@@ -174,38 +189,38 @@ class SimulationDevice(Device):
 
          Almost nothing"""
 
-    def __init__(self, device, actor=None, cfg_path=path):
-        super(SimulationDevice, self).__init__(device, actor, cfg_path)
+    def __init__(self, device, cfg_path=path):
+        super(SimulationDevice, self).__init__(device, cfg_path)
 
     ###################
     #  communication  #
     ###################
     def start_communication(self, *args, **kwargs):
-        print "[Simulation] %s: start communication" % self.device
-        self.load_cfg(self.device)
+        print "[Simulation] %s: start communication" % self.deviceName
+        self.loadInlineCfg()
         self.startFSM()
         self.OnLoad()
 
     def start_serial(self, input_buff=None):
-        print "[Simulation] %s: start serial" % self.device
+        print "[Simulation] %s: start serial" % self.deviceName
 
     def start_ethernet(self):
-        print "[Simulation] %s: start ethernet" % self.device
+        print "[Simulation] %s: start ethernet" % self.deviceName
 
     def start_ttl(self):
-        print "[Simulation] %s: start ttl" % self.device
+        print "[Simulation] %s: start ttl" % self.deviceName
 
     def send(self, input_buff=None):
         import sys
         sys.stdout.write("[Simulation] %s: sending '%s'" %
-                (self.device, input_buff))
+                (self.deviceName, input_buff))
 
     #########
     #  FSM  #
     #########
     @transition('init', 'idle')
     def initialise(self):
-        self.load_cfg(self.device)
+        self.load_cfg(self.deviceName)
 
     @transition('load')
     def OnLoad(self):
@@ -226,8 +241,8 @@ class OperationDevice(Device):
          * Communication is implemented
          * Starting, sending and receiving message is implemented"""
 
-    def __init__(self,device, actor=None, cfg_path=path):
-        super(OperationDevice, self).__init__(device, actor, cfg_path)
+    def __init__(self, device, cfg_path=path):
+        super(OperationDevice, self).__init__(device, cfg_path)
 
 
     def start_communication(self, *args, **kwargs):
@@ -245,7 +260,7 @@ class OperationDevice(Device):
         :raises: :class:`~.Error.CfgFileErr`
 
         """
-        self.load_cfg(self.device)
+        self.loadInlineCfg()
         # Load parameter link
         if kwargs.has_key('device'):
             if kwargs.has_key('configFile'):
@@ -355,6 +370,7 @@ LINK: %s\nCfgFile: %s\n " % (self.link, self._cfg))
             try:
                 self.connection.send(input_buff)
                 data = self.connection.recv(1)
+                return data #TODO: Tobe improve
             except socket.error as e:
                 raise Error.CommErr(e)
         elif self.link == 'TTL':
@@ -369,68 +385,114 @@ class DualModeDevice(QThread):
 
     def __init__(self, actor=None):
         """@todo: to be defined1. """
-        self.device = self.__class__.__name__
-        QThread.__init__(self, actor, self.device)
+        self.deviceName = self.__class__.__name__
+        QThread.__init__(self, actor, self.deviceName)
         self.start()
-        self._mode = 'operation'
+
+        #communication part
+        self.link = None
+        self._cfg = None
+        self._param = None
+
+        #factory part
+        self.mode = None
+        self.deviceStarted = False
         self._map = {
                 'operation' : OperationDevice,
                 'simulated' : SimulationDevice
                 }
-        self.curModeDevice = self._map[self._mode](self.device)
+
+    def startDevice(self):
+        """ Prepricessing before instantiate a device when start command
+        launched.
+
+        """
+        self.load_cfg()
+        self.mode = self._param['mode']
+        self.curModeDevice = self._map[self.mode](self.deviceName)
+        self.deviceStarted = True
+
+    def change_mode(self, mode):
+        """It does all pre/post processing for changing mode
+
+        :param mode: 'operation', 'simulated'
+
+        """
+        self.mode = mode
+        self.currPos = None
+        self.curModeDevice = self._map[mode](self.deviceName)
+        self.deviceStarted = True
+        self.startFSM()
+        self.OnLoad()
 
     def handleTimeout(self):
         """Override method :meth:`.QThread.handleTimeout`.
         Process while device is idling.
 
-        :returns: @todo
         :raises: :class:`~.Error.CommErr`
 
         """
-        if self.started:
+        if self.deviceStarted:
             self.check_status()
             self.check_position()
             self.updateFactory()
             if self.fsm.current in ['BUSY']:
                 self.fsm.idle()
-            elif self.fsm.current == 'none':
-                self.fsm.load()
+            #elif self.fsm.current == 'none':
+                #self.fsm.load()
+
+    ############
+    #  Device  #
+    ############
+    def start_communication(self):
+        self.startDevice()
+        self.curModeDevice.start_communication()
+
+    def load_cfg(self):
+        """Load configuration (call :meth:`.Devices.Device.load_cfg`) file of
+        the device:
+        * load data file to self._cfg ad self._param
+
+        :returns: dict config
+        :raises: :class:`~.Error.CfgFileErr``
+
+        """
+        dic = Device.load_cfg(self.deviceName)
+        self._param = dic['param']
+        self._cfg = dic['com']
+        self.link = dic['link']
+
+    @transition(after_state = 'load')
+    def OnLoad(self):
+        print "LOAD: Nothing to do"
 
     def getStatus(self):
         """return status of Device (FSM)
 
         :returns: ``'LOADED'``, ``'IDLE'``, ``'BUSY'``, ...
         """
-        return "%s status [%s, %s]" % (self.device.upper(),
+        return "[%s] %s status [%s, %s]" % (self.mode, self.deviceName.upper(),
                 self.fsm.current, self.currPos)
 
-
+    #############
+    #  Factory  #
+    #############
     def updateFactory(self):
         """Update attributes of curModeDevice object
-        :returns: @todo
-        :raises: @todo
 
         """
         self.curModeDevice.currPos = self.currPos
+        self.curModeDevice._param = self._param
+        self.curModeDevice._cfg = self._cfg
+        self.curModeDevice.link = self.link
 
-    def mode():
-        """Mode attribute : On change instantiate
-        OperationDevice/SimulationDevice
-
-        """
-        def fget(self):
-            return self._mode
-
-        def fset(self, value):
-            if self._mode != value:
-                self.curModeDevice = self._map[value](self.device)
-            self._mode = value
-        return locals()
-
-    mode = property(**mode())
 
     def __getattr__(self, name):
-        return getattr(self.curModeDevice, name)
+        if self.deviceStarted:
+            return getattr(self.curModeDevice, name)
+        else:
+            raise AttributeError("Device not started yet. Try to access: %s"
+                    % name)
 
     def __getattribute__(self, name):
         if name in [
@@ -439,6 +501,6 @@ class DualModeDevice(QThread):
                 'start_communication',
                 'initialise'
                 ]:
-            if self.mode == 'simulated':
+            if self.mode == 'simulated' and self.deviceStarted:
                 return self.__getattr__(name)
         return super(DualModeDevice, self).__getattribute__(name)

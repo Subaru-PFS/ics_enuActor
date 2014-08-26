@@ -98,8 +98,8 @@ class SlitCmd(object):
 
     def set_mode(self, cmd):
         mode = cmd.cmd.keywords[0].name
-        self.actor.slit.mode = mode
-        cmd.inform("text='mode simulation enabled'")
+        self.actor.slit.change_mode(mode)
+        cmd.inform("text='Slit mode %s enabled'" % mode)
 
     def set_state(self, cmd):
         state = cmd.cmd.keywords[0].name

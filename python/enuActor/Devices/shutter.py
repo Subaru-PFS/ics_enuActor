@@ -81,7 +81,7 @@ class Shutter(DualModeDevice):
         Here just trigger the FSM to INITIALISING and IDLE
 
         """
-        self.load_cfg(self.device)
+        self.load_cfg()
         self.check_status()
         self.currSimPos = "closed"
         self.check_position()

@@ -42,7 +42,7 @@ class Bia(DualModeDevice):
 
         """
         #TODO: to improve
-        self.load_cfg(self.device)
+        self.load_cfg()
         self.check_status()
         self.check_position()
 
@@ -109,6 +109,7 @@ class Bia(DualModeDevice):
             raise Error.CommErr(e)
         self.check_status()
 
+    @transition(after_state = 'load')
     def OnLoad(self):
         self.check_status()
 
