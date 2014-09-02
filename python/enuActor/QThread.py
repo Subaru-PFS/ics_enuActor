@@ -28,13 +28,14 @@ Description:
 class QThread(threading.Thread):
     def __init__(self, actor, name, timeout=2, isDaemon=True, queueClass=Queue.PriorityQueue):
         """ A thread with a queue. The thread's .run() method pops items off its public .queue and executes them. """
-        threading.Thread.__init__(self, name=name)
+        super(QThread, self).__init__(name=name)
         self.setDaemon(isDaemon)
         self.actor = actor
         self.timeout = timeout
         self.exitASAP = False
         self.queue = queueClass()
         self.started = False
+        self.ret = None
 
     def _realCmd(self, cmd=None):
         """ Returns a callable cmd instance. If the passed in cmd is None, return the actor's bcast cmd. """
@@ -95,7 +96,10 @@ class QThread(threading.Thread):
                 except AttributeError as e:
                     raise AttributeError("thread %s received a message without a method to call: %s" % (self.name, msg))
                 try:
-                    ret = method()
+                    print "performing %s" % method.func_name
+                    self.ret = method()
+                    self.queue.task_done()
+                    print "task done"
                 except SystemExit:
                     return
                 except Exception as e:
@@ -108,10 +112,10 @@ class QThread(threading.Thread):
                 try:
                     emsg = 'text="%s thread got unexpected exception: %s"' % (self.name, e)
                     self._realCmd().diag(emsg)
-                    tback("DeviceThread", e)
+                    tback("DualModeDevice", e)
                 except:
                     print emsg
-                    tback("DeviceThread", e)
+                    tback("DualModeDevice", e)
 
 class QMsg(object):
     DEFAULT_PRIORITY = 5

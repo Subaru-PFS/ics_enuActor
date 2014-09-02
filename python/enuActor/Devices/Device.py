@@ -211,8 +211,7 @@ class SimulationDevice(Device):
         print "[Simulation] %s: start ttl" % self.deviceName
 
     def send(self, input_buff=None):
-        import sys
-        sys.stdout.write("[Simulation] %s: sending '%s'" %
+        print("[Simulation] %s: sending '%s'" %
                 (self.deviceName, input_buff))
 
     #########
@@ -283,6 +282,11 @@ class OperationDevice(Device):
             raise Error.CfgFileErr("LINK section error in config file :\n\
 LINK: %s\nCfgFile: %s\n " % (self.link, self._cfg))
         self.startFSM()
+        self.OnLoad()
+
+    @transition(after_state = 'load')
+    def OnLoad(self):
+        pass
 
     def start_serial(self, input_buff=None):
         """Start a serial communication
@@ -346,10 +350,12 @@ LINK: %s\nCfgFile: %s\n " % (self.link, self._cfg))
         :raises: :class:`~.Error.CommErr`
 
         """
+        import sys
         buff = ''
         if self.link == 'SERIAL':
             if input_buff is not None:
                 cmpt = 0
+                sys.stdout.flush()
                 while buff == '' and cmpt < 3:
                     # try 3 times if no response
                     try:
@@ -357,10 +363,13 @@ LINK: %s\nCfgFile: %s\n " % (self.link, self._cfg))
                     except serial.SerialException as e:
                         raise Error.CommErr("[%s, %s]" % (e.errno, e.message))
                     time.sleep(0.3)
-                    while self.connection.inWaiting() > 0:
-                        buff += self.connection.read(1)
-                    print "trying again (%i)..." % cmpt
+                    #while self.connection.inWaiting() > 0:
+                    buff = self.connection.read(
+                            self.connection.inWaiting())
                     cmpt += 1
+                    if cmpt > 1:
+                        print "repeat %s" % cmpt
+                    print buff
                 if buff == '':
                     raise Error.CommErr("No response from serial port")
                 else:
@@ -386,7 +395,7 @@ class DualModeDevice(QThread):
     def __init__(self, actor=None):
         """@todo: to be defined1. """
         self.deviceName = self.__class__.__name__
-        QThread.__init__(self, actor, self.deviceName)
+        super(DualModeDevice, self).__init__(actor, self.deviceName)
         self.start()
 
         #communication part
@@ -412,18 +421,17 @@ class DualModeDevice(QThread):
         self.curModeDevice = self._map[self.mode](self.deviceName)
         self.deviceStarted = True
 
-    def change_mode(self, mode):
-        """It does all pre/post processing for changing mode
+    def qSend(self, string):
+        """Put in queue send(string) function (parser method)
 
-        :param mode: 'operation', 'simulated'
+        :param string: argument of send function
 
         """
-        self.mode = mode
-        self.currPos = None
-        self.curModeDevice = self._map[mode](self.deviceName)
-        self.deviceStarted = True
-        self.startFSM()
-        self.OnLoad()
+        self.putMsg(self.send, string)
+        print "waiting join"
+        self.queue.join()
+        print "quueue joined"
+        return self.ret
 
     def handleTimeout(self):
         """Override method :meth:`.QThread.handleTimeout`.
@@ -444,8 +452,9 @@ class DualModeDevice(QThread):
     ############
     #  Device  #
     ############
-    def start_communication(self):
-        self.startDevice()
+    def start_communication(self, inline = False):
+        if inline is False:
+            self.startDevice()
         self.curModeDevice.start_communication()
 
     def load_cfg(self):
@@ -486,6 +495,17 @@ class DualModeDevice(QThread):
         self.curModeDevice._cfg = self._cfg
         self.curModeDevice.link = self.link
 
+    def change_mode(self, mode):
+        """It does all pre/post processing for changing mode
+
+        :param mode: 'operation', 'simulated'
+
+        """
+        self.mode = mode
+        self.currPos = None
+        self.curModeDevice = self._map[mode](self.deviceName)
+        self.deviceStarted = True
+        self.start_communication()
 
     def __getattr__(self, name):
         if self.deviceStarted:

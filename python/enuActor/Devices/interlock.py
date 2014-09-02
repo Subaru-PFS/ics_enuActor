@@ -16,8 +16,8 @@ def interlock(func):
     from functools import wraps
     @wraps(func) # for docstring
     def wrapped_func(self, *args, **kwargs):
-        print self.device.lower()
-        if self.device.lower() == 'bia':
+        print self.deviceName.lower()
+        if self.deviceName.lower() == 'bia':
             target_currPos = getattr(getattr(self.actor, 'shutter'), "currPos")
             if func.func_name == 'bia':
                 if target_currPos == 'open' and args[0] == 'on'\
@@ -28,7 +28,7 @@ def interlock(func):
                     return func(self, *args, **kwargs)
             else:
                 raise NotImplementedError
-        elif self.device.lower() == 'shutter':
+        elif self.deviceName.lower() == 'shutter':
             target_currPos = getattr(getattr(self.actor, 'bia'), "currPos")
             if target_currPos in ['on', 'strobe']:
                 print func.func_name
@@ -48,5 +48,5 @@ def interlock(func):
             else:
                 raise NotImplementedError
         else:
-            raise NotImplementedError('case : %s' % self.device)
+            raise NotImplementedError('case : %s' % self.deviceName)
     return wrapped_func

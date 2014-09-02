@@ -63,11 +63,11 @@ class Shutter(DualModeDevice):
         self.currSimPos = transition
         try:
             if transition == 'open':
-                self.send('os\r\n')
+                self.qSend('os\r\n')
             elif transition == 'close':
-                self.send('cs\r\n')
+                self.qSend('cs\r\n')
             elif transition == 'reset':
-                self.send('rs\r\n')
+                self.qSend('rs\r\n')
             self.check_status()
         except Error.DeviceErr, e:
             raise e
@@ -107,7 +107,7 @@ class Shutter(DualModeDevice):
         l_sb = [1, 3, 5, 4, 6]
         mask = [None] * 6
         for sb in l_sb:
-            time.sleep(0.3)
+            #time.sleep(0.3)
             mask[sb - 1] = self.parseStatusByte(sb)
             if self.started:
                 if sum(mask[sb -1] * np.asarray(getattr(Shutter,
@@ -127,9 +127,8 @@ class Shutter(DualModeDevice):
         :raises: :class:`~.Error.DeviceErr`
 
         """
-        status = ''
         try:
-            ss = int(self.send('ss\r\n')[0])
+            ss = int(self.qSend('ss\r\n')[0])
             self.currPos = Shutter.positions[ss]
         except Error.CommErr as e:
             if self.started:
@@ -147,16 +146,17 @@ class Shutter(DualModeDevice):
         :raises: :class:`~.Error.CommErr`
 
         """
-        ret = self.send('sb %i\r\n' % sb)
+        ret = self.qSend('sb %i\r\n' % sb)
+        print ret
         ret = re.split(r"[~\r\n ]+", ret)
 
         #compare binary and decimal value
-        try:
-            if int(format(int(ret[0]), 'b')) != int(ret[1]):
-                raise Error.CommErr("Control bit error (bit lost or whatever)")
-        except ValueError, e:
-            raise Error.CommErr("Error bad type return from serial\
-: [%s, %s]" % (ret[0], ret[1]))
+        #try:
+            #if int(format(int(ret[0]), 'b')) != int(ret[1]):
+                #raise Error.CommErr("sb %s : Control bit error (bit lost)" % sb)
+        #except ValueError, e:
+            #raise Error.CommErr("sb %s :Error bad type return from serial\
+#: [%s, %s]" % (sb, ret[0], ret[1]))
         #return status byte 1
         mask = map(int, list(ret[1]))
         mask.reverse()
