@@ -57,7 +57,7 @@ class Device(object):
 
     available_link = ['TTL', 'SERIAL', 'ETHERNET', 'NOTSPECIFIED']
 
-    def __init__(self, device, cfg_path = None):
+    def __init__(self, device, thread = None, cfg_path = None):
         # Communication attributes
         self._param = None
         self._cfg = None
@@ -65,6 +65,7 @@ class Device(object):
         self.connection = None
 
         # Device attributes
+        self.thread = thread
         self.deviceName = device
         self.currPos = "undef. (bug. to be reported)"
         self.started = False
@@ -189,8 +190,8 @@ class SimulationDevice(Device):
 
          Almost nothing"""
 
-    def __init__(self, device, cfg_path=path):
-        super(SimulationDevice, self).__init__(device, cfg_path)
+    def __init__(self, device, thread=None, cfg_path=path):
+        super(SimulationDevice, self).__init__(device, thread,  cfg_path)
 
     ###################
     #  communication  #
@@ -226,9 +227,11 @@ class SimulationDevice(Device):
         pass
 
     def check_status(self):
+        #self.thread.<method> to have access to deviceyy
         pass
 
     def check_position(self):
+        #self.thread.<method> to have access to deviceyy
         if self.currSimPos is not None:
             self.currPos = self.currSimPos
 
@@ -240,9 +243,8 @@ class OperationDevice(Device):
          * Communication is implemented
          * Starting, sending and receiving message is implemented"""
 
-    def __init__(self, device, cfg_path=path):
-        super(OperationDevice, self).__init__(device, cfg_path)
-
+    def __init__(self, device, thread=None, cfg_path=path):
+        super(OperationDevice, self).__init__(device, thread, cfg_path)
 
     def start_communication(self, *args, **kwargs):
         """Docstring for start_communication.
@@ -384,8 +386,12 @@ LINK: %s\nCfgFile: %s\n " % (self.link, self._cfg))
                 raise Error.CommErr(e)
         elif self.link == 'TTL':
             raise NotImplementedError
+        elif self.link == 'NOTSPECIFIED':
+            raise Error.DeviceErr(
+            "Link not specified the method send shouldn't be called.",
+            device = self.deviceName)
         else:
-            raise NotImplementedError
+            raise NotImplementedError("send method: link not known %s " % self.link)
 
 
 class DualModeDevice(QThread):
@@ -404,7 +410,7 @@ class DualModeDevice(QThread):
         self._param = None
 
         #factory part
-        self.mode = None
+        self.mode = "operation"
         self.deviceStarted = False
         self._map = {
                 'operation' : OperationDevice,
@@ -417,21 +423,8 @@ class DualModeDevice(QThread):
 
         """
         self.load_cfg()
-        self.mode = self._param['mode']
         self.curModeDevice = self._map[self.mode](self.deviceName)
         self.deviceStarted = True
-
-    def qSend(self, string):
-        """Put in queue send(string) function (parser method)
-
-        :param string: argument of send function
-
-        """
-        self.putMsg(self.send, string)
-        print "waiting join"
-        self.queue.join()
-        print "quueue joined"
-        return self.ret
 
     def handleTimeout(self):
         """Override method :meth:`.QThread.handleTimeout`.
@@ -446,8 +439,6 @@ class DualModeDevice(QThread):
             self.updateFactory()
             if self.fsm.current in ['BUSY']:
                 self.fsm.idle()
-            #elif self.fsm.current == 'none':
-                #self.fsm.load()
 
     ############
     #  Device  #
@@ -503,7 +494,7 @@ class DualModeDevice(QThread):
         """
         self.mode = mode
         self.currPos = None
-        self.curModeDevice = self._map[mode](self.deviceName)
+        self.curModeDevice = self._map[mode](self.deviceName, thread=self)
         self.deviceStarted = True
         self.start_communication()
 

@@ -24,9 +24,8 @@ Description:
    tq.callMsgLater(10.0, tq.pingMsg, cmd=cmd)
 """
 
-
 class QThread(threading.Thread):
-    def __init__(self, actor, name, timeout=2, isDaemon=True, queueClass=Queue.PriorityQueue):
+    def __init__(self, actor, name, timeout=5, isDaemon=True, queueClass=Queue.PriorityQueue):
         """ A thread with a queue. The thread's .run() method pops items off its public .queue and executes them. """
         super(QThread, self).__init__(name=name)
         self.setDaemon(isDaemon)
@@ -34,13 +33,12 @@ class QThread(threading.Thread):
         self.timeout = timeout
         self.exitASAP = False
         self.queue = queueClass()
-        self.started = False
-        self.ret = None
 
     def _realCmd(self, cmd=None):
         """ Returns a callable cmd instance. If the passed in cmd is None, return the actor's bcast cmd. """
 
-        return cmd if cmd else self.actor.bcast
+        #return cmd if cmd else self.actor.bcast
+        return "Thomas : self.actor.bcast"
 
     def putMsg(self, method, *argl, **argd):
         """ send ourself a new message.
@@ -67,9 +65,10 @@ class QThread(threading.Thread):
     def handleTimeout(self):
         """ Called when the .get() times out. Intended to be overridden. """
 
-        self._realCmd(None).diag('text="%s thread is alive (exiting=%s)"' % (self.name, self.exitASAP))
+        #self._realCmd(None).diag('text="%s thread is alive (exiting=%s)"' % (self.name, self.exitASAP))
         if self.exitASAP:
             raise SystemExit()
+
 
     def exitMsg(self, cmd=None):
         """ handler for the "exit" message. Spits out a message and arranges for the .run() method to exit.  """
@@ -96,16 +95,12 @@ class QThread(threading.Thread):
                 except AttributeError as e:
                     raise AttributeError("thread %s received a message without a method to call: %s" % (self.name, msg))
                 try:
-                    print "performing %s" % method.func_name
                     self.ret = method()
-                    self.queue.task_done()
-                    print "task done"
                 except SystemExit:
                     return
                 except Exception as e:
                     self._realCmd().warn('text="%s: uncaught exception running %s: %s"' %
                                             (self.name, method, e))
-                    print e
             except Queue.Empty:
                 self.handleTimeout()
             except Exception, e:
@@ -114,7 +109,6 @@ class QThread(threading.Thread):
                     self._realCmd().diag(emsg)
                     tback("DualModeDevice", e)
                 except:
-                    print emsg
                     tback("DualModeDevice", e)
 
 class QMsg(object):

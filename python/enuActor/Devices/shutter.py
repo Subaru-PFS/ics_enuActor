@@ -60,14 +60,15 @@ class Shutter(DualModeDevice):
         :raises: :class:`~.Error.CommErr`, :class:`~.Error.DeviceErr`
 
         """
+        print "hey"
         self.currSimPos = transition
         try:
             if transition == 'open':
-                self.qSend('os\r\n')
+                self.send('os\r\n')
             elif transition == 'close':
-                self.qSend('cs\r\n')
+                self.send('cs\r\n')
             elif transition == 'reset':
-                self.qSend('rs\r\n')
+                self.send('rs\r\n')
             self.check_status()
         except Error.DeviceErr, e:
             raise e
@@ -107,7 +108,7 @@ class Shutter(DualModeDevice):
         l_sb = [1, 3, 5, 4, 6]
         mask = [None] * 6
         for sb in l_sb:
-            #time.sleep(0.3)
+            time.sleep(0.3)
             mask[sb - 1] = self.parseStatusByte(sb)
             if self.started:
                 if sum(mask[sb -1] * np.asarray(getattr(Shutter,
@@ -128,7 +129,7 @@ class Shutter(DualModeDevice):
 
         """
         try:
-            ss = int(self.qSend('ss\r\n')[0])
+            ss = int(self.send('ss\r\n')[0])
             self.currPos = Shutter.positions[ss]
         except Error.CommErr as e:
             if self.started:
@@ -146,8 +147,7 @@ class Shutter(DualModeDevice):
         :raises: :class:`~.Error.CommErr`
 
         """
-        ret = self.qSend('sb %i\r\n' % sb)
-        print ret
+        ret = self.send('sb %i\r\n' % sb)
         ret = re.split(r"[~\r\n ]+", ret)
 
         #compare binary and decimal value
