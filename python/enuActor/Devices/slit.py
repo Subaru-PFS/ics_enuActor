@@ -59,6 +59,7 @@ class Slit(DualModeDevice):
         if self._home is None:
             raise Exception("Bug: Home not initialised")
         else:
+            self.getHome()
             self.setHome(self._home)
         print "going to home ..."
         self._hexapodMoveAbsolute(*[0, 0, 0, 0, 0, 0])
@@ -73,7 +74,8 @@ class Slit(DualModeDevice):
         :returns: [x, y, z, u, v, w]
         :raises: :class: `~.Error.DeviceError`, :class:`~.Error.CommErr`
         """
-        return self._hexapodCoordinateSytemGet('Tool')
+        hxpHome = self._hexapodCoordinateSytemGet('Tool')
+        return [sum(x) for x in zip(hxpHome, self._slit_position)]
 
     def setHome(self, posCoord=None):
         """setHome.
@@ -84,12 +86,10 @@ class Slit(DualModeDevice):
         """
         if posCoord is None:
             posCoord = self._getCurrentPosition()
-            curHome = self.getHome()
-            #newhome = posCoord + curHome
-            print "posCoord= %s" % posCoord
-            print "curHome= %s" % curHome
+            curHome = self._hexapodCoordinateSytemGet('Tool')
             posCoord = [sum(x) for x in zip(posCoord, curHome)]
-        self._hexapodCoordinateSytemSet('Work', *posCoord)
+        curHome = [xi - xj for xi, xj  in zip(posCoord, self._slit_position)]
+        self._hexapodCoordinateSytemSet('Work', *curHome)
 
     @transition('busy', 'idle')
     def moveTo(self, reference, posCoord=None):
@@ -101,7 +101,9 @@ class Slit(DualModeDevice):
         :raises: :class: `~.Error.DeviceError`, :class:`~.Error.CommErr`
         """
         if posCoord == None:
-            posCoord = self.getHome()
+            # Go to home related to work : [0,0,0,0,0,0]
+            posCoord = [0] * 6
+
         if reference == 'absolute':
             self._hexapodMoveAbsolute(*posCoord)
         elif reference == 'relative' :
@@ -231,6 +233,28 @@ is not a direction")
 
     focus_value = property(**focus_value())
 
+    @transition(after_state = "SafeStop")
+    def safeOff(self):
+        """Preprocessing before shutdown.
+
+        """
+        print "seeking home ..."
+        self._hexapodMoveAbsolute(*[0] * 6)
+        print "killing connection ..."
+        self._kill()
+        print "shutdown!"
+
+    @transition(after_state = "ShutDown")
+    def shutdown(self):
+        """ Preprocessing before manual shutdowf
+
+        """
+        print "seeking home ..."
+        self._hexapodMoveAbsolute(*[0] * 6)
+        print "killing connection ..."
+        self._kill()
+        print "shutdown!"
+
     ############
     #  DEVICE  #
     ############o
@@ -269,6 +293,11 @@ is not a direction")
             self._home = map(float, self._param['home'].split(','))
         except Exception, e:
             raise Error.CfgFileErr("Wrong value home (%s)" % e)
+        try:
+            self._slit_position = map(float, self._param['slit_position'].split(','))
+        except Exception, e:
+            raise Error.CfgFileErr("Wrong value home (%s)" % e)
+
 
     def start_communication(self):
         self.startDevice() # Instantiation of Operation/SimuDevice
@@ -428,8 +457,13 @@ is not a direction")
         self.link_busy = False
         if buf[0] != 0:
             if buf[0] not in [-2, -108]:
-                [errorCode, errorString] = self.myxps.ErrorStringGet(self.socketId, buf[0])
-                if errorCode != 0:
+                [errorCode, errorString] = self.myxps.ErrorStringGet(
+                        self.socketId, buf[0]
+                        )
+                if buf[0] == -17:
+                    raise Exception("Warning: [X, Y, Z, U, V, W] exceed : %s"
+                            % errorString)
+                elif errorCode != 0:
                     err = func.func_name + ' : ERROR ' + str(errorCode)
                 else:
                     err = func.func_name + ' : ' + errorString
@@ -442,4 +476,3 @@ is not a direction")
             self.fsm.fail()
             raise Error.DeviceErr(err)#a traiter si Device ou COmm suivant cas
         return buf[1:]
-

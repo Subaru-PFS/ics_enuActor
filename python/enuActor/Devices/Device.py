@@ -220,11 +220,14 @@ class SimulationDevice(Device):
     #########
     @transition('init', 'idle')
     def initialise(self):
-        self.load_cfg(self.deviceName)
+        pass
 
     @transition('load')
     def OnLoad(self):
-        pass
+        self.load_cfg(self.deviceName)
+        if self.deviceName.lower() == 'slit':
+            print "Home: %s" %self.thread._home
+            self.thread._home = map(float, self._param['home'].split(','))
 
     def check_status(self):
         #self.thread.<method> to have access to deviceyy
@@ -471,8 +474,12 @@ class DualModeDevice(QThread):
 
         :returns: ``'LOADED'``, ``'IDLE'``, ``'BUSY'``, ...
         """
+        if self.currPos in [None, 'undef.']:
+            currPos = 'undef.'
+        else:
+            currPos = map(lambda x: round(x, 2), self.currPos)
         return "[%s] %s status [%s, %s]" % (self.mode, self.deviceName.upper(),
-                self.fsm.current, self.currPos)
+                self.fsm.current, currPos)
 
     #############
     #  Factory  #
@@ -515,3 +522,4 @@ class DualModeDevice(QThread):
             if self.mode == 'simulated' and self.deviceStarted:
                 return self.__getattr__(name)
         return super(DualModeDevice, self).__getattribute__(name)
+

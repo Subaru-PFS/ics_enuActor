@@ -13,7 +13,6 @@ class SlitCmd(object):
     def __init__(self, actor):
         self.actor = actor
         self.vocab = [
-            #('test', '<test>', self.test),
             ('slit', 'status', self.status),
             ('slit', 'start', self.start),
             ('slit', '<cmd>', self.command),
@@ -37,12 +36,11 @@ class SlitCmd(object):
             ('slit', 'magnification', self.getMagnification),
             ('slit', 'focus', self.goFocus),
             ('slit', '<focus>', self.goFocus),
-            ('slit', '@(off|load|busy|idle|SafeStop|fail)',
+            ('slit', '@(off|load|busy|idle|fail)',
                 self.set_state),
             ('slit', 'init', self.init),
-            ('slit', 'stop',
-             lambda x : self.actor.slit.stop()),# TODO
-                ]
+            ('slit', 'halt', self.halt)
+            ]
 
         # Define typed command arguments for the above commands.
         self.keys = keys.KeysDictionary("slit_slit", (1, 1),
@@ -65,8 +63,14 @@ class SlitCmd(object):
     def init(self, cmd):
         self.actor.slit.initialise()
 
-    def test(self, cmd):
-        print cmd.cmd.keywords
+    def halt(self, cmd):
+        if self.actor.slit.fsm.current == "IDLE":
+            self.actor.slit.safeOff()
+        elif self.actor.slit.fsm.current == "LOADED":
+            self.actor.slit.shutdown()
+        else:
+            print "It's impossible to halt system from current state: %s"\
+                    % self.actor.slit.current
 
     def status(self, cmd):
         try:
