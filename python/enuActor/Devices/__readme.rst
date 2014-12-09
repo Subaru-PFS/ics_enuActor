@@ -38,15 +38,19 @@ such as a state machine attribute:
       :align: center
 
 So **Device** class will handle main functions:
-    + Communication:
-      - load communication and parameter config files
-      - start a communication (create a socket, start a serial communication, ...)
-      - check status (periodically check by sending data)
-      - send message following protocol
-    + State machine:
-      - create the common rule of the state machine
-      - display state on change
-      - callback on specific state
+
+- Communication:
+
+    + load communication and parameter config files
+    + start a communication (create a socket, start a serial communication, ...)
+    + check status (periodically check by sending data)
+    + send message following protocol
+
+- State machine:
+
+    + create the common rule of the state machine
+    + display state on change
+    + callback on specific state
 
 .. todo:: Talk about :class:`~.Device.SimulationDevice` and :class:`~.Device.OperationDevice`
 

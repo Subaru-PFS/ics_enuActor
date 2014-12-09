@@ -52,7 +52,7 @@ class Device(object):
          * connection : object for link connection
          * cfg_path : path of the communication and parameter config files\
                  It should contains *devices_communication.cfg* and\
-                 *devices_parameters.cfg* file. *NOTIMPLEMENTED*
+                 *devices_parameters.cfg* file.
     """
 
     available_link = ['TTL', 'SERIAL', 'ETHERNET', 'NOTSPECIFIED']
@@ -77,6 +77,9 @@ class Device(object):
     #callbacks: init, safe_off, shut_down
     @transition('fail')
     def fail(self, reason):
+        """ Routine launched when device go to FAILED state.
+
+        """
         print "%s_FAILED : %s" % (self.deviceName, reason)
 
     def startFSM(self):
@@ -88,7 +91,7 @@ class Device(object):
         self.fsm.onchangestate = self.printstateonchange
 
     def printstateonchange(self, e):
-        """What to display when state change
+        """ What to display when state change
 
         :param e: event
 
@@ -101,8 +104,9 @@ class Device(object):
     ############################
     @staticmethod
     def load_cfg(device):
-        """Load configuration file of the device:
-        * load data file to self._cfg ad self._param
+        """ Load configuration file of the device:
+
+            * load data files to self._cfg and self._param
 
         :param device: name of the device (``'SHUTTER'``, ``'BIA'``, ...)
         :type device: str.
@@ -250,7 +254,7 @@ class OperationDevice(Device):
         super(OperationDevice, self).__init__(device, thread, cfg_path)
 
     def start_communication(self, *args, **kwargs):
-        """Docstring for start_communication.
+        """ Process to start communication following interface definition.
 
         .. note:: Need first to specify config file and device by calling :func:`load_cfg`
                 or in the header of :func:`start_communication`
@@ -320,10 +324,10 @@ LINK: %s\nCfgFile: %s\n " % (self.link, self._cfg))
         return connection
 
     def start_ethernet(self):
-        """@todo: Docstring for start_ethernet.
+        """ Start an Ethernet communication
 
-        :returns: @todo
-        :raises: @todo
+        :returns: socket
+        :raises: :class:`~.Error.CommErr`
 
         """
         #TODO: Implement ehere
@@ -338,10 +342,7 @@ LINK: %s\nCfgFile: %s\n " % (self.link, self._cfg))
         return sock
 
     def start_ttl(self):
-        """@todo: Docstring for start_ttl.
-
-        :returns: @todo
-        :raises: @todo
+        """ Not implemented.
 
         """
         raise NotImplementedError
@@ -399,10 +400,10 @@ LINK: %s\nCfgFile: %s\n " % (self.link, self._cfg))
 
 class DualModeDevice(QThread):
 
-    """Switch between class following the device mode"""
+    """ Switch between OperationDevice or SimulationDevice class following the\
+            device mode"""
 
     def __init__(self, actor=None):
-        """@todo: to be defined1. """
         self.deviceName = self.__class__.__name__
         super(DualModeDevice, self).__init__(actor, self.deviceName)
         self.start()
@@ -421,8 +422,8 @@ class DualModeDevice(QThread):
                 }
 
     def startDevice(self):
-        """ Prepricessing before instantiate a device when start command
-        launched.
+        """ Preprocessing before instantiation of a device when the\
+                command start is launched.
 
         """
         self.load_cfg()
@@ -447,6 +448,9 @@ class DualModeDevice(QThread):
     #  Device  #
     ############
     def start_communication(self, inline = False):
+        """ Parser of start_communication. Default behaviour load the config file.
+
+        """
         if inline is False:
             self.startDevice()
         self.curModeDevice.start_communication()
@@ -494,9 +498,11 @@ class DualModeDevice(QThread):
         self.curModeDevice.link = self.link
 
     def change_mode(self, mode):
-        """It does all pre/post processing for changing mode
+        """It does all pre/post processing for changing mode :
+                * reallocate & instanciate a Device
+                * Start the device
 
-        :param mode: 'operation', 'simulated'
+        :param mode: ``operation``, ``simulated``
 
         """
         self.mode = mode

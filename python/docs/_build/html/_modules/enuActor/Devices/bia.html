@@ -81,8 +81,13 @@
 
     <span class="sd">&quot;&quot;&quot;SW device: BIA</span>
 
-<span class="sd">       Attributes:</span>
-<span class="sd">        * currPos : current position of the BIA</span>
+<span class="sd">       Instance attributes:</span>
+
+<span class="sd">            * currPos : current position of the BIA</span>
+
+<span class="sd">       Class attributes:</span>
+
+<span class="sd">           * positions : set of possible positions</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">positions</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;on&#39;</span><span class="p">,</span> <span class="s">&#39;off&#39;</span><span class="p">,</span> <span class="s">&#39;strobe&#39;</span><span class="p">]</span>
@@ -103,7 +108,7 @@
 
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c">#TODO: to improve</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">load_cfg</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">load_cfg</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">check_status</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">check_position</span><span class="p">()</span>
 </div>
@@ -170,6 +175,7 @@
             <span class="k">raise</span> <span class="n">Error</span><span class="o">.</span><span class="n">CommErr</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">check_status</span><span class="p">()</span>
 </div>
+    <span class="nd">@transition</span><span class="p">(</span><span class="n">after_state</span> <span class="o">=</span> <span class="s">&#39;load&#39;</span><span class="p">)</span>
 <div class="viewcode-block" id="Bia.OnLoad"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.bia.Bia.OnLoad">[docs]</a>    <span class="k">def</span> <span class="nf">OnLoad</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">check_status</span><span class="p">()</span>
 </div>

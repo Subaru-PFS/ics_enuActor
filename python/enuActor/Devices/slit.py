@@ -20,7 +20,9 @@ class Slit(DualModeDevice):
     """SW device: Fiber Slit Positionning Sub Assembly
 
         Attributes:
-         * currPos : current position of the slit
+
+            * currPos : current position of the slit
+            * link_busy : flag saying if connection is busy
 
     """
 
@@ -46,10 +48,9 @@ class Slit(DualModeDevice):
     @transition('init', 'idle')
     def initialise(self):
         """ Initialise shutter.
+
         Here just trigger the FSM to INITIALISING and IDLE
 
-        :returns: @todo
-        :raises: @todo
         """
         self._kill()
         print "initialising hxp ..."
@@ -72,7 +73,7 @@ class Slit(DualModeDevice):
         """getHome.
 
         :returns: [x, y, z, u, v, w]
-        :raises: :class: `~.Error.DeviceError`, :class:`~.Error.CommErr`
+        :raises: :class:`~.Error.DeviceErr`, :class:`~.Error.CommErr`
         """
         hxpHome = self._hexapodCoordinateSytemGet('Tool')
         return [sum(x) for x in zip(hxpHome, self._slit_position)]
@@ -82,7 +83,7 @@ class Slit(DualModeDevice):
         setHome to posCoord or to current if posCoord is None
 
         :param posCoord: [x, y, z, u, v, w] or nothing if current
-        :raises: :class: `~.Error.DeviceError`, :class:`~.Error.CommErr`
+        :raises: :class:`~.Error.DeviceErr`, :class:`~.Error.CommErr`
         """
         if posCoord is None:
             posCoord = self._getCurrentPosition()
@@ -98,7 +99,7 @@ class Slit(DualModeDevice):
 
         :param reference: 'absolute' or 'relative'
         :param posCoord: [x, y, z, u, v, w] or nothing if home
-        :raises: :class: `~.Error.DeviceError`, :class:`~.Error.CommErr`
+        :raises: :class:`~.Error.DeviceErr`, :class:`~.Error.CommErr`
         """
         if posCoord == None:
             # Go to home related to work : [0,0,0,0,0,0]
@@ -316,7 +317,8 @@ is not a direction")
 
     def check_status(self):
         """Check status of hexapod
-        :raises: :class: `~.Error.DeviceError`, :class:`~.Error.CommErr`
+
+        :raises: :class:`~.Error.DeviceErr`, :class:`~.Error.CommErr`
         """
 
         if self.fsm.current not in ['none', 'INITIALISING']:
@@ -327,7 +329,8 @@ is not a direction")
 
     def check_position(self):
         """Check position of hexapod
-        :raises: :class: `~.Error.DeviceError`, :class:`~.Error.CommErr`
+
+        :raises: :class:`~.Error.DeviceErr`, :class:`~.Error.CommErr`
         """
         if self.fsm.current not in ['none', 'LOADED', 'INITIALISING']:
             # check position
@@ -445,7 +448,7 @@ is not a direction")
         """ Kind of decorator who check error after routine.
 
         :returns: value receive from TCP
-        :raises: :class: `~.Error.DeviceError`, :class:`~.Error.CommErr`
+        :raises: :class:`~.Error.DeviceErr`, :class:`~.Error.CommErr`
         """
         #Check if sending or receiving
         if self.link_busy == True:

@@ -79,8 +79,15 @@
 
     <span class="sd">&quot;&quot;&quot;SW device: Shutter</span>
 
-<span class="sd">       Attributes:</span>
-<span class="sd">        * currPos : current position of the shutter</span>
+<span class="sd">    Instance attributes:</span>
+
+<span class="sd">        * currPos : current position of the shutter.</span>
+
+<span class="sd">    Class attributes:</span>
+
+<span class="sd">        * positions : set of position.</span>
+<span class="sd">        * STATUS_BYTE_N : set of string value return by byte N.</span>
+<span class="sd">        * MASK_ERROR_SB_N : mask error related to SB N</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">positions</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;undef.&#39;</span><span class="p">,</span> <span class="s">&#39;open&#39;</span><span class="p">,</span> <span class="s">&#39;closed(A)&#39;</span><span class="p">,</span> <span class="s">&#39;closed(B)&#39;</span><span class="p">]</span>
@@ -142,7 +149,7 @@
 <span class="sd">        Here just trigger the FSM to INITIALISING and IDLE</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">load_cfg</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">load_cfg</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">check_status</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">currSimPos</span> <span class="o">=</span> <span class="s">&quot;closed&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">check_position</span><span class="p">()</span>
@@ -188,7 +195,6 @@
 <span class="sd">        :raises: :class:`~.Error.DeviceErr`</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">status</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">ss</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s">&#39;ss</span><span class="se">\r\n</span><span class="s">&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">currPos</span> <span class="o">=</span> <span class="n">Shutter</span><span class="o">.</span><span class="n">positions</span><span class="p">[</span><span class="n">ss</span><span class="p">]</span>
@@ -212,12 +218,12 @@
         <span class="n">ret</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">r&quot;[~\r\n ]+&quot;</span><span class="p">,</span> <span class="n">ret</span><span class="p">)</span>
 
         <span class="c">#compare binary and decimal value</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="k">if</span> <span class="nb">int</span><span class="p">(</span><span class="n">format</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">ret</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="s">&#39;b&#39;</span><span class="p">))</span> <span class="o">!=</span> <span class="nb">int</span><span class="p">(</span><span class="n">ret</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
-                <span class="k">raise</span> <span class="n">Error</span><span class="o">.</span><span class="n">CommErr</span><span class="p">(</span><span class="s">&quot;Control bit error (bit lost or whatever)&quot;</span><span class="p">)</span>
-        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="n">Error</span><span class="o">.</span><span class="n">CommErr</span><span class="p">(</span><span class="s">&quot;Error bad type return from serial</span><span class="se">\</span>
-<span class="s">: [</span><span class="si">%s</span><span class="s">, </span><span class="si">%s</span><span class="s">]&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">ret</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">ret</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+        <span class="c">#try:</span>
+            <span class="c">#if int(format(int(ret[0]), &#39;b&#39;)) != int(ret[1]):</span>
+                <span class="c">#raise Error.CommErr(&quot;sb %s : Control bit error (bit lost)&quot; % sb)</span>
+        <span class="c">#except ValueError, e:</span>
+            <span class="c">#raise Error.CommErr(&quot;sb %s :Error bad type return from serial\</span>
+<span class="c">#: [%s, %s]&quot; % (sb, ret[0], ret[1]))</span>
         <span class="c">#return status byte 1</span>
         <span class="n">mask</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">ret</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
         <span class="n">mask</span><span class="o">.</span><span class="n">reverse</span><span class="p">()</span>

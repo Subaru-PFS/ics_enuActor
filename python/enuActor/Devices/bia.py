@@ -20,8 +20,13 @@ class Bia(DualModeDevice):
 
     """SW device: BIA
 
-       Attributes:
-        * currPos : current position of the BIA
+       Instance attributes:
+
+            * currPos : current position of the BIA
+
+       Class attributes:
+
+           * positions : set of possible positions
     """
 
     positions = ['on', 'off', 'strobe']

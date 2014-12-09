@@ -18,8 +18,15 @@ class Shutter(DualModeDevice):
 
     """SW device: Shutter
 
-       Attributes:
-        * currPos : current position of the shutter
+    Instance attributes:
+
+        * currPos : current position of the shutter.
+
+    Class attributes:
+
+        * positions : set of position.
+        * STATUS_BYTE_N : set of string value return by byte N.
+        * MASK_ERROR_SB_N : mask error related to SB N
     """
 
     positions = ['undef.', 'open', 'closed(A)', 'closed(B)']
@@ -60,7 +67,6 @@ class Shutter(DualModeDevice):
         :raises: :class:`~.Error.CommErr`, :class:`~.Error.DeviceErr`
 
         """
-        print "hey"
         self.currSimPos = transition
         try:
             if transition == 'open':

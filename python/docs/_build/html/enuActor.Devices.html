@@ -78,7 +78,7 @@
 <span id="enuactor-devices-device-module"></span><h2>enuActor.Devices.Device module<a class="headerlink" href="#module-enuActor.Devices.Device" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
 <dt id="enuActor.Devices.Device.Device">
-<em class="property">class </em><tt class="descclassname">enuActor.Devices.Device.</tt><tt class="descname">Device</tt><big>(</big><em>device</em>, <em>actor=None</em>, <em>cfg_path=None</em><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/Device.html#Device"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.Device.Device" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><tt class="descclassname">enuActor.Devices.Device.</tt><tt class="descname">Device</tt><big>(</big><em>device</em>, <em>thread=None</em>, <em>cfg_path=None</em><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/Device.html#Device"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.Device.Device" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
 <p>All device (Shutter, BIA,...) should inherit this class</p>
 <dl class="docutils">
@@ -101,28 +101,34 @@
 <tt class="descname">available_link</tt><em class="property"> = ['TTL', 'SERIAL', 'ETHERNET', 'NOTSPECIFIED']</em><a class="headerlink" href="#enuActor.Devices.Device.Device.available_link" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
-<dl class="attribute">
-<dt id="enuActor.Devices.Device.Device.cfg_files">
-<tt class="descname">cfg_files</tt><em class="property"> = {'communication': 'devices_communication.cfg', 'parameters': 'devices_parameters.cfg'}</em><a class="headerlink" href="#enuActor.Devices.Device.Device.cfg_files" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
 <dl class="method">
 <dt id="enuActor.Devices.Device.Device.fail">
 <tt class="descname">fail</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/Device.html#Device.fail"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.Device.Device.fail" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Routine launched when device go to FAILED state.</p>
+</dd></dl>
 
 <dl class="method">
+<dt id="enuActor.Devices.Device.Device.loadInlineCfg">
+<tt class="descname">loadInlineCfg</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/Device.html#Device.loadInlineCfg"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.Device.Device.loadInlineCfg" title="Permalink to this definition">¶</a></dt>
+<dd><p>call load config inline (splitted because of external call)</p>
+</dd></dl>
+
+<dl class="staticmethod">
 <dt id="enuActor.Devices.Device.Device.load_cfg">
-<tt class="descname">load_cfg</tt><big>(</big><em>device</em><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/Device.html#Device.load_cfg"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.Device.Device.load_cfg" title="Permalink to this definition">¶</a></dt>
-<dd><p>Load configuration file of the device:
-* load data file to self._cfg ad self._param</p>
+<em class="property">static </em><tt class="descname">load_cfg</tt><big>(</big><em>device</em><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/Device.html#Device.load_cfg"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.Device.Device.load_cfg" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load configuration file of the device:</p>
+<blockquote>
+<div><ul class="simple">
+<li>load data files to self._cfg and self._param</li>
+</ul>
+</div></blockquote>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>device</strong> (<em>str.</em>) &#8211; name of the device (<tt class="docutils literal"><span class="pre">'SHUTTER'</span></tt>, <tt class="docutils literal"><span class="pre">'BIA'</span></tt>, ...)</td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">dict config</td>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">dict config keys: &#8216;param&#8217;, &#8216;com&#8217;, &#8216;link&#8217;</td>
 </tr>
 <tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body"><tt class="xref py py-class docutils literal"><span class="pre">CfgFileErr`</span></tt></td>
 </tr>
@@ -186,7 +192,33 @@
 <dt id="enuActor.Devices.Device.DualModeDevice">
 <em class="property">class </em><tt class="descclassname">enuActor.Devices.Device.</tt><tt class="descname">DualModeDevice</tt><big>(</big><em>actor=None</em><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/Device.html#DualModeDevice"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.Device.DualModeDevice" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="enuActor.html#enuActor.QThread.QThread" title="enuActor.QThread.QThread"><tt class="xref py py-class docutils literal"><span class="pre">enuActor.QThread.QThread</span></tt></a></p>
-<p>Switch between class following the device mode</p>
+<p>Switch between OperationDevice or SimulationDevice class following the            device mode</p>
+<dl class="method">
+<dt id="enuActor.Devices.Device.DualModeDevice.OnLoad">
+<tt class="descname">OnLoad</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/Device.html#DualModeDevice.OnLoad"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.Device.DualModeDevice.OnLoad" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="enuActor.Devices.Device.DualModeDevice.change_mode">
+<tt class="descname">change_mode</tt><big>(</big><em>mode</em><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/Device.html#DualModeDevice.change_mode"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.Device.DualModeDevice.change_mode" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="docutils">
+<dt>It does all pre/post processing for changing mode :</dt>
+<dd><ul class="first last simple">
+<li>reallocate &amp; instanciate a Device</li>
+<li>Start the device</li>
+</ul>
+</dd>
+</dl>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>mode</strong> &#8211; <tt class="docutils literal"><span class="pre">operation</span></tt>, <tt class="docutils literal"><span class="pre">simulated</span></tt></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
 <dl class="method">
 <dt id="enuActor.Devices.Device.DualModeDevice.getStatus">
 <tt class="descname">getStatus</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/Device.html#DualModeDevice.getStatus"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.Device.DualModeDevice.getStatus" title="Permalink to this definition">¶</a></dt>
@@ -210,38 +242,64 @@ Process while device is idling.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">&#64;todo</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><a class="reference internal" href="#enuActor.Devices.Error.CommErr" title="enuActor.Devices.Error.CommErr"><tt class="xref py py-class docutils literal"><span class="pre">CommErr</span></tt></a></td>
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body"><a class="reference internal" href="#enuActor.Devices.Error.CommErr" title="enuActor.Devices.Error.CommErr"><tt class="xref py py-class docutils literal"><span class="pre">CommErr</span></tt></a></td>
 </tr>
 </tbody>
 </table>
 </dd></dl>
 
-<dl class="attribute">
-<dt id="enuActor.Devices.Device.DualModeDevice.mode">
-<tt class="descname">mode</tt><a class="reference internal" href="_modules/enuActor/Devices/Device.html#DualModeDevice.mode"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.Device.DualModeDevice.mode" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dl class="method">
+<dt id="enuActor.Devices.Device.DualModeDevice.load_cfg">
+<tt class="descname">load_cfg</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/Device.html#DualModeDevice.load_cfg"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.Device.DualModeDevice.load_cfg" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load configuration (call <tt class="xref py py-meth docutils literal"><span class="pre">Devices.Device.load_cfg()</span></tt>) file of
+the device:
+* load data file to self._cfg ad self._param</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">dict config</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><tt class="xref py py-class docutils literal"><span class="pre">CfgFileErr`</span></tt></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="enuActor.Devices.Device.DualModeDevice.startDevice">
+<tt class="descname">startDevice</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/Device.html#DualModeDevice.startDevice"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.Device.DualModeDevice.startDevice" title="Permalink to this definition">¶</a></dt>
+<dd><p>Preprocessing before instantiation of a device when the                command start is launched.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="enuActor.Devices.Device.DualModeDevice.start_communication">
+<tt class="descname">start_communication</tt><big>(</big><em>inline=False</em><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/Device.html#DualModeDevice.start_communication"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.Device.DualModeDevice.start_communication" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parser of start_communication. Default behaviour load the config file.</p>
+</dd></dl>
 
 <dl class="method">
 <dt id="enuActor.Devices.Device.DualModeDevice.updateFactory">
 <tt class="descname">updateFactory</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/Device.html#DualModeDevice.updateFactory"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.Device.DualModeDevice.updateFactory" title="Permalink to this definition">¶</a></dt>
-<dd><p>Update attributes of curModeDevice object
-:returns: &#64;todo
-:raises: &#64;todo</p>
+<dd><p>Update attributes of curModeDevice object</p>
 </dd></dl>
 
 </dd></dl>
 
 <dl class="class">
 <dt id="enuActor.Devices.Device.OperationDevice">
-<em class="property">class </em><tt class="descclassname">enuActor.Devices.Device.</tt><tt class="descname">OperationDevice</tt><big>(</big><em>device</em>, <em>actor=None</em>, <em>cfg_path='/home/tpegot/mhsls/devel/enuActor/python/enuActor/Devices/cfg/'</em><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/Device.html#OperationDevice"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.Device.OperationDevice" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><tt class="descclassname">enuActor.Devices.Device.</tt><tt class="descname">OperationDevice</tt><big>(</big><em>device</em>, <em>thread=None</em>, <em>cfg_path='/home/tpegot/mhsls/devel/enuActor/python/enuActor/Devices/cfg/'</em><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/Device.html#OperationDevice"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.Device.OperationDevice" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#enuActor.Devices.Device.Device" title="enuActor.Devices.Device.Device"><tt class="xref py py-class docutils literal"><span class="pre">enuActor.Devices.Device.Device</span></tt></a></p>
 <p>Device in operation mode:</p>
 <ul class="simple">
 <li>Communication is implemented</li>
 <li>Starting, sending and receiving message is implemented</li>
 </ul>
+<dl class="method">
+<dt id="enuActor.Devices.Device.OperationDevice.OnLoad">
+<tt class="descname">OnLoad</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/Device.html#OperationDevice.OnLoad"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.Device.OperationDevice.OnLoad" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
 <dl class="method">
 <dt id="enuActor.Devices.Device.OperationDevice.send">
 <tt class="descname">send</tt><big>(</big><em>input_buff=None</em><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/Device.html#OperationDevice.send"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.Device.OperationDevice.send" title="Permalink to this definition">¶</a></dt>
@@ -263,7 +321,7 @@ Process while device is idling.</p>
 <dl class="method">
 <dt id="enuActor.Devices.Device.OperationDevice.start_communication">
 <tt class="descname">start_communication</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/Device.html#OperationDevice.start_communication"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.Device.OperationDevice.start_communication" title="Permalink to this definition">¶</a></dt>
-<dd><p>Docstring for start_communication.</p>
+<dd><p>Process to start communication following interface definition.</p>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
 <p class="last">Need first to specify config file and device by calling <tt class="xref py py-func docutils literal"><span class="pre">load_cfg()</span></tt>
@@ -293,14 +351,14 @@ or in the header of <a class="reference internal" href="#enuActor.Devices.Device
 <dl class="method">
 <dt id="enuActor.Devices.Device.OperationDevice.start_ethernet">
 <tt class="descname">start_ethernet</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/Device.html#OperationDevice.start_ethernet"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.Device.OperationDevice.start_ethernet" title="Permalink to this definition">¶</a></dt>
-<dd><p>&#64;todo: Docstring for start_ethernet.</p>
+<dd><p>Start an Ethernet communication</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">&#64;todo</td>
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">socket</td>
 </tr>
-<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body">&#64;todo</td>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><a class="reference internal" href="#enuActor.Devices.Error.CommErr" title="enuActor.Devices.Error.CommErr"><tt class="xref py py-class docutils literal"><span class="pre">CommErr</span></tt></a></td>
 </tr>
 </tbody>
 </table>
@@ -325,24 +383,14 @@ or in the header of <a class="reference internal" href="#enuActor.Devices.Device
 <dl class="method">
 <dt id="enuActor.Devices.Device.OperationDevice.start_ttl">
 <tt class="descname">start_ttl</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/Device.html#OperationDevice.start_ttl"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.Device.OperationDevice.start_ttl" title="Permalink to this definition">¶</a></dt>
-<dd><p>&#64;todo: Docstring for start_ttl.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">&#64;todo</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body">&#64;todo</td>
-</tr>
-</tbody>
-</table>
+<dd><p>Not implemented.</p>
 </dd></dl>
 
 </dd></dl>
 
 <dl class="class">
 <dt id="enuActor.Devices.Device.SimulationDevice">
-<em class="property">class </em><tt class="descclassname">enuActor.Devices.Device.</tt><tt class="descname">SimulationDevice</tt><big>(</big><em>device</em>, <em>actor=None</em>, <em>cfg_path='/home/tpegot/mhsls/devel/enuActor/python/enuActor/Devices/cfg/'</em><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/Device.html#SimulationDevice"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.Device.SimulationDevice" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><tt class="descclassname">enuActor.Devices.Device.</tt><tt class="descname">SimulationDevice</tt><big>(</big><em>device</em>, <em>thread=None</em>, <em>cfg_path='/home/tpegot/mhsls/devel/enuActor/python/enuActor/Devices/cfg/'</em><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/Device.html#SimulationDevice"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.Device.SimulationDevice" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#enuActor.Devices.Device.Device" title="enuActor.Devices.Device.Device"><tt class="xref py py-class docutils literal"><span class="pre">enuActor.Devices.Device.Device</span></tt></a></p>
 <p>Device in simulation mode:</p>
 <p>Almost nothing</p>
@@ -400,8 +448,11 @@ or in the header of <a class="reference internal" href="#enuActor.Devices.Device
 <dt id="enuActor.Devices.Error.CfgFileErr">
 <em class="property">exception </em><tt class="descclassname">enuActor.Devices.Error.</tt><tt class="descname">CfgFileErr</tt><big>(</big><em>reason</em>, <em>lvl=1</em><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/Error.html#CfgFileErr"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.Error.CfgFileErr" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#enuActor.Devices.Error.RuleError" title="enuActor.Devices.Error.RuleError"><tt class="xref py py-class docutils literal"><span class="pre">enuActor.Devices.Error.RuleError</span></tt></a></p>
-<p>Docstring for CommErr.
-.. todo:: Specify file error</p>
+<p>Error related to configuration files.</p>
+<div class="admonition-todo admonition" id="index-0">
+<p class="first admonition-title">Todo</p>
+<p class="last">Specify file error</p>
+</div>
 </dd></dl>
 
 <dl class="exception">
@@ -450,23 +501,28 @@ When a DeviceErr occures the current state of the FSM go to fail.</p>
 <em class="property">class </em><tt class="descclassname">enuActor.Devices.bia.</tt><tt class="descname">Bia</tt><big>(</big><em>actor=None</em><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/bia.html#Bia"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.bia.Bia" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#enuActor.Devices.Device.DualModeDevice" title="enuActor.Devices.Device.DualModeDevice"><tt class="xref py py-class docutils literal"><span class="pre">enuActor.Devices.Device.DualModeDevice</span></tt></a></p>
 <p>SW device: BIA</p>
-<dl class="docutils">
-<dt>Attributes:</dt>
-<dd><ul class="first last simple">
+<p>Instance attributes:</p>
+<blockquote>
+<div><ul class="simple">
 <li>currPos : current position of the BIA</li>
 </ul>
-</dd>
-</dl>
+</div></blockquote>
+<p>Class attributes:</p>
+<blockquote>
+<div><ul class="simple">
+<li>positions : set of possible positions</li>
+</ul>
+</div></blockquote>
 <dl class="method">
 <dt id="enuActor.Devices.bia.Bia.OnLoad">
-<tt class="descname">OnLoad</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/bia.html#Bia.OnLoad"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.bia.Bia.OnLoad" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">OnLoad</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/bia.html#Bia.OnLoad"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.bia.Bia.OnLoad" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
 <dt id="enuActor.Devices.bia.Bia.bia">
 <tt class="descname">bia</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/bia.html#Bia.bia"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.bia.Bia.bia" title="Permalink to this definition">¶</a></dt>
 <dd><p>Operation on/off bia</p>
-<div class="admonition-todo admonition" id="index-0">
+<div class="admonition-todo admonition" id="index-1">
 <p class="first admonition-title">Todo</p>
 <p class="last">code to be changed when ne input received</p>
 </div>
@@ -525,7 +581,7 @@ When a DeviceErr occures the current state of the FSM go to fail.</p>
 <p class="first admonition-title">Note</p>
 <p class="last">Default parameters are located in                <em>cfg/devices_parameters.cfg</em> file. This function only                change default parameters of session.</p>
 </div>
-<div class="admonition-todo admonition" id="index-1">
+<div class="admonition-todo admonition" id="index-2">
 <p class="first admonition-title">Todo</p>
 <p class="last">Check values and types</p>
 </div>
@@ -554,13 +610,20 @@ When a DeviceErr occures the current state of the FSM go to fail.</p>
 <em class="property">class </em><tt class="descclassname">enuActor.Devices.shutter.</tt><tt class="descname">Shutter</tt><big>(</big><em>actor=None</em><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/shutter.html#Shutter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.shutter.Shutter" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#enuActor.Devices.Device.DualModeDevice" title="enuActor.Devices.Device.DualModeDevice"><tt class="xref py py-class docutils literal"><span class="pre">enuActor.Devices.Device.DualModeDevice</span></tt></a></p>
 <p>SW device: Shutter</p>
-<dl class="docutils">
-<dt>Attributes:</dt>
-<dd><ul class="first last simple">
-<li>currPos : current position of the shutter</li>
+<p>Instance attributes:</p>
+<blockquote>
+<div><ul class="simple">
+<li>currPos : current position of the shutter.</li>
 </ul>
-</dd>
-</dl>
+</div></blockquote>
+<p>Class attributes:</p>
+<blockquote>
+<div><ul class="simple">
+<li>positions : set of position.</li>
+<li>STATUS_BYTE_N : set of string value return by byte N.</li>
+<li>MASK_ERROR_SB_N : mask error related to SB N</li>
+</ul>
+</div></blockquote>
 <dl class="attribute">
 <dt id="enuActor.Devices.shutter.Shutter.MASK_ERROR_SB_1">
 <tt class="descname">MASK_ERROR_SB_1</tt><em class="property"> = [0, 0, 1, 1]</em><a class="headerlink" href="#enuActor.Devices.shutter.Shutter.MASK_ERROR_SB_1" title="Permalink to this definition">¶</a></dt>
@@ -715,13 +778,13 @@ Here just trigger the FSM to INITIALISING and IDLE</p>
 <em class="property">class </em><tt class="descclassname">enuActor.Devices.slit.</tt><tt class="descname">Slit</tt><big>(</big><em>actor=None</em><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/slit.html#Slit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.slit.Slit" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#enuActor.Devices.Device.DualModeDevice" title="enuActor.Devices.Device.DualModeDevice"><tt class="xref py py-class docutils literal"><span class="pre">enuActor.Devices.Device.DualModeDevice</span></tt></a></p>
 <p>SW device: Fiber Slit Positionning Sub Assembly</p>
-<dl class="docutils">
-<dt>Attributes:</dt>
-<dd><ul class="first last simple">
+<p>Attributes:</p>
+<blockquote>
+<div><ul class="simple">
 <li>currPos : current position of the slit</li>
+<li>link_busy : flag saying if connection is busy</li>
 </ul>
-</dd>
-</dl>
+</div></blockquote>
 <dl class="method">
 <dt id="enuActor.Devices.slit.Slit.OnLoad">
 <tt class="descname">OnLoad</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/slit.html#Slit.OnLoad"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.slit.Slit.OnLoad" title="Permalink to this definition">¶</a></dt>
@@ -742,15 +805,29 @@ Here just trigger the FSM to INITIALISING and IDLE</p>
 <dl class="method">
 <dt id="enuActor.Devices.slit.Slit.check_position">
 <tt class="descname">check_position</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/slit.html#Slit.check_position"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.slit.Slit.check_position" title="Permalink to this definition">¶</a></dt>
-<dd><p>Check position of hexapod
-:raises: :class: <cite>~.Error.DeviceError</cite>, <a class="reference internal" href="#enuActor.Devices.Error.CommErr" title="enuActor.Devices.Error.CommErr"><tt class="xref py py-class docutils literal"><span class="pre">CommErr</span></tt></a></p>
+<dd><p>Check position of hexapod</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body"><a class="reference internal" href="#enuActor.Devices.Error.DeviceErr" title="enuActor.Devices.Error.DeviceErr"><tt class="xref py py-class docutils literal"><span class="pre">DeviceErr</span></tt></a>, <a class="reference internal" href="#enuActor.Devices.Error.CommErr" title="enuActor.Devices.Error.CommErr"><tt class="xref py py-class docutils literal"><span class="pre">CommErr</span></tt></a></td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="method">
 <dt id="enuActor.Devices.slit.Slit.check_status">
 <tt class="descname">check_status</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/slit.html#Slit.check_status"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.slit.Slit.check_status" title="Permalink to this definition">¶</a></dt>
-<dd><p>Check status of hexapod
-:raises: :class: <cite>~.Error.DeviceError</cite>, <a class="reference internal" href="#enuActor.Devices.Error.CommErr" title="enuActor.Devices.Error.CommErr"><tt class="xref py py-class docutils literal"><span class="pre">CommErr</span></tt></a></p>
+<dd><p>Check status of hexapod</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body"><a class="reference internal" href="#enuActor.Devices.Error.DeviceErr" title="enuActor.Devices.Error.DeviceErr"><tt class="xref py py-class docutils literal"><span class="pre">DeviceErr</span></tt></a>, <a class="reference internal" href="#enuActor.Devices.Error.CommErr" title="enuActor.Devices.Error.CommErr"><tt class="xref py py-class docutils literal"><span class="pre">CommErr</span></tt></a></td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="method">
@@ -790,18 +867,9 @@ Here just trigger the FSM to INITIALISING and IDLE</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">value receive from TCP</p>
-</td>
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">value receive from TCP</td>
 </tr>
-<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><table class="first last docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">class:</th><td class="field-body"><cite>~.Error.DeviceError</cite>, <a class="reference internal" href="#enuActor.Devices.Error.CommErr" title="enuActor.Devices.Error.CommErr"><tt class="xref py py-class docutils literal"><span class="pre">CommErr</span></tt></a></td>
-</tr>
-</tbody>
-</table>
-</td>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><a class="reference internal" href="#enuActor.Devices.Error.DeviceErr" title="enuActor.Devices.Error.DeviceErr"><tt class="xref py py-class docutils literal"><span class="pre">DeviceErr</span></tt></a>, <a class="reference internal" href="#enuActor.Devices.Error.CommErr" title="enuActor.Devices.Error.CommErr"><tt class="xref py py-class docutils literal"><span class="pre">CommErr</span></tt></a></td>
 </tr>
 </tbody>
 </table>
@@ -839,18 +907,9 @@ Here just trigger the FSM to INITIALISING and IDLE</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">[x, y, z, u, v, w]</p>
-</td>
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">[x, y, z, u, v, w]</td>
 </tr>
-<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><table class="first last docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">class:</th><td class="field-body"><cite>~.Error.DeviceError</cite>, <a class="reference internal" href="#enuActor.Devices.Error.CommErr" title="enuActor.Devices.Error.CommErr"><tt class="xref py py-class docutils literal"><span class="pre">CommErr</span></tt></a></td>
-</tr>
-</tbody>
-</table>
-</td>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><a class="reference internal" href="#enuActor.Devices.Error.DeviceErr" title="enuActor.Devices.Error.DeviceErr"><tt class="xref py py-class docutils literal"><span class="pre">DeviceErr</span></tt></a>, <a class="reference internal" href="#enuActor.Devices.Error.CommErr" title="enuActor.Devices.Error.CommErr"><tt class="xref py py-class docutils literal"><span class="pre">CommErr</span></tt></a></td>
 </tr>
 </tbody>
 </table>
@@ -859,24 +918,8 @@ Here just trigger the FSM to INITIALISING and IDLE</p>
 <dl class="method">
 <dt id="enuActor.Devices.slit.Slit.initialise">
 <tt class="descname">initialise</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/slit.html#Slit.initialise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.slit.Slit.initialise" title="Permalink to this definition">¶</a></dt>
-<dd><dl class="docutils">
-<dt>Initialise shutter.</dt>
-<dd>Here just trigger the FSM to INITIALISING and IDLE</dd>
-</dl>
-<dl class="docutils">
-<dt>)</dt>
-<dd><table class="first last docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">returns:</th><td class="field-body">&#64;todo</td>
-</tr>
-<tr class="field-even field"><th class="field-name">raises:</th><td class="field-body">&#64;todo</td>
-</tr>
-</tbody>
-</table>
-</dd>
-</dl>
+<dd><p>Initialise shutter.</p>
+<p>Here just trigger the FSM to INITIALISING and IDLE</p>
 </dd></dl>
 
 <dl class="attribute">
@@ -899,18 +942,17 @@ Move to posCoord or to home if posCoord is None</p>
 </ul>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><table class="first last docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">class:</th><td class="field-body"><cite>~.Error.DeviceError</cite>, <a class="reference internal" href="#enuActor.Devices.Error.CommErr" title="enuActor.Devices.Error.CommErr"><tt class="xref py py-class docutils literal"><span class="pre">CommErr</span></tt></a></td>
-</tr>
-</tbody>
-</table>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first last"><a class="reference internal" href="#enuActor.Devices.Error.DeviceErr" title="enuActor.Devices.Error.DeviceErr"><tt class="xref py py-class docutils literal"><span class="pre">DeviceErr</span></tt></a>, <a class="reference internal" href="#enuActor.Devices.Error.CommErr" title="enuActor.Devices.Error.CommErr"><tt class="xref py py-class docutils literal"><span class="pre">CommErr</span></tt></a></p>
 </td>
 </tr>
 </tbody>
 </table>
+</dd></dl>
+
+<dl class="method">
+<dt id="enuActor.Devices.slit.Slit.safeOff">
+<tt class="descname">safeOff</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/slit.html#Slit.safeOff"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.slit.Slit.safeOff" title="Permalink to this definition">¶</a></dt>
+<dd><p>Preprocessing before shutdown.</p>
 </dd></dl>
 
 <dl class="method">
@@ -922,21 +964,18 @@ setHome to posCoord or to current if posCoord is None</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>posCoord</strong> &#8211; [x, y, z, u, v, w] or nothing if current</p>
-</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>posCoord</strong> &#8211; [x, y, z, u, v, w] or nothing if current</td>
 </tr>
-<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><table class="first last docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">class:</th><td class="field-body"><cite>~.Error.DeviceError</cite>, <a class="reference internal" href="#enuActor.Devices.Error.CommErr" title="enuActor.Devices.Error.CommErr"><tt class="xref py py-class docutils literal"><span class="pre">CommErr</span></tt></a></td>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><a class="reference internal" href="#enuActor.Devices.Error.DeviceErr" title="enuActor.Devices.Error.DeviceErr"><tt class="xref py py-class docutils literal"><span class="pre">DeviceErr</span></tt></a>, <a class="reference internal" href="#enuActor.Devices.Error.CommErr" title="enuActor.Devices.Error.CommErr"><tt class="xref py py-class docutils literal"><span class="pre">CommErr</span></tt></a></td>
 </tr>
 </tbody>
 </table>
-</td>
-</tr>
-</tbody>
-</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="enuActor.Devices.slit.Slit.shutdown">
+<tt class="descname">shutdown</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/enuActor/Devices/slit.html#Slit.shutdown"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#enuActor.Devices.slit.Slit.shutdown" title="Permalink to this definition">¶</a></dt>
+<dd><p>Preprocessing before manual shutdowf</p>
 </dd></dl>
 
 <dl class="method">
@@ -973,12 +1012,12 @@ It also contain an error class.</p>
 <div class="section" id="device">
 <h4>Device<a class="headerlink" href="#device" title="Permalink to this headline">¶</a></h4>
 <p class="graphviz">
-<img src="_images/inheritance-de125dfda880c8e619d20f244924f070c9d3dead.png" alt="Inheritance diagram of enuActor.Devices.Device" usemap="#inheritance6311a034c2" class="inheritance"/>
+<img src="_images/inheritance-f4e039ac45bded0fc1d77484ebb7f889ce49f6ed.png" alt="Inheritance diagram of enuActor.Devices.Device" usemap="#inheritance6311a034c2" class="inheritance"/>
 <map id="inheritance6311a034c2" name="inheritance6311a034c2">
 <area shape="rect" id="node1" href="#enuActor.Devices.Device.Device" title="All device (Shutter, BIA,...) should inherit this class" alt="" coords="5,81,77,106"/>
 <area shape="rect" id="node4" href="#enuActor.Devices.Device.OperationDevice" title="Device in operation mode:" alt="" coords="128,55,256,81"/>
 <area shape="rect" id="node6" href="#enuActor.Devices.Device.SimulationDevice" title="Device in simulation mode:" alt="" coords="125,105,259,130"/>
-<area shape="rect" id="node2" href="#enuActor.Devices.Device.DualModeDevice" title="Switch between class following the device mode" alt="" coords="307,6,437,31"/>
+<area shape="rect" id="node2" href="#enuActor.Devices.Device.DualModeDevice" title="Switch between OperationDevice or SimulationDevice class following the &#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;device mode" alt="" coords="307,6,437,31"/>
 <area shape="rect" id="node3" href="enuActor.html#enuActor.QThread.QThread" title="QThread" alt="" coords="154,6,230,31"/>
 <area shape="rect" id="node5" title="A class that represents a thread of control." alt="" coords="5,6,77,31"/>
 </map>
@@ -991,22 +1030,29 @@ such as a state machine attribute:</p>
 <p class="topic-title first">State Machine</p>
 <img alt="FSM should be here" class="align-center" src="../../state_diagram.png" />
 </div>
-<dl class="docutils">
-<dt>So <strong>Device</strong> class will handle main functions:</dt>
-<dd><ul class="first last simple">
-<li>Communication:
-- load communication and parameter config files
-- start a communication (create a socket, start a serial communication, ...)
-- check status (periodically check by sending data)
-- send message following protocol</li>
-<li>State machine:
-- create the common rule of the state machine
-- display state on change
-- callback on specific state</li>
+<p>So <strong>Device</strong> class will handle main functions:</p>
+<ul>
+<li><p class="first">Communication:</p>
+<blockquote>
+<div><ul class="simple">
+<li>load communication and parameter config files</li>
+<li>start a communication (create a socket, start a serial communication, ...)</li>
+<li>check status (periodically check by sending data)</li>
+<li>send message following protocol</li>
 </ul>
-</dd>
-</dl>
-<div class="admonition-todo admonition" id="index-2">
+</div></blockquote>
+</li>
+<li><p class="first">State machine:</p>
+<blockquote>
+<div><ul class="simple">
+<li>create the common rule of the state machine</li>
+<li>display state on change</li>
+<li>callback on specific state</li>
+</ul>
+</div></blockquote>
+</li>
+</ul>
+<div class="admonition-todo admonition" id="index-3">
 <p class="first admonition-title">Todo</p>
 <p class="last">Talk about <a class="reference internal" href="#enuActor.Devices.Device.SimulationDevice" title="enuActor.Devices.Device.SimulationDevice"><tt class="xref py py-class docutils literal"><span class="pre">SimulationDevice</span></tt></a> and <a class="reference internal" href="#enuActor.Devices.Device.OperationDevice" title="enuActor.Devices.Device.OperationDevice"><tt class="xref py py-class docutils literal"><span class="pre">OperationDevice</span></tt></a></p>
 </div>
@@ -1043,7 +1089,7 @@ TIMEOUT:      5
 <span class="o">[</span>SLIT<span class="o">]</span>
 IP:           172.20.83.127
 PORT:         5001
-TIMEOUT:      20
+TIMEOUT:      5
 </pre></div>
 </div>
 </td>
@@ -1052,11 +1098,14 @@ frequency:        100
 duration:         100
 intensity:        1
 <span class="o">[</span>SHUTTER<span class="o">]</span>
-<span class="o">[</span>BIA<span class="o">]</span>
 <span class="o">[</span>SLIT<span class="o">]</span>
-home:             0,   0,  25,  0,  0,  0
-dither_axis:      0,   0,  1
-focus_axis:       0,   1,  0
+; home value refers to slit position related to the WORLD reference at Home position
+home:             -30,   0, 210 , 0,  0,  0
+; slit_position refers to the position of slit related to the upper CARRIAGE
+slit_position:    -35,  0,  10,  0,  0,  0
+; +∕-1 define which axis is dither : -z <span class="o">=</span>&gt; <span class="o">[</span>0, 0, -1<span class="o">]</span>
+dither_axis:      0,    0,   -1
+focus_axis:       0,    1,   0
 magnification:    1
 focus_value:      0.5
 dithering_value:  2
@@ -1070,9 +1119,9 @@ dithering_value:  2
 <div class="section" id="error">
 <h4>Error<a class="headerlink" href="#error" title="Permalink to this headline">¶</a></h4>
 <p class="graphviz">
-<img src="_images/inheritance-76c5b715eef30aca7a3ad8888c2a9a3dc403931a.png" alt="Inheritance diagram of enuActor.Devices.Error" usemap="#inheritance2c3c5e313d" class="inheritance"/>
+<img src="_images/inheritance-a60bb8b8453f843bf646434e6e515061a4f8d3d0.png" alt="Inheritance diagram of enuActor.Devices.Error" usemap="#inheritance2c3c5e313d" class="inheritance"/>
 <map id="inheritance2c3c5e313d" name="inheritance2c3c5e313d">
-<area shape="rect" id="node1" href="#enuActor.Devices.Error.CfgFileErr" title="Docstring for CommErr." alt="" coords="283,5,514,30"/>
+<area shape="rect" id="node1" href="#enuActor.Devices.Error.CfgFileErr" title="Error related to configuration files." alt="" coords="283,5,514,30"/>
 <area shape="rect" id="node2" href="#enuActor.Devices.Error.RuleError" title="Define rule and how it is displaied" alt="" coords="6,54,234,79"/>
 <area shape="rect" id="node3" href="#enuActor.Devices.Error.CommErr" title="CommErr are all the error related to the communication" alt="" coords="283,54,515,79"/>
 <area shape="rect" id="node4" href="#enuActor.Devices.Error.DeviceErr" title="DeviceErr are all the error related to the device and controller." alt="" coords="283,103,515,129"/>
@@ -1091,51 +1140,51 @@ dithering_value:  2
 <div class="section" id="shutter">
 <h4>Shutter<a class="headerlink" href="#shutter" title="Permalink to this headline">¶</a></h4>
 <p class="graphviz">
-<img src="_images/inheritance-35126d07348e6f52484de49d91e7853faa00f323.png" alt="Inheritance diagram of enuActor.Devices.shutter" usemap="#inheritanceab9749f11f" class="inheritance"/>
+<img src="_images/inheritance-9747a9040eefa280bd2d6864317b6aeebf864007.png" alt="Inheritance diagram of enuActor.Devices.shutter" usemap="#inheritanceab9749f11f" class="inheritance"/>
 <map id="inheritanceab9749f11f" name="inheritanceab9749f11f">
-<area shape="rect" id="node1" href="#enuActor.Devices.Device.DualModeDevice" title="Switch between class following the device mode" alt="" coords="251,5,381,30"/>
+<area shape="rect" id="node1" href="#enuActor.Devices.Device.DualModeDevice" title="Switch between OperationDevice or SimulationDevice class following the &#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;device mode" alt="" coords="251,5,381,30"/>
 <area shape="rect" id="node4" href="#enuActor.Devices.shutter.Shutter" title="SW device: Shutter" alt="" coords="429,5,501,30"/>
 <area shape="rect" id="node2" href="enuActor.html#enuActor.QThread.QThread" title="QThread" alt="" coords="126,5,202,30"/>
 <area shape="rect" id="node3" title="A class that represents a thread of control." alt="" coords="5,5,77,30"/>
 </map>
 </p>
 <p>Shutter is open or close ...</p>
-<div class="admonition-todo admonition" id="index-3">
+<div class="admonition-todo admonition" id="index-4">
 <p class="first admonition-title">Todo</p>
 <p class="last">add more details</p>
 </div>
 </div>
 <div class="section" id="bia">
 <h4>BIA<a class="headerlink" href="#bia" title="Permalink to this headline">¶</a></h4>
-<div class="admonition-todo admonition" id="index-4">
+<div class="admonition-todo admonition" id="index-5">
 <p class="first admonition-title">Todo</p>
 <p class="last">add more details</p>
 </div>
 </div>
 <div class="section" id="rexm">
 <h4>REXM<a class="headerlink" href="#rexm" title="Permalink to this headline">¶</a></h4>
-<div class="admonition-todo admonition" id="index-5">
+<div class="admonition-todo admonition" id="index-6">
 <p class="first admonition-title">Todo</p>
 <p class="last">add more details</p>
 </div>
 </div>
 <div class="section" id="iisource">
 <h4>IISOURCE<a class="headerlink" href="#iisource" title="Permalink to this headline">¶</a></h4>
-<div class="admonition-todo admonition" id="index-6">
+<div class="admonition-todo admonition" id="index-7">
 <p class="first admonition-title">Todo</p>
 <p class="last">add more details</p>
 </div>
 </div>
 <div class="section" id="enu">
 <h4>ENU<a class="headerlink" href="#enu" title="Permalink to this headline">¶</a></h4>
-<div class="admonition-todo admonition" id="index-7">
+<div class="admonition-todo admonition" id="index-8">
 <p class="first admonition-title">Todo</p>
 <p class="last">add more details</p>
 </div>
 </div>
 <div class="section" id="fpsa">
 <h4>FPSA<a class="headerlink" href="#fpsa" title="Permalink to this headline">¶</a></h4>
-<div class="admonition-todo admonition" id="index-8">
+<div class="admonition-todo admonition" id="index-9">
 <p class="first admonition-title">Todo</p>
 <p class="last">add more details</p>
 </div>
