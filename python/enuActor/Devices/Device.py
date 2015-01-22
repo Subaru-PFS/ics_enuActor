@@ -73,8 +73,6 @@ class Device(object):
         self.MAP = copy.deepcopy(MAP) # referenced
         #self.MAP['callbacks']['onload'] = lambda e: self.device.OnLoad()
         self.fsm = Fysom(self.MAP)
-        # internal loop
-        self.loCmd = None
 
     #callbacks: init, safe_off, shut_down
     @transition('fail')
@@ -425,7 +423,7 @@ class DualModeDevice(QThread):
 
     def startDevice(self):
         """ Preprocessing before instantiation of a device when the\
-                command start is launched.
+                command start is launched. Maybe function can be refactored
 
         """
         self.load_cfg()
@@ -460,13 +458,14 @@ class DualModeDevice(QThread):
     ############
     #  Device  #
     ############
-    def start_communication(self, inline = False):
-        """ Parser of start_communication. Default behaviour load the config file.
+    #def start_communication(self, inline = False):
+        #""" Parser of start_communication. Default behaviour load the config file.
+        #Can be overriden for specific operation
 
-        """
-        if inline is False:
-            self.startDevice()
-        self.curModeDevice.start_communication()
+        #"""
+        #if inline is False:
+            #self.startDevice()
+        #self.curModeDevice.start_communication()
 
     def load_cfg(self):
         """Load configuration (call :meth:`.Devices.Device.load_cfg`) file of
@@ -504,7 +503,7 @@ class DualModeDevice(QThread):
     #  Factory  #
     #############
     def updateFactory(self):
-        """Update attributes of curModeDevice object
+        """Update attributes of curModeDevice object (of current "Device")
 
         """
         self.curModeDevice.currPos = self.currPos
@@ -520,11 +519,12 @@ class DualModeDevice(QThread):
         :param mode: ``operation``, ``simulated``
 
         """
-        self.mode = mode
         self.currPos = None
-        self.curModeDevice = self._map[mode](self.deviceName, thread=self)
-        self.deviceStarted = True
+        self.mode = mode
+        # it calls start device which create new Op/SimDevice
+        self.startDevice()
         self.start_communication()
+
 
     def __getattr__(self, name):
         if self.deviceStarted:

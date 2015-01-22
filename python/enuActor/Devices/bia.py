@@ -131,7 +131,8 @@ class Bia(DualModeDevice):
     def check_position(self):
         """ Check position.
 
-        .. warning: Can not check postion yet (waiting for input)
+        .. warning: Can not check postion yet (waiting for input).
+        So here Position simulated is same as real Position
         """
         if self.currSimPos is not None:
             self.currPos = self.currSimPos
