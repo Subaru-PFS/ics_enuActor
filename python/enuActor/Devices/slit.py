@@ -337,6 +337,7 @@ is not a direction")
             self.currPos = self._getCurrentPosition()
         else:
             self.currPos = "undef."
+        self.generator(self.currPos)
 
     #############
     #  Parsers  #

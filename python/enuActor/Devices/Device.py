@@ -73,6 +73,8 @@ class Device(object):
         self.MAP = copy.deepcopy(MAP) # referenced
         #self.MAP['callbacks']['onload'] = lambda e: self.device.OnLoad()
         self.fsm = Fysom(self.MAP)
+        # internal loop
+        self.loCmd = None
 
     #callbacks: init, safe_off, shut_down
     @transition('fail')
@@ -443,6 +445,17 @@ class DualModeDevice(QThread):
             self.updateFactory()
             if self.fsm.current in ['BUSY']:
                 self.fsm.idle()
+
+    def generate(self, var):
+        """Called each time the Dictionary variable are changed
+
+        """
+        cmd = self.actor.bcast #not sure
+        cmd.inform("Generator:")
+        cmd.inform(" -> device : %s" % self.deviceName)
+        cmd.inform(" -> variable value: %s" % var)
+        cmd.finish()
+
 
     ############
     #  Device  #

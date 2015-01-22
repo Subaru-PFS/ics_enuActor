@@ -137,6 +137,7 @@ class Shutter(DualModeDevice):
         try:
             ss = int(self.send('ss\r\n')[0])
             self.currPos = Shutter.positions[ss]
+            self.generate(self.currPos)
         except Error.CommErr as e:
             if self.started:
                 self.fail("%s" % e)

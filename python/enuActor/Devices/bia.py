@@ -112,6 +112,7 @@ class Bia(DualModeDevice):
                 self.currPos = "off" # TODO: To be change when got input
         except socket.error as e:
             raise Error.CommErr(e)
+        self.generate(self.currPos)
         self.check_status()
 
     @transition(after_state = 'load')
@@ -134,6 +135,7 @@ class Bia(DualModeDevice):
         """
         if self.currSimPos is not None:
             self.currPos = self.currSimPos
+            self.generate(self.currPos)
 
 
 
