@@ -493,8 +493,10 @@ class DualModeDevice(QThread):
         """
         if self.currPos in [None, 'undef.']:
             currPos = 'undef.'
-        else:
+        elif type(self.currPos) == float:
             currPos = map(lambda x: round(x, 2), self.currPos)
+        else:
+            currPos = self.currPos
         return "[%s] %s status [%s, %s]" % (self.mode, self.deviceName.upper(),
                 self.fsm.current, currPos)
 
