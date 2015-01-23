@@ -13,7 +13,6 @@ class BiaCmd(object):
         self.actor = actor
         self.vocab = [
             ('bia', 'status', self.status),
-            ('bia', 'start', self.start),
             ('bia', '@(simulated|operation)', self.set_mode),
             ('bia', '@(on|off)', self.bia),
             ('bia', 'on <int>', self.bia),
@@ -48,22 +47,20 @@ class BiaCmd(object):
         except:
             cmd.error("text='Unexpected error: %s'" % sys.exc_info()[0])
 
-    def start(self, cmd):
+    def set_mode(self, cmd):
+        mode = cmd.cmd.keywords[0].name
         try:
-            cmd.inform("text='starting communication...'")
-            self.actor.bia.start_communication()
-        except CommErr as e: # ISSUE : I cannot catch timeout error
+            self.actor.bia.change_mode(mode)
+        except CommErr as e:
             cmd.error("text='%s'" % e)
         except:
             cmd.error("text='Unexpected error: [%s] %s'" % (
                     sys.exc_info()[0],
                     sys.exc_info()[1]))
         else:
-            cmd.inform("text='Bia started successfully!'")
+            cmd.inform("text='Bia mode %s enabled'" % mode)
 
-    def set_mode(self, cmd):
-        mode = cmd.cmd.keywords[0].name
-        self.actor.bia.change_mode(mode)
+
         cmd.inform("text='Bia mode %s enabled'" % mode)
 
     def set_state(self, cmd):

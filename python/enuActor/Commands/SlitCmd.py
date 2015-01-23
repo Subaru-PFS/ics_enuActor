@@ -14,7 +14,6 @@ class SlitCmd(object):
         self.actor = actor
         self.vocab = [
             ('slit', 'status', self.status),
-            ('slit', 'start', self.start),
             ('slit', '<cmd>', self.command),
             ('slit', '@(simulated|operation)', self.set_mode),
             ('slit', 'GetHome', self.getHome),
@@ -80,21 +79,6 @@ class SlitCmd(object):
         except:
             cmd.error("text='Unexpected error: %s'" % sys.exc_info()[0])
 
-    def start(self, cmd):
-        try:
-            self.actor.slit.start_communication()
-        except CommErr as e: # ISSUE : I cannot catch timeout error
-            cmd.error("text='%s'" % e)
-        except FysomError as e:
-            cmd.error("text='Can't start when device is in %s state'" %
-            self.actor.slit.fsm.current)
-        except:
-            cmd.error("text='Unexpected error: [%s] %s'" % (
-                    sys.exc_info()[0],
-                    sys.exc_info()[1]))
-        else:
-            cmd.inform("text='slit started successfully!'")
-
     def command(self, cmd):
         """Opens a terminal to communicate directly with device"""
         self.actor.slit.send("%s\r\n" %
@@ -102,8 +86,16 @@ class SlitCmd(object):
 
     def set_mode(self, cmd):
         mode = cmd.cmd.keywords[0].name
-        self.actor.slit.change_mode(mode)
-        cmd.inform("text='Slit mode %s enabled'" % mode)
+        try:
+            self.actor.slit.change_mode(mode)
+        except CommErr as e:
+            cmd.error("text='%s'" % e)
+        except:
+            cmd.error("text='Unexpected error: [%s] %s'" % (
+                    sys.exc_info()[0],
+                    sys.exc_info()[1]))
+        else:
+            cmd.inform("text='Slit mode %s enabled'" % mode)
 
     def set_state(self, cmd):
         state = cmd.cmd.keywords[0].name

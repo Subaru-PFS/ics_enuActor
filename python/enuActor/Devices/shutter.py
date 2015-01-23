@@ -142,7 +142,7 @@ class Shutter(DualModeDevice):
             if self.started:
                 self.fail("%s" % e)
             raise e
-        if self.currPos == "undef.":
+        if self.currPos == None:
             raise Error.DeviceErr("Position undef.")
 
 

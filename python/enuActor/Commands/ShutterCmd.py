@@ -14,7 +14,6 @@ class ShutterCmd(object):
         self.actor = actor
         self.vocab = [
             ('shutter', 'status', self.status),
-            ('shutter', 'start', self.start),
             ('shutter', '<cmd>', self.command),
             ('shutter', '@(simulated|operation)', self.set_mode),
             ('shutter', '@(open|close|reset) @(red|blue)', self.shutter),
@@ -40,22 +39,6 @@ class ShutterCmd(object):
             cmd.error("text='Shutter did not start well. details: %s" % e)
         except:
             cmd.error("text='Unexpected error: %s'" % sys.exc_info()[0])
-
-    def start(self, cmd):
-        try:
-            self.actor.shutter.start_communication()
-        except CommErr as e: # ISSUE : I cannot catch timeout error
-            cmd.error("text='%s'" % e)
-        except FysomError as e:
-            cmd.error("text='Can't start when device is in %s state'" %
-            self.actor.shutter.fsm.current)
-        except:
-            cmd.error("text='Unexpected error: [%s] %s'" % (
-                    sys.exc_info()[0],
-                    sys.exc_info()[1]))
-        else:
-            cmd.inform("text='Shutter started successfully!'")
-
     def command(self, cmd):
         """Opens a terminal to communicate directly with device"""
         self.actor.shutter.send("%s\r\n" %
@@ -63,8 +46,16 @@ class ShutterCmd(object):
 
     def set_mode(self, cmd):
         mode = cmd.cmd.keywords[0].name
-        self.actor.shutter.change_mode(mode)
-        cmd.inform("text='Shutter mode %s enabled'" % mode)
+        try:
+            self.actor.shutter.change_mode(mode)
+        except CommErr as e:
+            cmd.error("text='%s'" % e)
+        except:
+            cmd.error("text='Unexpected error: [%s] %s'" % (
+                    sys.exc_info()[0],
+                    sys.exc_info()[1]))
+        else:
+            cmd.inform("text='Shutter mode %s enabled'" % mode)
 
     def set_state(self, cmd):
         state = cmd.cmd.keywords[0].name
