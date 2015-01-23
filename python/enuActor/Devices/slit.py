@@ -47,10 +47,12 @@ class Slit(DualModeDevice):
 
     @transition('init', 'idle')
     def initialise(self):
-        """ Initialise shutter.
+        """ Initialise slit
 
-        Here just trigger the FSM to INITIALISING and IDLE
-
+        - init hxp
+        - search home
+        - go home
+        - check status
         """
         self._kill()
         print "initialising hxp ..."
@@ -337,7 +339,7 @@ is not a direction")
             self.currPos = self._getCurrentPosition()
         else:
             self.currPos = "undef."
-        self.generator(self.currPos)
+        self.generate(self.currPos)
 
     #############
     #  Parsers  #
