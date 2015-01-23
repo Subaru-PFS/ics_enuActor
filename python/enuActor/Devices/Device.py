@@ -427,7 +427,7 @@ class DualModeDevice(QThread):
 
         """
         self.load_cfg()
-        self.curModeDevice = self._map[self.mode](self.deviceName)
+        self.curModeDevice = self._map[self.mode](self.deviceName, thread = self)
         self.deviceStarted = True
 
     def handleTimeout(self):

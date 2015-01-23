@@ -126,6 +126,7 @@ class Shutter(DualModeDevice):
                     self.fsm.idle()
                 elif self.fsm.current == 'none':
                     self.fsm.load()
+        self.generate(self.currPos)
         return mask
 
     def check_position(self):

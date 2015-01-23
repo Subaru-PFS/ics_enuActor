@@ -20,7 +20,7 @@ def interlock(func):
         if self.deviceName.lower() == 'bia':
             target_currPos = getattr(getattr(self.actor, 'shutter'), "currPos")
             if func.func_name == 'bia':
-                if target_currPos == 'open' and args[0] in ['on', None']\
+                if target_currPos == 'open' and args[0] in ['on', None]\
                         or kwargs.has_key('strobe'):
                             print("Interlock !!!")
                             return
