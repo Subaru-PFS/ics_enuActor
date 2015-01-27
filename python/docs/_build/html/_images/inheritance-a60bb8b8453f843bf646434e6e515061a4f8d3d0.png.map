@@ -1,0 +1,6 @@
+<map id="inheritance2c3c5e313d" name="inheritance2c3c5e313d">
+<area shape="rect" id="node1" href="#enuActor.Devices.Error.CfgFileErr" title="Error related to configuration files." alt="" coords="283,5,514,30"/>
+<area shape="rect" id="node2" href="#enuActor.Devices.Error.RuleError" title="Define rule and how it is displaied" alt="" coords="6,54,234,79"/>
+<area shape="rect" id="node3" href="#enuActor.Devices.Error.CommErr" title="CommErr are all the error related to the communication" alt="" coords="283,54,515,79"/>
+<area shape="rect" id="node4" href="#enuActor.Devices.Error.DeviceErr" title="DeviceErr are all the error related to the device and controller." alt="" coords="283,103,515,129"/>
+</map>

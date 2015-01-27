@@ -33,7 +33,7 @@ class Bia(DualModeDevice):
 
     def __init__(self, actor=None):
         super(Bia, self).__init__(actor)
-        self.currPos = "off"
+        self.currPos = None
 
     ############################
     #  About Device functions  #

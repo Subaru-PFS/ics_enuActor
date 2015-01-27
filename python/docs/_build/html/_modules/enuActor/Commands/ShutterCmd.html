@@ -1,0 +1,207 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>enuActor.Commands.ShutterCmd &mdash; ENtrance Unit actor</title>
+    
+    <link rel="stylesheet" href="../../../_static/cloud.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Noticia+Text|Open+Sans|Droid+Sans+Mono" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/javascript" src="../../../_static/jquery.cookie.js"></script>
+    <script type="text/javascript" src="../../../_static/cloud.js"></script>
+    <link rel="top" title="ENtrance Unit actor" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+  </head>
+  <body>
+    <div class="relbar-top">
+        
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> &nbsp; &nbsp;</li>
+    <li><a href="../../../enuActor.html">ENtrance Unit actor</a> &raquo;</li>
+
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    </div>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for enuActor.Commands.ShutterCmd</h1><div class="highlight"><pre>
+<span class="c">#!/usr/bin/env python</span>
+
+<span class="kn">import</span> <span class="nn">opscore.protocols.keys</span> <span class="kn">as</span> <span class="nn">keys</span>
+<span class="kn">import</span> <span class="nn">opscore.protocols.types</span> <span class="kn">as</span> <span class="nn">types</span>
+<span class="kn">from</span> <span class="nn">opscore.utility.qstr</span> <span class="kn">import</span> <span class="n">qstr</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">from</span> <span class="nn">enuActor.Devices.Error</span> <span class="kn">import</span> <span class="n">CommErr</span><span class="p">,</span> <span class="n">DeviceErr</span>
+<span class="kn">from</span> <span class="nn">enuActor.MyFSM</span> <span class="kn">import</span> <span class="n">FysomError</span>
+
+
+<div class="viewcode-block" id="ShutterCmd"><a class="viewcode-back" href="../../../enuActor.Commands.html#enuActor.Commands.ShutterCmd.ShutterCmd">[docs]</a><span class="k">class</span> <span class="nc">ShutterCmd</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">actor</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">actor</span> <span class="o">=</span> <span class="n">actor</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vocab</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="p">(</span><span class="s">&#39;shutter&#39;</span><span class="p">,</span> <span class="s">&#39;status&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">status</span><span class="p">),</span>
+            <span class="p">(</span><span class="s">&#39;shutter&#39;</span><span class="p">,</span> <span class="s">&#39;start&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">start</span><span class="p">),</span>
+            <span class="p">(</span><span class="s">&#39;shutter&#39;</span><span class="p">,</span> <span class="s">&#39;&lt;cmd&gt;&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">command</span><span class="p">),</span>
+            <span class="p">(</span><span class="s">&#39;shutter&#39;</span><span class="p">,</span> <span class="s">&#39;@(simulated|operation)&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">set_mode</span><span class="p">),</span>
+            <span class="p">(</span><span class="s">&#39;shutter&#39;</span><span class="p">,</span> <span class="s">&#39;@(open|close|reset) @(red|blue)&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">shutter</span><span class="p">),</span>
+            <span class="p">(</span><span class="s">&#39;shutter&#39;</span><span class="p">,</span> <span class="s">&#39;@(open|close|reset)&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">shutter</span><span class="p">),</span>
+            <span class="p">(</span><span class="s">&#39;shutter&#39;</span><span class="p">,</span> <span class="s">&#39;@(off|load|busy|idle|SafeStop|fail)&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">set_state</span><span class="p">),</span>
+            <span class="p">(</span><span class="s">&#39;shutter&#39;</span><span class="p">,</span> <span class="s">&#39;init&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">init</span><span class="p">),</span>
+            <span class="p">(</span><span class="s">&#39;shutter&#39;</span><span class="p">,</span> <span class="s">&#39;stop&#39;</span><span class="p">,</span>
+             <span class="k">lambda</span> <span class="n">x</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">shutter</span><span class="o">.</span><span class="n">stop</span><span class="p">()),</span>
+        <span class="p">]</span>
+
+        <span class="c"># Define typed command arguments for the above commands.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">keys</span> <span class="o">=</span> <span class="n">keys</span><span class="o">.</span><span class="n">KeysDictionary</span><span class="p">(</span><span class="s">&quot;shutter_shutter&quot;</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                <span class="n">keys</span><span class="o">.</span><span class="n">Key</span><span class="p">(</span><span class="s">&quot;cmd&quot;</span><span class="p">,</span> <span class="n">types</span><span class="o">.</span><span class="n">String</span><span class="p">(),</span> <span class="n">help</span><span class="o">=</span><span class="s">&quot;Command ascii&quot;</span><span class="p">),</span>
+                                        <span class="p">)</span>
+
+<div class="viewcode-block" id="ShutterCmd.init"><a class="viewcode-back" href="../../../enuActor.Commands.html#enuActor.Commands.ShutterCmd.ShutterCmd.init">[docs]</a>    <span class="k">def</span> <span class="nf">init</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cmd</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">shutter</span><span class="o">.</span><span class="n">initialise</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="ShutterCmd.status"><a class="viewcode-back" href="../../../enuActor.Commands.html#enuActor.Commands.ShutterCmd.ShutterCmd.status">[docs]</a>    <span class="k">def</span> <span class="nf">status</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cmd</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">cmd</span><span class="o">.</span><span class="n">inform</span><span class="p">(</span><span class="s">&quot;text=&#39;{}&#39;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">shutter</span><span class="o">.</span><span class="n">getStatus</span><span class="p">()))</span>
+        <span class="k">except</span> <span class="ne">AttributeError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">cmd</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&quot;text=&#39;Shutter did not start well. details: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">e</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">cmd</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&quot;text=&#39;Unexpected error: </span><span class="si">%s</span><span class="s">&#39;&quot;</span> <span class="o">%</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span>
+</div>
+<div class="viewcode-block" id="ShutterCmd.start"><a class="viewcode-back" href="../../../enuActor.Commands.html#enuActor.Commands.ShutterCmd.ShutterCmd.start">[docs]</a>    <span class="k">def</span> <span class="nf">start</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cmd</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">shutter</span><span class="o">.</span><span class="n">start_communication</span><span class="p">()</span>
+        <span class="k">except</span> <span class="n">CommErr</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span> <span class="c"># ISSUE : I cannot catch timeout error</span>
+            <span class="n">cmd</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&quot;text=&#39;</span><span class="si">%s</span><span class="s">&#39;&quot;</span> <span class="o">%</span> <span class="n">e</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">FysomError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">cmd</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&quot;text=&#39;Can&#39;t start when device is in </span><span class="si">%s</span><span class="s"> state&#39;&quot;</span> <span class="o">%</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">shutter</span><span class="o">.</span><span class="n">fsm</span><span class="o">.</span><span class="n">current</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">cmd</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&quot;text=&#39;Unexpected error: [</span><span class="si">%s</span><span class="s">] </span><span class="si">%s</span><span class="s">&#39;&quot;</span> <span class="o">%</span> <span class="p">(</span>
+                    <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()[</span><span class="mi">0</span><span class="p">],</span>
+                    <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()[</span><span class="mi">1</span><span class="p">]))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">cmd</span><span class="o">.</span><span class="n">inform</span><span class="p">(</span><span class="s">&quot;text=&#39;Shutter started successfully!&#39;&quot;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="ShutterCmd.command"><a class="viewcode-back" href="../../../enuActor.Commands.html#enuActor.Commands.ShutterCmd.ShutterCmd.command">[docs]</a>    <span class="k">def</span> <span class="nf">command</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cmd</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Opens a terminal to communicate directly with device&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">shutter</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%s</span><span class="se">\r\n</span><span class="s">&quot;</span> <span class="o">%</span>
+        <span class="n">cmd</span><span class="o">.</span><span class="n">cmd</span><span class="o">.</span><span class="n">keywords</span><span class="p">[</span><span class="s">&quot;cmd&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+</div>
+<div class="viewcode-block" id="ShutterCmd.set_mode"><a class="viewcode-back" href="../../../enuActor.Commands.html#enuActor.Commands.ShutterCmd.ShutterCmd.set_mode">[docs]</a>    <span class="k">def</span> <span class="nf">set_mode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cmd</span><span class="p">):</span>
+        <span class="n">mode</span> <span class="o">=</span> <span class="n">cmd</span><span class="o">.</span><span class="n">cmd</span><span class="o">.</span><span class="n">keywords</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">shutter</span><span class="o">.</span><span class="n">change_mode</span><span class="p">(</span><span class="n">mode</span><span class="p">)</span>
+        <span class="n">cmd</span><span class="o">.</span><span class="n">inform</span><span class="p">(</span><span class="s">&quot;text=&#39;Shutter mode </span><span class="si">%s</span><span class="s"> enabled&#39;&quot;</span> <span class="o">%</span> <span class="n">mode</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="ShutterCmd.set_state"><a class="viewcode-back" href="../../../enuActor.Commands.html#enuActor.Commands.ShutterCmd.ShutterCmd.set_state">[docs]</a>    <span class="k">def</span> <span class="nf">set_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cmd</span><span class="p">):</span>
+        <span class="n">state</span> <span class="o">=</span> <span class="n">cmd</span><span class="o">.</span><span class="n">cmd</span><span class="o">.</span><span class="n">keywords</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">name</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">shutter</span><span class="o">.</span><span class="n">fsm</span><span class="p">,</span> <span class="n">state</span><span class="p">)()</span>
+        <span class="k">except</span> <span class="ne">AttributeError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">cmd</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&quot;text=&#39;Shutter did not start well. details: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">e</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">FysomError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">cmd</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&quot;text= Can&#39;t go to this state: </span><span class="si">%s</span><span class="s"> -x-&gt; </span><span class="si">%s</span><span class="s">&#39;&quot;</span> <span class="o">%</span>
+            <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">shutter</span><span class="o">.</span><span class="n">fsm</span><span class="o">.</span><span class="n">current</span><span class="p">,</span> <span class="n">state</span><span class="o">.</span><span class="n">upper</span><span class="p">()))</span>
+</div>
+<div class="viewcode-block" id="ShutterCmd.shutter"><a class="viewcode-back" href="../../../enuActor.Commands.html#enuActor.Commands.ShutterCmd.ShutterCmd.shutter">[docs]</a>    <span class="k">def</span> <span class="nf">shutter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cmd</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Parse shutter command and arguments</span>
+<span class="sd">        :cmd: open or close shutter red or blue or both if no args</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">transition</span> <span class="o">=</span> <span class="n">cmd</span><span class="o">.</span><span class="n">cmd</span><span class="o">.</span><span class="n">keywords</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">name</span>
+        <span class="k">if</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">cmd</span><span class="o">.</span><span class="n">cmd</span><span class="o">.</span><span class="n">keywords</span><span class="p">)</span><span class="o">==</span><span class="mi">2</span><span class="p">):</span>
+            <span class="n">shutter_id</span> <span class="o">=</span> <span class="n">cmd</span><span class="o">.</span><span class="n">cmd</span><span class="o">.</span><span class="n">keywords</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">name</span>
+        <span class="k">elif</span><span class="p">(</span> <span class="nb">len</span><span class="p">(</span><span class="n">cmd</span><span class="o">.</span><span class="n">cmd</span><span class="o">.</span><span class="n">keywords</span><span class="p">)</span><span class="o">==</span><span class="mi">1</span><span class="p">):</span>
+            <span class="n">shutter_id</span> <span class="o">=</span> <span class="s">&#39;all&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;Number of args exceed&quot;</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">shutter</span><span class="o">.</span><span class="n">putMsg</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">shutter</span><span class="o">.</span><span class="n">shutter</span><span class="p">,</span> <span class="n">transition</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">AttributeError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">cmd</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&quot;text=&#39;Shutter did not start well. details: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">e</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">cmd</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&quot;text=&#39;Unexpected error: [</span><span class="si">%s</span><span class="s">] </span><span class="si">%s</span><span class="s">&#39;&quot;</span> <span class="o">%</span> <span class="p">(</span>
+                    <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()[</span><span class="mi">0</span><span class="p">],</span>
+                    <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()[</span><span class="mi">1</span><span class="p">]))</span>
+</pre></div></div></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="relbar-bottom">
+        
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> &nbsp; &nbsp;</li>
+    <li><a href="../../../enuActor.html">ENtrance Unit actor</a> &raquo;</li>
+
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    </div>
+
+    <div class="footer">
+        &copy; Copyright 2014, Pégot-Ogier Thomas.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+    <!-- cloud_sptheme 1.4 -->
+  </body>
+</html>

@@ -1,0 +1,591 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>enuActor.Devices.slit &mdash; ENtrance Unit actor</title>
+    
+    <link rel="stylesheet" href="../../../_static/cloud.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Noticia+Text|Open+Sans|Droid+Sans+Mono" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/javascript" src="../../../_static/jquery.cookie.js"></script>
+    <script type="text/javascript" src="../../../_static/cloud.js"></script>
+    <link rel="top" title="ENtrance Unit actor" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+  </head>
+  <body>
+    <div class="relbar-top">
+        
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> &nbsp; &nbsp;</li>
+    <li><a href="../../../enuActor.html">ENtrance Unit actor</a> &raquo;</li>
+
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    </div>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for enuActor.Devices.slit</h1><div class="highlight"><pre>
+<span class="c">#!/usr/bin/env python</span>
+<span class="c"># encoding: utf-8</span>
+
+<span class="c">#######################################################################</span>
+<span class="c">#                        FPSA SW device module                        #</span>
+<span class="c">#######################################################################</span>
+
+<span class="kn">from</span> <span class="nn">enuActor.QThread</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">import</span> <span class="nn">serial</span><span class="o">,</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">Error</span>
+<span class="kn">from</span> <span class="nn">Device</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">utils</span> <span class="kn">import</span> <span class="n">hxp_drivers</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+
+
+<div class="viewcode-block" id="Slit"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.slit.Slit">[docs]</a><span class="k">class</span> <span class="nc">Slit</span><span class="p">(</span><span class="n">DualModeDevice</span><span class="p">):</span>
+
+    <span class="sd">&quot;&quot;&quot;SW device: Fiber Slit Positionning Sub Assembly</span>
+
+<span class="sd">        Attributes:</span>
+
+<span class="sd">            * currPos : current position of the slit</span>
+<span class="sd">            * link_busy : flag saying if connection is busy</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">actor</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">Slit</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">actor</span><span class="p">)</span>
+        <span class="c"># Device attributes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">currPos</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">link_busy</span> <span class="o">=</span> <span class="bp">False</span>
+
+        <span class="c"># Hexapod Attributes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">groupName</span> <span class="o">=</span> <span class="s">&#39;HEXAPOD&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">myxps</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">socketId</span> <span class="o">=</span> <span class="bp">None</span>
+
+        <span class="c"># Slit Attributes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dither_axis</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_focus_axis</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_magnification</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dithering_value</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_focus_value</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_home</span> <span class="o">=</span> <span class="bp">None</span>
+
+    <span class="nd">@transition</span><span class="p">(</span><span class="s">&#39;init&#39;</span><span class="p">,</span> <span class="s">&#39;idle&#39;</span><span class="p">)</span>
+<div class="viewcode-block" id="Slit.initialise"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.slit.Slit.initialise">[docs]</a>    <span class="k">def</span> <span class="nf">initialise</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Initialise shutter.</span>
+
+<span class="sd">        Here just trigger the FSM to INITIALISING and IDLE</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_kill</span><span class="p">()</span>
+        <span class="k">print</span> <span class="s">&quot;initialising hxp ...&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_initialize</span><span class="p">()</span>
+        <span class="k">print</span> <span class="s">&quot;seeking home ...&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_homeSearch</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_home</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;Bug: Home not initialised&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">getHome</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">setHome</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_home</span><span class="p">)</span>
+        <span class="k">print</span> <span class="s">&quot;going to home ...&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_hexapodMoveAbsolute</span><span class="p">(</span><span class="o">*</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">check_status</span><span class="p">()</span>
+
+    <span class="c">#############</span>
+    <span class="c">#  HEXAPOD  #</span>
+    <span class="c">#############</span></div>
+<div class="viewcode-block" id="Slit.getHome"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.slit.Slit.getHome">[docs]</a>    <span class="k">def</span> <span class="nf">getHome</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;getHome.</span>
+
+<span class="sd">        :returns: [x, y, z, u, v, w]</span>
+<span class="sd">        :raises: :class:`~.Error.DeviceErr`, :class:`~.Error.CommErr`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">hxpHome</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_hexapodCoordinateSytemGet</span><span class="p">(</span><span class="s">&#39;Tool&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">[</span><span class="nb">sum</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">hxpHome</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slit_position</span><span class="p">)]</span>
+</div>
+<div class="viewcode-block" id="Slit.setHome"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.slit.Slit.setHome">[docs]</a>    <span class="k">def</span> <span class="nf">setHome</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">posCoord</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;setHome.</span>
+<span class="sd">        setHome to posCoord or to current if posCoord is None</span>
+
+<span class="sd">        :param posCoord: [x, y, z, u, v, w] or nothing if current</span>
+<span class="sd">        :raises: :class:`~.Error.DeviceErr`, :class:`~.Error.CommErr`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">posCoord</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">posCoord</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getCurrentPosition</span><span class="p">()</span>
+            <span class="n">curHome</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_hexapodCoordinateSytemGet</span><span class="p">(</span><span class="s">&#39;Tool&#39;</span><span class="p">)</span>
+            <span class="n">posCoord</span> <span class="o">=</span> <span class="p">[</span><span class="nb">sum</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">posCoord</span><span class="p">,</span> <span class="n">curHome</span><span class="p">)]</span>
+        <span class="n">curHome</span> <span class="o">=</span> <span class="p">[</span><span class="n">xi</span> <span class="o">-</span> <span class="n">xj</span> <span class="k">for</span> <span class="n">xi</span><span class="p">,</span> <span class="n">xj</span>  <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">posCoord</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_slit_position</span><span class="p">)]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_hexapodCoordinateSytemSet</span><span class="p">(</span><span class="s">&#39;Work&#39;</span><span class="p">,</span> <span class="o">*</span><span class="n">curHome</span><span class="p">)</span>
+</div>
+    <span class="nd">@transition</span><span class="p">(</span><span class="s">&#39;busy&#39;</span><span class="p">,</span> <span class="s">&#39;idle&#39;</span><span class="p">)</span>
+<div class="viewcode-block" id="Slit.moveTo"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.slit.Slit.moveTo">[docs]</a>    <span class="k">def</span> <span class="nf">moveTo</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">reference</span><span class="p">,</span> <span class="n">posCoord</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;MoveTo.</span>
+<span class="sd">        Move to posCoord or to home if posCoord is None</span>
+
+<span class="sd">        :param reference: &#39;absolute&#39; or &#39;relative&#39;</span>
+<span class="sd">        :param posCoord: [x, y, z, u, v, w] or nothing if home</span>
+<span class="sd">        :raises: :class:`~.Error.DeviceErr`, :class:`~.Error.CommErr`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">posCoord</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="c"># Go to home related to work : [0,0,0,0,0,0]</span>
+            <span class="n">posCoord</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="mi">6</span>
+
+        <span class="k">if</span> <span class="n">reference</span> <span class="o">==</span> <span class="s">&#39;absolute&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_hexapodMoveAbsolute</span><span class="p">(</span><span class="o">*</span><span class="n">posCoord</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">reference</span> <span class="o">==</span> <span class="s">&#39;relative&#39;</span> <span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_hexapodMoveIncremental</span><span class="p">(</span><span class="s">&#39;Work&#39;</span><span class="p">,</span> <span class="o">*</span><span class="n">posCoord</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">currSimPos</span> <span class="o">=</span> <span class="n">posCoord</span>
+
+    <span class="c">############################</span>
+    <span class="c">#  DITHER &amp; THROUGH FOCUS  #</span>
+    <span class="c">############################</span></div>
+    <span class="nd">@transition</span><span class="p">(</span><span class="s">&#39;busy&#39;</span><span class="p">,</span> <span class="s">&#39;idle&#39;</span><span class="p">)</span>
+<div class="viewcode-block" id="Slit.dither"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.slit.Slit.dither">[docs]</a>    <span class="k">def</span> <span class="nf">dither</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">length</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Move in dither (dither_axis) to length pixel.\</span>
+<span class="sd">                Size of pixel is 34.64 :math:`\mu{}m` on\</span>
+<span class="sd">                the slit.</span>
+<span class="sd">                .. math::</span>
+<span class="sd">                                dither = G * PixelSize</span>
+
+<span class="sd">        :param length: length in pixel</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">axis</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dither_axis</span> <span class="o">+</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="mi">3</span><span class="p">)</span>
+        <span class="n">dithering</span> <span class="o">=</span> <span class="n">length</span> <span class="o">*</span> <span class="n">axis</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">magnification</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_hexapodMoveIncremental</span><span class="p">(</span><span class="s">&#39;Work&#39;</span><span class="p">,</span> <span class="o">*</span><span class="n">dithering</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">currSimPos</span> <span class="o">=</span> <span class="p">[</span><span class="nb">sum</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">dithering</span> <span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">currPos</span><span class="p">)]</span>
+</div>
+    <span class="nd">@transition</span><span class="p">(</span><span class="s">&#39;busy&#39;</span><span class="p">,</span> <span class="s">&#39;idle&#39;</span><span class="p">)</span>
+<div class="viewcode-block" id="Slit.focus"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.slit.Slit.focus">[docs]</a>    <span class="k">def</span> <span class="nf">focus</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">length</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Move in focus (focus_axis) to length pixel</span>
+
+<span class="sd">        :param length: @todo</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">axis</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">focus_axis</span> <span class="o">+</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="mi">3</span><span class="p">)</span>
+        <span class="n">through_focus</span> <span class="o">=</span> <span class="n">axis</span> <span class="o">*</span> <span class="n">length</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_hexapodMoveIncremental</span><span class="p">(</span><span class="s">&#39;Work&#39;</span><span class="p">,</span> <span class="o">*</span><span class="n">through_focus</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">currSimPos</span> <span class="o">=</span> <span class="p">[</span><span class="nb">sum</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">through_focus</span> <span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">currPos</span><span class="p">)]</span>
+</div>
+<div class="viewcode-block" id="Slit.magnification"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.slit.Slit.magnification">[docs]</a>    <span class="k">def</span> <span class="nf">magnification</span><span class="p">():</span>
+        <span class="sd">&quot;&quot;&quot;Change magnification.</span>
+
+<span class="sd">        :param G: magnification</span>
+<span class="sd">        :raises: Exception (not init yet)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">def</span> <span class="nf">fget</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_magnification</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;Magnification not defined yet.&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_magnification</span>
+
+        <span class="k">def</span> <span class="nf">fset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">value</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;Wrong magnification value (&lt;=0).&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_magnification</span> <span class="o">=</span> <span class="n">value</span>
+        <span class="k">return</span> <span class="nb">locals</span><span class="p">()</span>
+</div>
+    <span class="n">magnification</span> <span class="o">=</span> <span class="nb">property</span><span class="p">(</span><span class="o">**</span><span class="n">magnification</span><span class="p">())</span>
+
+<div class="viewcode-block" id="Slit.dither_axis"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.slit.Slit.dither_axis">[docs]</a>    <span class="k">def</span> <span class="nf">dither_axis</span><span class="p">():</span>
+        <span class="sd">&quot;&quot;&quot;Accessor to dither_axis attribute</span>
+
+<span class="sd">        :param axis: [X, Y, Z] in pixel</span>
+<span class="sd">        :raises: Exception (not init yet)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">def</span> <span class="nf">fget</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dither_axis</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;Dither axis not defined yet.&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dither_axis</span>
+
+        <span class="k">def</span> <span class="nf">fset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">value</span> <span class="o">==</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]:</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;Wrong axis value: (0, 0, 0)</span><span class="se">\</span>
+<span class="s">is not a direction&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_dither_axis</span> <span class="o">=</span> <span class="n">value</span>
+        <span class="k">return</span> <span class="nb">locals</span><span class="p">()</span>
+</div>
+    <span class="n">dither_axis</span> <span class="o">=</span> <span class="nb">property</span><span class="p">(</span><span class="o">**</span><span class="n">dither_axis</span><span class="p">())</span>
+
+<div class="viewcode-block" id="Slit.focus_axis"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.slit.Slit.focus_axis">[docs]</a>    <span class="k">def</span> <span class="nf">focus_axis</span><span class="p">():</span>
+        <span class="sd">&quot;&quot;&quot;Accessor to focus_axis attribute</span>
+
+<span class="sd">        :param axis: [X, Y, Z] in :math:`\mu{}m`</span>
+<span class="sd">        :raises: Exception (not init yet).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">def</span> <span class="nf">fget</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_focus_axis</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;Focus axis not defined yet.&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_focus_axis</span>
+
+        <span class="k">def</span> <span class="nf">fset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">value</span> <span class="o">==</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]:</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;Wrong axis value: (0, 0, 0)</span><span class="se">\</span>
+<span class="s">is not a direction&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_focus_axis</span> <span class="o">=</span> <span class="n">value</span>
+        <span class="k">return</span> <span class="nb">locals</span><span class="p">()</span>
+</div>
+    <span class="n">focus_axis</span> <span class="o">=</span> <span class="nb">property</span><span class="p">(</span><span class="o">**</span><span class="n">focus_axis</span><span class="p">())</span>
+
+<div class="viewcode-block" id="Slit.dithering_value"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.slit.Slit.dithering_value">[docs]</a>    <span class="k">def</span> <span class="nf">dithering_value</span><span class="p">():</span>
+        <span class="sd">&quot;&quot;&quot;Accessor to dithering_value attribute for dithering function</span>
+
+<span class="sd">        :raises: Exception (not init yet).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">def</span> <span class="nf">fget</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dithering_value</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;Dithering value not defined yet.&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dithering_value</span>
+
+        <span class="k">def</span> <span class="nf">fset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">value</span> <span class="o">&lt;=</span><span class="mi">0</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;Wrong dithering value (&lt;=0).&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_dithering_value</span> <span class="o">=</span> <span class="n">value</span>
+        <span class="k">return</span> <span class="nb">locals</span><span class="p">()</span>
+</div>
+    <span class="n">dithering_value</span> <span class="o">=</span> <span class="nb">property</span><span class="p">(</span><span class="o">**</span><span class="n">dithering_value</span><span class="p">())</span>
+
+<div class="viewcode-block" id="Slit.focus_value"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.slit.Slit.focus_value">[docs]</a>    <span class="k">def</span> <span class="nf">focus_value</span><span class="p">():</span>
+        <span class="sd">&quot;&quot;&quot;Accessor to focus_value attribute for focusing function</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">def</span> <span class="nf">fget</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_focus_value</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;Focus value not defined yet.&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_focus_value</span>
+
+        <span class="k">def</span> <span class="nf">fset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">value</span> <span class="o">&lt;=</span><span class="mi">0</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;Wrong focus value (&lt;=0).&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_focus_value</span> <span class="o">=</span> <span class="n">value</span>
+        <span class="k">return</span> <span class="nb">locals</span><span class="p">()</span>
+</div>
+    <span class="n">focus_value</span> <span class="o">=</span> <span class="nb">property</span><span class="p">(</span><span class="o">**</span><span class="n">focus_value</span><span class="p">())</span>
+
+    <span class="nd">@transition</span><span class="p">(</span><span class="n">after_state</span> <span class="o">=</span> <span class="s">&quot;SafeStop&quot;</span><span class="p">)</span>
+<div class="viewcode-block" id="Slit.safeOff"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.slit.Slit.safeOff">[docs]</a>    <span class="k">def</span> <span class="nf">safeOff</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Preprocessing before shutdown.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">print</span> <span class="s">&quot;seeking home ...&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_hexapodMoveAbsolute</span><span class="p">(</span><span class="o">*</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="mi">6</span><span class="p">)</span>
+        <span class="k">print</span> <span class="s">&quot;killing connection ...&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_kill</span><span class="p">()</span>
+        <span class="k">print</span> <span class="s">&quot;shutdown!&quot;</span>
+</div>
+    <span class="nd">@transition</span><span class="p">(</span><span class="n">after_state</span> <span class="o">=</span> <span class="s">&quot;ShutDown&quot;</span><span class="p">)</span>
+<div class="viewcode-block" id="Slit.shutdown"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.slit.Slit.shutdown">[docs]</a>    <span class="k">def</span> <span class="nf">shutdown</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Preprocessing before manual shutdowf</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">print</span> <span class="s">&quot;seeking home ...&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_hexapodMoveAbsolute</span><span class="p">(</span><span class="o">*</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="mi">6</span><span class="p">)</span>
+        <span class="k">print</span> <span class="s">&quot;killing connection ...&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_kill</span><span class="p">()</span>
+        <span class="k">print</span> <span class="s">&quot;shutdown!&quot;</span>
+
+    <span class="c">############</span>
+    <span class="c">#  DEVICE  #</span>
+    <span class="c">############o</span></div>
+    <span class="nd">@transition</span><span class="p">(</span><span class="n">after_state</span> <span class="o">=</span> <span class="s">&#39;load&#39;</span><span class="p">)</span>
+<div class="viewcode-block" id="Slit.OnLoad"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.slit.Slit.OnLoad">[docs]</a>    <span class="k">def</span> <span class="nf">OnLoad</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Override callback of load transition (FSM):</span>
+<span class="sd">            load all parameter from cfg file.</span>
+
+<span class="sd">        .. warning: It does not load communication parameters</span>
+
+<span class="sd">        :raises: :class:`~.Error.CfgFileError`</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">print</span> <span class="s">&quot;LOADING...&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dither_axis</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_param</span><span class="p">[</span><span class="s">&#39;dither_axis&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;,&#39;</span><span class="p">))</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">Error</span><span class="o">.</span><span class="n">CfgFileErr</span><span class="p">(</span><span class="s">&quot;Wrong value dither_axis (</span><span class="si">%s</span><span class="s">)&quot;</span> <span class="o">%</span> <span class="n">e</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">focus_axis</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_param</span><span class="p">[</span><span class="s">&#39;focus_axis&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;,&#39;</span><span class="p">))</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">Error</span><span class="o">.</span><span class="n">CfgFileErr</span><span class="p">(</span><span class="s">&quot;Wrong value focus_axis (</span><span class="si">%s</span><span class="s">)&quot;</span> <span class="o">%</span> <span class="n">e</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">magnification</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_param</span><span class="p">[</span><span class="s">&#39;magnification&#39;</span><span class="p">])</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">Error</span><span class="o">.</span><span class="n">CfgFileErr</span><span class="p">(</span><span class="s">&quot;Wrong value magnification (</span><span class="si">%s</span><span class="s">)&quot;</span> <span class="o">%</span> <span class="n">e</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">focus_value</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_param</span><span class="p">[</span><span class="s">&#39;focus_value&#39;</span><span class="p">])</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">Error</span><span class="o">.</span><span class="n">CfgFileErr</span><span class="p">(</span><span class="s">&quot;Wrong value focus_value&quot;</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dithering_value</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_param</span><span class="p">[</span><span class="s">&#39;dithering_value&#39;</span><span class="p">])</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">Error</span><span class="o">.</span><span class="n">CfgFileErr</span><span class="p">(</span><span class="s">&quot;Wrong value dithering_value&quot;</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_home</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_param</span><span class="p">[</span><span class="s">&#39;home&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;,&#39;</span><span class="p">))</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">Error</span><span class="o">.</span><span class="n">CfgFileErr</span><span class="p">(</span><span class="s">&quot;Wrong value home (</span><span class="si">%s</span><span class="s">)&quot;</span> <span class="o">%</span> <span class="n">e</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_slit_position</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_param</span><span class="p">[</span><span class="s">&#39;slit_position&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;,&#39;</span><span class="p">))</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">Error</span><span class="o">.</span><span class="n">CfgFileErr</span><span class="p">(</span><span class="s">&quot;Wrong value home (</span><span class="si">%s</span><span class="s">)&quot;</span> <span class="o">%</span> <span class="n">e</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="Slit.start_communication"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.slit.Slit.start_communication">[docs]</a>    <span class="k">def</span> <span class="nf">start_communication</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">startDevice</span><span class="p">()</span> <span class="c"># Instantiation of Operation/SimuDevice</span>
+        <span class="k">print</span> <span class="s">&quot;Connecting to HXP...&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">myxps</span> <span class="o">=</span> <span class="n">hxp_drivers</span><span class="o">.</span><span class="n">XPS</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">socketId</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">myxps</span><span class="o">.</span><span class="n">TCP_ConnectToServer</span><span class="p">(</span>
+            <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_cfg</span><span class="p">[</span><span class="s">&#39;ip&#39;</span><span class="p">]),</span>
+            <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_cfg</span><span class="p">[</span><span class="s">&#39;port&#39;</span><span class="p">]),</span>
+            <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_cfg</span><span class="p">[</span><span class="s">&#39;timeout&#39;</span><span class="p">])</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">socketId</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">Error</span><span class="o">.</span><span class="n">CommErr</span><span class="p">(</span><span class="s">&quot;Connection to Hexapod failed check IP &amp; Port&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">startFSM</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">OnLoad</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="Slit.check_status"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.slit.Slit.check_status">[docs]</a>    <span class="k">def</span> <span class="nf">check_status</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Check status of hexapod</span>
+
+<span class="sd">        :raises: :class:`~.Error.DeviceErr`, :class:`~.Error.CommErr`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">fsm</span><span class="o">.</span><span class="n">current</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&#39;none&#39;</span><span class="p">,</span> <span class="s">&#39;INITIALISING&#39;</span><span class="p">]:</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="o">.</span><span class="mi">1</span><span class="p">)</span><span class="c"># have to wait else return busy socke</span>
+            <span class="c"># check status</span>
+            <span class="n">status_code</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getStatus</span><span class="p">()</span>
+            <span class="n">status</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getStatusString</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">status_code</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="Slit.check_position"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.slit.Slit.check_position">[docs]</a>    <span class="k">def</span> <span class="nf">check_position</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Check position of hexapod</span>
+
+<span class="sd">        :raises: :class:`~.Error.DeviceErr`, :class:`~.Error.CommErr`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">fsm</span><span class="o">.</span><span class="n">current</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&#39;none&#39;</span><span class="p">,</span> <span class="s">&#39;LOADED&#39;</span><span class="p">,</span> <span class="s">&#39;INITIALISING&#39;</span><span class="p">]:</span>
+            <span class="c"># check position</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">currPos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getCurrentPosition</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">currPos</span> <span class="o">=</span> <span class="s">&quot;undef.&quot;</span>
+
+    <span class="c">#############</span>
+    <span class="c">#  Parsers  #</span>
+    <span class="c">#############</span></div>
+    <span class="k">def</span> <span class="nf">_getCurrentPosition</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s">&#39;operation&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">errorChecker</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">myxps</span><span class="o">.</span><span class="n">GroupPositionCurrentGet</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">socketId</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">groupName</span><span class="p">,</span>
+                    <span class="mi">6</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">currPos</span>
+
+    <span class="k">def</span> <span class="nf">_getStatus</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s">&#39;operation&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">errorChecker</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">myxps</span><span class="o">.</span><span class="n">GroupStatusGet</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">socketId</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">groupName</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">NotImplemented</span>
+
+    <span class="k">def</span> <span class="nf">_getStatusString</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">code</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s">&#39;operation&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">errorChecker</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">myxps</span><span class="o">.</span><span class="n">GroupStatusStringGet</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">socketId</span><span class="p">,</span>
+                    <span class="n">code</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">NotImplemented</span>
+
+    <span class="k">def</span> <span class="nf">_kill</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s">&#39;operation&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">errorChecker</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">myxps</span><span class="o">.</span><span class="n">GroupKill</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">socketId</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">groupName</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s">&#39;operation&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">errorChecker</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">myxps</span><span class="o">.</span><span class="n">GroupInitialize</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">socketId</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">groupName</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_homeSearch</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s">&#39;operation&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">errorChecker</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">myxps</span><span class="o">.</span><span class="n">GroupHomeSearch</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">socketId</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">groupName</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_hexapodCoordinateSytemGet</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">coordSystem</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s">&#39;operation&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">errorChecker</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">myxps</span><span class="o">.</span><span class="n">HexapodCoordinateSystemGet</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">socketId</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">groupName</span><span class="p">,</span>
+                    <span class="n">coordSystem</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_home</span> <span class="c"># TODO: take care of reference : &#39;Work&#39; or &#39;Base&#39;</span>
+
+    <span class="k">def</span> <span class="nf">_hexapodCoordinateSytemSet</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">coordSystem</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">w</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s">&#39;operation&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">errorChecker</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">myxps</span><span class="o">.</span><span class="n">HexapodCoordinateSystemSet</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">socketId</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">groupName</span><span class="p">,</span>
+                    <span class="n">coordSystem</span><span class="p">,</span>
+                    <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">w</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_home</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">w</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">_hexapodMoveAbsolute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">w</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        ..note: coordSystem not specified because has to be &#39;Work&#39;</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s">&#39;operation&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">errorChecker</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">myxps</span><span class="o">.</span><span class="n">HexapodMoveAbsolute</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">socketId</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">groupName</span><span class="p">,</span>
+                    <span class="s">&#39;Work&#39;</span><span class="p">,</span>
+                    <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">w</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">currPos</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">w</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">_hexapodMoveIncremental</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">coordSystem</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">w</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        ..todo: Add algorithm for simulation mode</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s">&#39;operation&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">errorChecker</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">myxps</span><span class="o">.</span><span class="n">HexapodMoveIncremental</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">socketId</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">groupName</span><span class="p">,</span>
+                    <span class="n">coordSystem</span><span class="p">,</span>
+                    <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">w</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c"># TODO: add rotation algo</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">currPos</span> <span class="o">=</span> <span class="p">[</span>
+                    <span class="nb">sum</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">currPos</span><span class="p">,</span> <span class="p">[</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">w</span><span class="p">])</span>
+                    <span class="p">]</span>
+            <span class="k">print</span> <span class="bp">self</span><span class="o">.</span><span class="n">currPos</span>
+
+<div class="viewcode-block" id="Slit.errorChecker"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.slit.Slit.errorChecker">[docs]</a>    <span class="k">def</span> <span class="nf">errorChecker</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Kind of decorator who check error after routine.</span>
+
+<span class="sd">        :returns: value receive from TCP</span>
+<span class="sd">        :raises: :class:`~.Error.DeviceErr`, :class:`~.Error.CommErr`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c">#Check if sending or receiving</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">link_busy</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.2</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">errorChecker</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">link_busy</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="n">buf</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">link_busy</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="k">if</span> <span class="n">buf</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">buf</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">108</span><span class="p">]:</span>
+                <span class="p">[</span><span class="n">errorCode</span><span class="p">,</span> <span class="n">errorString</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">myxps</span><span class="o">.</span><span class="n">ErrorStringGet</span><span class="p">(</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">socketId</span><span class="p">,</span> <span class="n">buf</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                        <span class="p">)</span>
+                <span class="k">if</span> <span class="n">buf</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="o">-</span><span class="mi">17</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;Warning: [X, Y, Z, U, V, W] exceed : </span><span class="si">%s</span><span class="s">&quot;</span>
+                            <span class="o">%</span> <span class="n">errorString</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">errorCode</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">err</span> <span class="o">=</span> <span class="n">func</span><span class="o">.</span><span class="n">func_name</span> <span class="o">+</span> <span class="s">&#39; : ERROR &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">errorCode</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">err</span> <span class="o">=</span> <span class="n">func</span><span class="o">.</span><span class="n">func_name</span> <span class="o">+</span> <span class="s">&#39; : &#39;</span> <span class="o">+</span> <span class="n">errorString</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">buf</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="o">-</span><span class="mi">2</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">Error</span><span class="o">.</span><span class="n">CommErr</span><span class="p">(</span><span class="n">func</span><span class="o">.</span><span class="n">func_name</span> <span class="o">+</span> <span class="s">&#39;TCP timeout&#39;</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">buf</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="o">-</span><span class="mi">108</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">Error</span><span class="o">.</span><span class="n">CommErr</span><span class="p">(</span><span class="n">func</span><span class="o">.</span><span class="n">func_name</span> <span class="o">+</span>
+                            <span class="s">&#39;TCP/IP connection was closed by an admin&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fsm</span><span class="o">.</span><span class="n">fail</span><span class="p">()</span>
+            <span class="k">raise</span> <span class="n">Error</span><span class="o">.</span><span class="n">DeviceErr</span><span class="p">(</span><span class="n">err</span><span class="p">)</span><span class="c">#a traiter si Device ou COmm suivant cas</span>
+        <span class="k">return</span> <span class="n">buf</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="relbar-bottom">
+        
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> &nbsp; &nbsp;</li>
+    <li><a href="../../../enuActor.html">ENtrance Unit actor</a> &raquo;</li>
+
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    </div>
+
+    <div class="footer">
+        &copy; Copyright 2014, Pégot-Ogier Thomas.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+    <!-- cloud_sptheme 1.4 -->
+  </body>
+</html>

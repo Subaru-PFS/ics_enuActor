@@ -30,7 +30,7 @@ def interlock(func):
                 raise NotImplementedError
         elif self.deviceName.lower() == 'shutter':
             target_currPos = getattr(getattr(self.actor, 'bia'), "currPos")
-            if target_currPos in ['on', 'strobe']:
+            if target_currPos in ['on', 'strobe', None, 'undef.']:
                 print func.func_name
                 if func.func_name == 'initialise':
                     print('interlock !!!')
