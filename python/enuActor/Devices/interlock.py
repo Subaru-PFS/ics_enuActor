@@ -5,48 +5,57 @@
 
 def interlock(func):
     """Interlock
-            print target_currPos
 
-    Handle interlock between bia and shutter.
-    In Simulation mode interlock is not handled due to redefinition of getattribute in factory
-    class DualModeDevice: calls initialise from SimulationDevice in simulated mode. So interlock can't be handled.
+    Inter lock between bia and shutter : Interlock = Bia on/strobe and shutter open
+    It takes also in account state machine:
+        * It takes the worst case scenario if device is INITIALISING or BUSY or FAILED
 
     :raises: NotImplementedError
     """
     from functools import wraps
     @wraps(func) # for docstring
     def wrapped_func(self, *args, **kwargs):
-        print self.deviceName.lower()
         if self.deviceName.lower() == 'bia':
+            shutterState = self.actor.shutter.fsm.current
             target_currPos = getattr(getattr(self.actor, 'shutter'), "currPos")
-            if func.func_name == 'bia':
-                if target_currPos == 'open' and args[0] in ['on', None]\
-                        or kwargs.has_key('strobe'):
-                            print("Interlock !!!")
-                            return
-                else:
-                    return func(self, *args, **kwargs)
-            else:
-                raise NotImplementedError
-        elif self.deviceName.lower() == 'shutter':
-            target_currPos = getattr(getattr(self.actor, 'bia'), "currPos")
-            if target_currPos in ['on', 'strobe', None, 'undef.']:
-                print func.func_name
+            if target_currPos in ['open', None, 'undef.']\
+                    and shutterState in ['IDLE']\
+                    or shutterState in ['FAILED', 'BUSY', 'INITIALISING']:
                 if func.func_name == 'initialise':
-                    print('interlock !!!')
+                    self.actor.bcast.warn('text="Interlock"')
                     return
-                elif func.func_name == 'shutter':
-                    if args[0] in ['open', None, "undef."]:
-                        print("Interlock !!!")
+                elif func.func_name == 'bia':
+                    if args[0] in ['on', None] or kwargs.has_key('strobe'):
+                        self.actor.bcast.warn('text="Interlock"')
                         return
                     else:
                         return func(self, *args, **kwargs)
                 else:
-                    raise NotImplementedError
-            elif target_currPos == 'off':
-                return func(self, *args, **kwargs)
+                    raise NotImplementedError('case : func= %s, dev= %s'\
+                                              % (func.func_name, self.deviceName))
             else:
-                raise NotImplementedError
+                return func(self, *args, **kwargs)
+        elif self.deviceName.lower() == 'shutter':
+            biaState = self.actor.bia.fsm.current
+            target_currPos = getattr(getattr(self.actor, 'bia'), "currPos")
+            if target_currPos in ['on', 'strobe', None, 'undef.']\
+                    and biaState in ['IDLE']\
+                    or biaState in ['FAILED', 'BUSY', 'INITIALISING']:
+                if func.func_name == 'initialise':
+                    self.actor.bcast.warn('text="Interlock"')
+                    return
+                elif func.func_name == 'shutter':
+                    if args[0] in ['open', None, "undef."]:
+                        self.actor.bcast.warn('text="Interlock"')
+                        return
+                    else:
+                        return func(self, *args, **kwargs)
+                    return func(self, *args, **kwargs)
+                else:
+                    raise NotImplementedError('case : %s' % self.deviceName)
+            else:
+                return func(self, *args, **kwargs)
         else:
-            raise NotImplementedError('case : %s' % self.deviceName)
+            raise NotImplementedError('case : func= %s, dev= %s'\
+                                    % (func.func_name, self.deviceName))
     return wrapped_func

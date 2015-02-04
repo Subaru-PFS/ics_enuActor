@@ -67,6 +67,7 @@ class Slit(DualModeDevice):
         print "going to home ..."
         self._hexapodMoveAbsolute(*[0, 0, 0, 0, 0, 0])
         self.check_status()
+        self.check_position()
 
     #############
     #  HEXAPOD  #
@@ -261,7 +262,6 @@ is not a direction")
     ############
     #  DEVICE  #
     ############o
-    @transition(after_state = 'load')
     def OnLoad(self):
         """Override callback of load transition (FSM):
             load all parameter from cfg file.
@@ -303,7 +303,7 @@ is not a direction")
 
 
     def start_communication(self):
-        self.startDevice() # Instantiation of Operation/SimuDevice
+        #self.startDevice() # Instantiation of Operation/SimuDevice
         print "Connecting to HXP..."
         self.myxps = hxp_drivers.XPS()
         self.socketId = self.myxps.TCP_ConnectToServer(

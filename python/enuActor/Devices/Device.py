@@ -239,8 +239,8 @@ class SimulationDevice(Device):
 
     def check_position(self):
         #self.thread.<method> to have access to deviceyy
-        if self.currSimPos is not None:
-            self.currPos = self.currSimPos
+        if self.thread.currSimPos is not None:
+            self.thread.currPos = self.thread.currSimPos
 
 
 class OperationDevice(Device):
@@ -524,6 +524,7 @@ class DualModeDevice(QThread):
         # it calls start device which create new Op/SimDevice
         self.startDevice()
         self.start_communication()
+        self.OnLoad()
 
 
     def __getattr__(self, name):
@@ -537,8 +538,7 @@ class DualModeDevice(QThread):
         if name in [
                 'check_status',
                 'check_position',
-                'start_communication',
-                'initialise'
+                'start_communication'
                 ]:
             if self.mode == 'simulated' and self.deviceStarted:
                 return self.__getattr__(name)

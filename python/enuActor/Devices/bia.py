@@ -34,11 +34,13 @@ class Bia(DualModeDevice):
     def __init__(self, actor=None):
         super(Bia, self).__init__(actor)
         self.currPos = None
+        self.home = None
 
     ############################
     #  About Device functions  #
     ############################
 
+    @interlock
     @transition('init', 'idle')
     def initialise(self):
         """Initialise Bia.
@@ -48,6 +50,7 @@ class Bia(DualModeDevice):
         """
         #TODO: to improve
         self.load_cfg()
+        self.currSimPos = self.home
         self.check_status()
         self.check_position()
 
@@ -114,10 +117,11 @@ class Bia(DualModeDevice):
             raise Error.CommErr(e)
         self.generate(self.currPos)
         self.check_status()
+        self.check_position()
 
-    @transition(after_state = 'load')
     def OnLoad(self):
-        self.check_status()
+        print "LOADING..."
+        self.home = self._param['home']
 
     def check_status(self):
         """ Check status.
@@ -136,7 +140,7 @@ class Bia(DualModeDevice):
         """
         if self.currSimPos is not None:
             self.currPos = self.currSimPos
-            self.generate(self.currPos)
+        self.generate(self.currPos)
 
 
 
