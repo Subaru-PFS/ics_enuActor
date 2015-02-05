@@ -25,9 +25,9 @@ class SlitCmd(object):
                 self.moveTo),
             ('slit', 'MoveTo relative <X> <Y> <Z> <U> <V> <W>',
                 self.moveTo),
-            #('slit', 'dither axis <X> <Y> <Z>', self.setDither),
+            ('slit', 'SetDither <X> <Y> <Z>', self.setDither),
             ('slit', 'dither axis', self.getDither),
-            #('slit', 'focus axis <X> <Y> <Z>', self.setFocus),
+            ('slit', 'SetFocus <X> <Y> <Z>', self.setFocus),
             ('slit', 'focus axis', self.getFocus),
             ('slit', 'dither', self.goDither),
             ('slit', '<dither>', self.goDither),
@@ -58,6 +58,9 @@ class SlitCmd(object):
                 keys.Key("magnification", types.Float(),
                     help="magnification value"),
                                         )
+
+    def teston(self, cmd):
+        self.actor.slit.testCmd = cmd
 
     def init(self, cmd):
         self.actor.slit.initialise()
@@ -96,7 +99,6 @@ class SlitCmd(object):
                     sys.exc_info()[1]))
         else:
             cmd.inform("text='Slit mode %s enabled'" % mode)
-
     def set_state(self, cmd):
         state = cmd.cmd.keywords[0].name
         try:
@@ -162,19 +164,19 @@ class SlitCmd(object):
         else:
             cmd.inform("text= 'goHome done successfully !!'")
 
-    #def setDither(self, cmd):
-        #try:
-            #self.actor.slit.dither_axis = map(
-                    #float,
-                    #[
-                        #cmd.cmd.keywords["X"].values[0],
-                        #cmd.cmd.keywords["Y"].values[0],
-                        #cmd.cmd.keywords["Z"].values[0]
-                    #])
-        #except Exception, e:
-            #cmd.error("text='%s'" % e)
-        #else:
-            #cmd.inform("text= 'set dither done!'")
+    def setDither(self, cmd):
+        try:
+            self.actor.slit.dither_axis = map(
+                    float,
+                    [
+                        cmd.cmd.keywords["X"].values[0],
+                        cmd.cmd.keywords["Y"].values[0],
+                        cmd.cmd.keywords["Z"].values[0]
+                    ])
+        except Exception, e:
+            cmd.error("text='%s'" % e)
+        else:
+            cmd.inform("text= 'set dither done!'")
 
     def getDither(self, cmd):
         try:
@@ -182,19 +184,19 @@ class SlitCmd(object):
         except Exception, e:
             cmd.error("text='%s'" % e)
 
-    #def setFocus(self, cmd):
-        #try:
-            #self.actor.slit.focus_axis = map(
-                    #float,
-                    #[
-                        #cmd.cmd.keywords["X"].values[0],
-                        #cmd.cmd.keywords["Y"].values[0],
-                        #cmd.cmd.keywords["Z"].values[0]
-                    #])
-        #except Exception, e:
-            #cmd.error("text='%s'" % e)
-        #else:
-            #cmd.inform("text= 'set focus done!'")
+    def setFocus(self, cmd):
+        try:
+            self.actor.slit.focus_axis = map(
+                    float,
+                    [
+                        cmd.cmd.keywords["X"].values[0],
+                        cmd.cmd.keywords["Y"].values[0],
+                        cmd.cmd.keywords["Z"].values[0]
+                    ])
+        except Exception, e:
+            cmd.error("text='%s'" % e)
+        else:
+            cmd.inform("text= 'set focus done!'")
 
     def getFocus(self, cmd):
         try:
