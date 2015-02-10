@@ -1,10 +1,12 @@
 #!/bin/bash
 echo "setup ..."
-source ~/mhsls/products/eups/1.2.33/bin/setups.sh
-setup -v ics_mhs_root
+source ~/mhs/products/eups/default/bin/setups.sh
+setup -v tron_tron
 echo "starting tron..."
 tron start
-hubclient &
 echo "launching enuActor"
-python ~/mhsls/devel/enuActor/python/enuActor/main.py
+stageManager enu start
+setup -v ics_enuActor
+setup -v tron_actorcore
+hubclient &
 #exit 1

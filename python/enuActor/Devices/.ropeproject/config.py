@@ -20,7 +20,7 @@ def set_prefs(prefs):
     # useful when you have scripts inside your project.  Only files
     # ending with ``.py`` are considered to be python files by
     # default.
-    #prefs['python_files'] = ['*.py']
+    prefs['python_files'] = ['*.py', '*.cfg']
 
     # Custom source folders:  By default rope searches the project
     # for finding source folders (folders that should be searched

@@ -30,6 +30,7 @@ class ShutterCmd(object):
                                         )
 
     def init(self, cmd):
+        cmd.inform("text='test'")
         self.actor.shutter.initialise()
 
     def status(self, cmd):

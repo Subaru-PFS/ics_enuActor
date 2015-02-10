@@ -35,6 +35,10 @@ class Bia(DualModeDevice):
         super(Bia, self).__init__(actor)
         self.currPos = None
         self.home = None
+        self.strobe_duty = None
+        self.strobe_period = None
+        self.dimmer_duty = None
+        self.dimmer_period = None
 
     ############################
     #  About Device functions  #
@@ -51,6 +55,7 @@ class Bia(DualModeDevice):
         #TODO: to improve
         self.load_cfg()
         self.currSimPos = self.home
+        self.send('set_bia_thresh%s\r\n' % self.intensity_thresh)
         self.check_status()
         self.check_position()
 
@@ -69,8 +74,8 @@ class Bia(DualModeDevice):
 
         """
         #TODO: check values and types
-        self._param["frequency"] = freq
-        self._param["duration"] = dur
+        self._param["dimmer_duty"] = freq
+        self._param["duration_period"] = dur
         self._param["intensity"] = intensity
 
     @interlock
@@ -91,11 +96,11 @@ class Bia(DualModeDevice):
         self.currSimPos = transition
         try:
             if transition == 'on':
-                self.send('a\r\n')
+                self.send('bia_on\r\n')
                 time.sleep(.5)
-                self.send('p10\r\n')
+                self.send('set_bia_dperiod%s\r\n' % self.dimmer_period)
                 time.sleep(.5)
-                self.send('d1000\r\n')
+                self.send('set_bia_dduty%s\r\n' % self.dimmer_duty)
                 self.currPos = "on" # TODO: To be change when got input
             elif transition == 'strobe':
                 self.send('a\r\n')
@@ -103,15 +108,15 @@ class Bia(DualModeDevice):
                 if strobe is None:
                     # Use default parameters
                     strobe = [
-                            self._param["frequency"],
-                            self._param["duration"]
+                            self.strobe_period,
+                            self.strobe_duty
                             ]
-                self.send('p%i\r\n' % int(strobe[0]))
+                self.send('set_bia_speriod%i\r\n' % int(strobe[0]))
                 time.sleep(5)
-                self.send('d%i\r\n' % int(strobe[1]))
+                self.send('set_bia_sduty%i\r\n' % int(strobe[1]))
                 self.currPos = "strobe" # TODO: To be change when got input
             elif transition == 'off':
-                self.send('c\r\n')
+                self.send('bia_off\r\n')
                 self.currPos = "off" # TODO: To be change when got input
         except socket.error as e:
             raise Error.CommErr(e)
@@ -122,6 +127,11 @@ class Bia(DualModeDevice):
     def OnLoad(self):
         print "LOADING..."
         self.home = self._param['home']
+        self.strobe_period = self._param['strobe_period']
+        self.strobe_duty = self._param['strobe_duty']
+        self.dimmer_period = self._param['dimmer_period']
+        self.dimmer_duty = self._param['dimmer_duty']
+        self.intensity_thresh = self._param['intensity_thres']
 
     def check_status(self):
         """ Check status.
@@ -130,7 +140,13 @@ class Bia(DualModeDevice):
         """
         # TODO: to be changed whn input received
         # Same as sim_check_status
-        pass
+        OnOrOff = self.send('get_bia_status\r\n')
+        if OnOrOff == 1:
+            self.currPos = "on"
+        elif OnOrOff == 0:
+            self.currPos = "off"
+        else:
+            self.currPos = "undef."
 
     def check_position(self):
         """ Check position.
