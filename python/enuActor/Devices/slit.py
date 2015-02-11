@@ -4,11 +4,13 @@
 #######################################################################
 #                        FPSA SW device module                        #
 #######################################################################
-
-from enuActor.QThread import *
+try:
+    from enuActor.QThread import *
+    from Device import *
+except:
+    pass
 import serial, time
 import Error
-from Device import *
 from utils import hxp_drivers
 import numpy as np
 import re
@@ -475,6 +477,7 @@ is not a direction")
                     err = func.func_name + ' : ' + errorString
             else:
                 if buf[0] == -2:
+                    self.command.error("text='TCP_timeout'")
                     raise Error.CommErr(func.func_name + 'TCP timeout')
                 elif buf[0] == -108:
                     raise Error.CommErr(func.func_name +

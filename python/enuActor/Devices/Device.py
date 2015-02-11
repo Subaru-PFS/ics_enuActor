@@ -448,7 +448,8 @@ class DualModeDevice(QThread):
         """Called each time the Dictionary variable are changed
 
         """
-        cmd = self.actor.bcast #not sure
+        #cmd = self.actor.bcast #not sure
+        cmd = self.command
         cmd.inform("Generator:")
         cmd.inform(" -> device : %s" % self.deviceName)
         cmd.inform(" -> variable value: %s" % var)

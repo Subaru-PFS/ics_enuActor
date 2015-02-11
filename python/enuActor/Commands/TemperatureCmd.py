@@ -14,7 +14,7 @@ class TemperatureCmd(object):
         self.vocab = [
             ('temperature', 'status', self.status),
             ('temperature', 'read <sensorId>', self.read),
-            ('temperature', '@(simulated|operation)', self.set_mode),
+            ('temperature', '@(start|start simulation)', self.set_mode),
             ('temperature', '@(off|load|busy|idle|SafeStop|fail)', self.set_state),
             ('temperature', 'init', self.init),
         ]
@@ -43,7 +43,11 @@ class TemperatureCmd(object):
             cmd.error("text='Unexpected error: %s'" % sys.exc_info()[0])
 
     def set_mode(self, cmd):
-        mode = cmd.cmd.keywords[0].name
+        name = cmd.cmd.keywords[0].name
+        if name == 'start simulation':
+            mode = 'simulated'
+        elif name == 'start':
+            mode = 'operation'
         try:
             self.actor.temperature.change_mode(mode)
         except CommErr as e:

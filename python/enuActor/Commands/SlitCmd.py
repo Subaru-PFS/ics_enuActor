@@ -15,7 +15,7 @@ class SlitCmd(object):
         self.vocab = [
             ('slit', 'status', self.status),
             ('slit', '<cmd>', self.command),
-            ('slit', '@(simulated|operation)', self.set_mode),
+            ('slit', '@(start|start simulation)', self.set_mode),
             ('slit', 'GetHome', self.getHome),
             ('slit', 'GoHome', self.goHome),
             ('slit', 'SetHome <X> <Y> <Z> <U> <V> <W>',
@@ -59,9 +59,6 @@ class SlitCmd(object):
                     help="magnification value"),
                                         )
 
-    def teston(self, cmd):
-        self.actor.slit.testCmd = cmd
-
     def init(self, cmd):
         self.actor.slit.initialise()
 
@@ -88,7 +85,11 @@ class SlitCmd(object):
         cmd.cmd.keywords["cmd"].values[0])
 
     def set_mode(self, cmd):
-        mode = cmd.cmd.keywords[0].name
+        name = cmd.cmd.keywords[0].name
+        if name == 'start simulation':
+            mode = 'simulated'
+        elif name == 'start':
+            mode = 'operation'
         try:
             self.actor.slit.change_mode(mode)
         except CommErr as e:
@@ -99,6 +100,7 @@ class SlitCmd(object):
                     sys.exc_info()[1]))
         else:
             cmd.inform("text='Slit mode %s enabled'" % mode)
+
     def set_state(self, cmd):
         state = cmd.cmd.keywords[0].name
         try:

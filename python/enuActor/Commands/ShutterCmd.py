@@ -15,7 +15,7 @@ class ShutterCmd(object):
         self.vocab = [
             ('shutter', 'status', self.status),
             ('shutter', '<cmd>', self.command),
-            ('shutter', '@(simulated|operation)', self.set_mode),
+            ('shutter', '@(start|start simulation)', self.set_mode),
             ('shutter', '@(open|close|reset) @(red|blue)', self.shutter),
             ('shutter', '@(open|close|reset)', self.shutter),
             ('shutter', '@(off|load|busy|idle|SafeStop|fail)', self.set_state),
@@ -30,7 +30,6 @@ class ShutterCmd(object):
                                         )
 
     def init(self, cmd):
-        cmd.inform("text='test'")
         self.actor.shutter.initialise()
 
     def status(self, cmd):
@@ -46,7 +45,11 @@ class ShutterCmd(object):
         cmd.cmd.keywords["cmd"].values[0])
 
     def set_mode(self, cmd):
-        mode = cmd.cmd.keywords[0].name
+        name = cmd.cmd.keywords[0].name
+        if name == 'start simulation':
+            mode = 'simulated'
+        elif name == 'start':
+            mode = 'operation'
         try:
             self.actor.shutter.change_mode(mode)
         except CommErr as e:

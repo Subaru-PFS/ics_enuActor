@@ -13,7 +13,7 @@ class BiaCmd(object):
         self.actor = actor
         self.vocab = [
             ('bia', 'status', self.status),
-            ('bia', '@(simulated|operation)', self.set_mode),
+            ('bia', '@(start|start simulation)', self.set_mode),
             ('bia', '@(on|off)', self.bia),
             ('bia', 'on <int>', self.bia),
             ('bia', 'on strobe <int>', self.strobe_int),
@@ -48,7 +48,11 @@ class BiaCmd(object):
             cmd.error("text='Unexpected error: %s'" % sys.exc_info()[0])
 
     def set_mode(self, cmd):
-        mode = cmd.cmd.keywords[0].name
+        name = cmd.cmd.keywords[0].name
+        if name == 'start simulation':
+            mode = 'simulated'
+        elif name == 'start':
+            mode = 'operation'
         try:
             self.actor.bia.change_mode(mode)
         except CommErr as e:
