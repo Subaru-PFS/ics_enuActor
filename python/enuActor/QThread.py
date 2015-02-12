@@ -37,8 +37,7 @@ class QThread(threading.Thread):
     def _realCmd(self, cmd=None):
         """ Returns a callable cmd instance. If the passed in cmd is None, return the actor's bcast cmd. """
 
-        #return cmd if cmd else self.actor.bcast
-        return "Thomas : self.actor.bcast"
+        return cmd if cmd else self.actor.bcast
 
     def putMsg(self, method, *argl, **argd):
         """ send ourself a new message.
