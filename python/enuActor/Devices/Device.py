@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
-from enuActor.QThread import *
+#from enuActor.QThread import *
+from actorcore.QThread import QThread
 from enuActor.MyFSM import *
 from interlock import interlock
 import serial
