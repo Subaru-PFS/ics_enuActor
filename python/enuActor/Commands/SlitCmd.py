@@ -15,7 +15,7 @@ class SlitCmd(object):
         self.vocab = [
             ('slit', 'status', self.status),
             ('slit', '<cmd>', self.command),
-            ('slit', '@(start|start simulation)', self.set_mode),
+            ('slit', 'start [@(operation|simulation)]', self.set_mode),
             ('slit', 'GetHome', self.getHome),
             ('slit', 'GoHome', self.goHome),
             ('slit', 'SetHome <X> <Y> <Z> <U> <V> <W>',
@@ -85,11 +85,14 @@ class SlitCmd(object):
         cmd.cmd.keywords["cmd"].values[0])
 
     def set_mode(self, cmd):
-        name = cmd.cmd.keywords[0].name
-        if name == 'start simulation':
-            mode = 'simulated'
-        elif name == 'start':
+        name = cmd.cmd.keywords[-1].name
+        if name in ['start','operation']:
             mode = 'operation'
+        elif name == 'simulation':
+            mode = 'simulated'
+        else:
+            cmd.error("text='unknow operation %s'" % name)
+
         try:
             self.actor.slit.change_mode(mode)
         except CommErr as e:

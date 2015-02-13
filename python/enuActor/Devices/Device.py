@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
-#from enuActor.QThread import *
-from actorcore.QThread import QThread
+from enuActor.QThread import *
+#from actorcore.QThread import QThread
 from enuActor.MyFSM import *
 from interlock import interlock
 import serial
@@ -408,6 +408,7 @@ class DualModeDevice(QThread):
         self.deviceName = self.__class__.__name__
         super(DualModeDevice, self).__init__(actor, self.deviceName)
         self.start()
+        self.deviceStarted = False
 
         #communication part
         self.link = None
@@ -449,8 +450,7 @@ class DualModeDevice(QThread):
         """Called each time the Dictionary variable are changed
 
         """
-        #cmd = self.actor.bcast #not sure
-        cmd = self.command
+        cmd = self.actor.bcast #not sure
         cmd.inform("Generator:")
         cmd.inform(" -> device : %s" % self.deviceName)
         cmd.inform(" -> variable value: %s" % var)
@@ -530,7 +530,7 @@ class DualModeDevice(QThread):
 
 
     def __getattr__(self, name):
-        if self.deviceStarted:
+        if self.deviceStarted is True:
             return getattr(self.curModeDevice, name)
         else:
             raise AttributeError("Device not started yet. Try to access: %s"

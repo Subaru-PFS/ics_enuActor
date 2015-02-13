@@ -15,7 +15,7 @@ class ShutterCmd(object):
         self.vocab = [
             ('shutter', 'status', self.status),
             ('shutter', '<cmd>', self.command),
-            ('shutter', '@(start|start simulation)', self.set_mode),
+            ('shutter', 'start [@(operation|simulation)]', self.set_mode),
             ('shutter', '@(open|close|reset) @(red|blue)', self.shutter),
             ('shutter', '@(open|close|reset)', self.shutter),
             ('shutter', '@(off|load|busy|idle|SafeStop|fail)', self.set_state),
@@ -39,17 +39,21 @@ class ShutterCmd(object):
             cmd.error("text='Shutter did not start well. details: %s" % e)
         except:
             cmd.error("text='Unexpected error: %s'" % sys.exc_info()[0])
+
     def command(self, cmd):
         """Opens a terminal to communicate directly with device"""
         self.actor.shutter.send("%s\r\n" %
         cmd.cmd.keywords["cmd"].values[0])
 
     def set_mode(self, cmd):
-        name = cmd.cmd.keywords[0].name
-        if name == 'start simulation':
-            mode = 'simulated'
-        elif name == 'start':
+        name = cmd.cmd.keywords[-1].name
+        if name in ['start','operation']:
             mode = 'operation'
+        elif name == 'simulation':
+            mode = 'simulated'
+        else:
+            cmd.error("text='unknow operation %s'" % name)
+
         try:
             self.actor.shutter.change_mode(mode)
         except CommErr as e:

@@ -477,7 +477,6 @@ is not a direction")
                     err = func.func_name + ' : ' + errorString
             else:
                 if buf[0] == -2:
-                    self.command.error("text='TCP_timeout'")
                     raise Error.CommErr(func.func_name + 'TCP timeout')
                 elif buf[0] == -108:
                     raise Error.CommErr(func.func_name +

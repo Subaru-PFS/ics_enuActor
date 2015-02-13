@@ -4,11 +4,8 @@
 #######################################################################
 #                 Back-Illumination SW device module                  #
 #######################################################################
-try:
-    from enuActor.QThread import *
-    from Device import *
-except ImportError:
-    pass
+from enuActor.QThread import *
+from Device import *
 from interlock import interlock
 import serial, time
 import Error
