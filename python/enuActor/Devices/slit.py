@@ -4,11 +4,8 @@
 #######################################################################
 #                        FPSA SW device module                        #
 #######################################################################
-try:
-    from enuActor.QThread import *
-    from Device import *
-except:
-    pass
+from enuActor.QThread import *
+from Device import *
 import serial, time
 import Error
 from utils import hxp_drivers

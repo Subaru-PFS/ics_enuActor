@@ -408,7 +408,6 @@ class DualModeDevice(QThread):
         self.deviceName = self.__class__.__name__
         super(DualModeDevice, self).__init__(actor, self.deviceName)
         self.start()
-        self.deviceStarted = False
 
         #communication part
         self.link = None

@@ -16,6 +16,8 @@ def interlock(func):
     @wraps(func) # for docstring
     def wrapped_func(self, *args, **kwargs):
         if self.deviceName.lower() == 'bia':
+            if self.actor.shutter.deviceStarted is False:
+                return func(self, *args, **kwargs)
             shutterState = self.actor.shutter.fsm.current
             target_currPos = getattr(getattr(self.actor, 'shutter'), "currPos")
             if target_currPos in ['open', None, 'undef.']\
@@ -36,6 +38,8 @@ def interlock(func):
             else:
                 return func(self, *args, **kwargs)
         elif self.deviceName.lower() == 'shutter':
+            if self.actor.bia.deviceStarted is False:
+                return func(self, *args, **kwargs)
             biaState = self.actor.bia.fsm.current
             target_currPos = getattr(getattr(self.actor, 'bia'), "currPos")
             if target_currPos in ['on', 'strobe', None, 'undef.']\
