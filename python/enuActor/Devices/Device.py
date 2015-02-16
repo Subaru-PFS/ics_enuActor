@@ -497,8 +497,16 @@ class DualModeDevice(QThread):
             currPos = map(lambda x: round(x, 2), self.currPos)
         else:
             currPos = self.currPos
-        return "[%s] %s status [%s, %s]" % (self.mode, self.deviceName.upper(),
-                self.fsm.current, currPos)
+        try:
+            return "[%s] %s status [%s, %s]" % (self.mode, self.deviceName.upper(),
+                    self.fsm.current, currPos)
+        except Error.DeviceErr as e:
+            if e.code == 1000:
+                self.actor.bcast.warn("text=''GetStatus' called before device \
+%s started.'" % self.deviceName)
+                return "[%s] %s No status" % (self.mode, self.deviceName)
+            else:
+                raise e
 
     #############
     #  Factory  #
@@ -532,8 +540,9 @@ class DualModeDevice(QThread):
         if self.deviceStarted is True:
             return getattr(self.curModeDevice, name)
         else:
-            raise AttributeError("Device not started yet. Try to access: %s"
-                    % name)
+            raise Error.DeviceErr("Try to access: %s"% name,
+                                  device = self.deviceName,
+                                  code = 1000)
 
     def __getattribute__(self, name):
         if name in [

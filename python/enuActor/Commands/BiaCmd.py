@@ -42,10 +42,10 @@ class BiaCmd(object):
         try:
             status = self.actor.bia.getStatus()
             cmd.inform("text='{}'".format(status))
-        except AttributeError as e:
-            cmd.error("text='Bia did not start well. details: %s" % e)
         except:
-            cmd.error("text='Unexpected error: %s'" % sys.exc_info()[0])
+            cmd.error("text='Unexpected error: [%s] %s'" % (
+                    sys.exc_info()[0],
+                    sys.exc_info()[1]))
 
     def set_mode(self, cmd):
         name = cmd.cmd.keywords[-1].name
