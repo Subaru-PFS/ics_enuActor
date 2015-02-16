@@ -29,7 +29,12 @@ class Shutter(DualModeDevice):
         * MASK_ERROR_SB_N : mask error related to SB N
     """
 
-    positions = ['undef.', 'open', 'closed(A)', 'closed(B)']
+    positions = {
+        'shop' : 'open',
+        'shcl' : 'closed',
+        'sherr': 'undef.',
+        'shmov': 'undef.'
+    }
     shutter_id = ["red", "blue", "all"]
 
     STATUS_BYTE_1 = ['S_blade_A_offline', 'S_blade_B_offline', ''
@@ -53,6 +58,7 @@ class Shutter(DualModeDevice):
     def __init__(self, actor=None):
         """Inherit QThread and start the Thread (with FSM)"""
         super(Shutter, self).__init__(actor)
+        self.home = None
         self.currPos = None     #current position
         self.shutter_id = None      #current id
 
@@ -70,15 +76,19 @@ class Shutter(DualModeDevice):
         self.currSimPos = transition
         try:
             if transition == 'open':
-                self.send('os\r\n')
+                self.send('open_sh\r\n')
+                self.currSimPos = 'open'
             elif transition == 'close':
-                self.send('cs\r\n')
+                self.send('close_sh\r\n')
+                self.currSimPos = 'close'
             elif transition == 'reset':
                 self.send('rs\r\n')
             self.check_status()
         except Error.DeviceErr, e:
+            self.currSimPos = 'undef.'
             raise e
         except Error.CommErr, e:
+            self.currSimPos = 'undef.'
             raise e
 
     @interlock
@@ -88,9 +98,10 @@ class Shutter(DualModeDevice):
         Here just trigger the FSM to INITIALISING and IDLE
 
         """
-        self.load_cfg()
+        self.OnLoad()
         self.check_status()
-        self.currSimPos = "closed"
+        self.currSimPos = self.home
+        self.send('init_sh\r\n')
         self.check_position()
 
     def terminal(self):
@@ -100,34 +111,54 @@ class Shutter(DualModeDevice):
         return NotImplementedError
 
     def OnLoad(self):
-        self.check_status()
+        self.home = self._param['home']
+
+     #def check_status(self):
+        #"""Check status byte 1, 3, 4, 5 and 6 from Shutter controller\
+            #and return current list of status byte.
+
+        #:returns: [sb1, sb3, sb5, sb6] with sbi\
+         #list of byte from status byte
+        #:raises: :class:`~.Error.CommErr`
+
+        #"""
+        #l_sb = [1, 3, 5, 4, 6]
+        #mask = [None] * 6
+        #for sb in l_sb:
+            #time.sleep(0.3)
+            #mask[sb - 1] = self.parseStatusByte(sb)
+            #if self.started:
+                #if sum(mask[sb -1] * np.asarray(getattr(Shutter,
+                    #'MASK_ERROR_SB_%i' % sb))) > 0:
+                    #error = ', '.join(np.array(getattr(Shutter,\
+    #'STATUS_BYTE_%i' % sb))[mask[sb - 1] == 1])
+                    #self.fail("%s" % error)
+                #elif self.fsm.current in ['INITIALISING', 'BUSY']:
+                    #self.fsm.idle()
+                #elif self.fsm.current == 'none':
+                    #self.fsm.load()
+        #self.generate(self.currPos)
+        #return mask
 
     def check_status(self):
         """Check status byte 1, 3, 4, 5 and 6 from Shutter controller\
             and return current list of status byte.
 
         :returns: [sb1, sb3, sb5, sb6] with sbi\
-         list of byte from status byte
+            list of byte from status byte
         :raises: :class:`~.Error.CommErr`
 
         """
-        l_sb = [1, 3, 5, 4, 6]
-        mask = [None] * 6
-        for sb in l_sb:
-            time.sleep(0.3)
-            mask[sb - 1] = self.parseStatusByte(sb)
-            if self.started:
-                if sum(mask[sb -1] * np.asarray(getattr(Shutter,
-                    'MASK_ERROR_SB_%i' % sb))) > 0:
-                    error = ', '.join(np.array(getattr(Shutter,\
-    'STATUS_BYTE_%i' % sb))[mask[sb - 1] == 1])
-                    self.fail("%s" % error)
-                elif self.fsm.current in ['INITIALISING', 'BUSY']:
+        if self.started:
+            ss = self.send('status_sh')
+            if ss == 'sherr':
+                self.fail("%s" % error)
+            elif self.fsm.current in ['INITIALISING', 'BUSY']:
+                if ss != 'shmov':
                     self.fsm.idle()
-                elif self.fsm.current == 'none':
-                    self.fsm.load()
+            elif self.fsm.current == 'none':
+                self.fsm.load()
         self.generate(self.currPos)
-        return mask
 
     def check_position(self):
         """Check position from Shutter controller
@@ -136,7 +167,7 @@ class Shutter(DualModeDevice):
 
         """
         try:
-            ss = int(self.send('ss\r\n')[0])
+            ss = self.send('status_sh\r\n')
             self.currPos = Shutter.positions[ss]
             self.generate(self.currPos)
         except Error.CommErr as e:

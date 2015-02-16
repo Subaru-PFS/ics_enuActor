@@ -482,9 +482,9 @@ class DualModeDevice(QThread):
         self._cfg = dic['com']
         self.link = dic['link']
 
-    @transition(after_state = 'load')
-    def OnLoad(self):
-        print "LOAD: Nothing to do"
+    #@transition(after_state = 'load')
+    #def OnLoad(self):
+        #print "LOAD: Nothing to do"
 
     def getStatus(self):
         """return status of Device (FSM)

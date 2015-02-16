@@ -36,6 +36,7 @@ class Bia(DualModeDevice):
         self.strobe_period = None
         self.dimmer_duty = None
         self.dimmer_period = None
+        self.intensity_thresh = None
 
     ############################
     #  About Device functions  #
@@ -50,7 +51,7 @@ class Bia(DualModeDevice):
 
         """
         #TODO: to improve
-        self.load_cfg()
+        self.OnLoad()
         self.currSimPos = self.home
         self.send('set_bia_thresh%s\r\n' % self.intensity_thresh)
         self.check_status()
@@ -71,8 +72,8 @@ class Bia(DualModeDevice):
 
         """
         #TODO: check values and types
-        self._param["dimmer_duty"] = freq
-        self._param["duration_period"] = dur
+        self._param["duty"] = freq
+        self._param["period"] = dur
         self._param["intensity"] = intensity
 
     @interlock
@@ -95,10 +96,10 @@ class Bia(DualModeDevice):
             if transition == 'on':
                 self.send('bia_on\r\n')
                 time.sleep(.5)
-                self.send('set_bia_dperiod%s\r\n' % self.dimmer_period)
+                self.send('set_bia_period%s\r\n' % self.dimmer_period)
                 time.sleep(.5)
-                self.send('set_bia_dduty%s\r\n' % self.dimmer_duty)
-                self.currPos = "on" # TODO: To be change when got input
+                self.send('set_bia_duty%s\r\n' % self.dimmer_duty)
+                self.currSimPos = "on" # TODO: To be change when got input
             elif transition == 'strobe':
                 self.send('a\r\n')
                 time.sleep(.5)
@@ -111,11 +112,12 @@ class Bia(DualModeDevice):
                 self.send('set_bia_speriod%i\r\n' % int(strobe[0]))
                 time.sleep(5)
                 self.send('set_bia_sduty%i\r\n' % int(strobe[1]))
-                self.currPos = "strobe" # TODO: To be change when got input
+                self.currSimPos = "strobe" # TODO: To be change when got input
             elif transition == 'off':
                 self.send('bia_off\r\n')
-                self.currPos = "off" # TODO: To be change when got input
+                self.currSimPos = "off" # TODO: To be change when got input
         except socket.error as e:
+            self.curSimPos = 'undef.'
             raise Error.CommErr(e)
         self.generate(self.currPos)
         self.check_status()
@@ -126,8 +128,8 @@ class Bia(DualModeDevice):
         self.home = self._param['home']
         self.strobe_period = self._param['strobe_period']
         self.strobe_duty = self._param['strobe_duty']
-        self.dimmer_period = self._param['dimmer_period']
-        self.dimmer_duty = self._param['dimmer_duty']
+        self.dimmer_period = self._param['period']
+        self.dimmer_duty = self._param['duty']
         self.intensity_thresh = self._param['intensity_thres']
 
     def check_status(self):
