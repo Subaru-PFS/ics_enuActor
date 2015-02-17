@@ -18,12 +18,13 @@ class SlitCmd(object):
             ('slit', 'start [@(operation|simulation)]', self.set_mode),
             ('slit', 'GetHome', self.getHome),
             ('slit', 'GoHome', self.goHome),
+            ('slit', 'test [<X>] [<Y>]', self.jeteste),
             ('slit', 'SetHome <X> <Y> <Z> <U> <V> <W>',
                 self.setHome),
             ('slit', 'SetHome CURRENT', self.setHomeCurrent),
             ('slit', 'MoveTo absolute <X> <Y> <Z> <U> <V> <W>',
                 self.moveTo),
-            ('slit', 'MoveTo relative <X> <Y> <Z> <U> <V> <W>',
+            ('slit', 'MoveTo relative [<X>] [<Y>] [<Z>] [<U>] [<V>] [<W>]',
                 self.moveTo),
             ('slit', 'SetDither <X> <Y> <Z>', self.setDither),
             ('slit', 'dither axis', self.getDither),
@@ -58,6 +59,7 @@ class SlitCmd(object):
                 keys.Key("magnification", types.Float(),
                     help="magnification value"),
                                         )
+
 
     def init(self, cmd):
         self.actor.slit.initialise()
@@ -144,22 +146,52 @@ class SlitCmd(object):
         else:
             cmd.inform("text= 'setHome done successfully !!'")
 
+    def jeteste(self, cmd):
+        pipe = cmd.cmd.keywords
+        position = {
+                'X' : 0,
+                'Y' : 0,
+            }
+        while len(pipe) > 0:
+            item = pipe.pop()
+            if item.name != "test":
+                position[item.name] = float(item.values[0])
+        cmd.inform('Posiition : %s' %position.values())
+
+
     def moveTo(self, cmd):
-        # Remove "MoveTo"
-        reference = cmd.cmd.keywords[1].name
-        X = cmd.cmd.keywords["X"].values[0]
-        Y = cmd.cmd.keywords["Y"].values[0]
-        Z = cmd.cmd.keywords["Z"].values[0]
-        U = cmd.cmd.keywords["U"].values[0]
-        V = cmd.cmd.keywords["V"].values[0]
-        W = cmd.cmd.keywords["W"].values[0]
+        reference = None
+        pipe = cmd.cmd.keywords
+        # we want to map to a list [x,y,z,...]
+        positionMap = { 'X': 1, 'Y': 2, 'Z': 3, 'U': 4, 'V': 5, 'W': 6}
+        position = dict(X=0.0, Y=0.0, Z=0.0, U=0.0, V=0.0, W=0.0)
+        while len(pipe) > 0:
+            item = pipe.pop()
+            if item.name not in ["relative", "absolute", "MoveTo"]:
+                position[item.name] = item.values[0]
+            elif item.name in ["relative", "absolute"]:
+                reference = item.name
+        if reference is None:
+            cmd.error('text="Error syntax "absolute or relative" \
+expected and we have: %s"' % item.name)
+
+        liste_position = [position[i] \
+                          for i in sorted(position, key=positionMap.__getitem__)]
+
+        #X = cmd.cmd.keywords["X"].values[0]
+        #Y = cmd.cmd.keywords["Y"].values[0]
+        #Z = cmd.cmd.keywords["Z"].values[0]
+        #U = cmd.cmd.keywords["U"].values[0]
+        #V = cmd.cmd.keywords["V"].values[0]
+        #W = cmd.cmd.keywords["W"].values[0]
         try:
             self.actor.slit.moveTo(reference, posCoord =
-                    map(float, [X, Y, Z, U, V, W]))
+                    map(float, liste_position))
         except Exception, e:
             cmd.error("text= '%s'" % e)
         else:
             cmd.inform("text= 'moveTo done successfully !!'")
+        cmd.finish()
 
     def goHome(self, cmd):
         try:

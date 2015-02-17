@@ -442,9 +442,8 @@ is not a direction")
         else:
             # TODO: add rotation algo
             self.currPos = [
-                    sum(x) for x in zip(self.currPos, [x, y, z, u, v, w])
+                    sum(i) for i in zip(self.currPos, [x, y, z, u, v, w])
                     ]
-            print self.currPos
 
     def errorChecker(self, func, *args):
         """ Kind of decorator who check error after routine.
