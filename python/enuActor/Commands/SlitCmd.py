@@ -178,12 +178,6 @@ expected and we have: %s"' % item.name)
         liste_position = [position[i] \
                           for i in sorted(position, key=positionMap.__getitem__)]
 
-        #X = cmd.cmd.keywords["X"].values[0]
-        #Y = cmd.cmd.keywords["Y"].values[0]
-        #Z = cmd.cmd.keywords["Z"].values[0]
-        #U = cmd.cmd.keywords["U"].values[0]
-        #V = cmd.cmd.keywords["V"].values[0]
-        #W = cmd.cmd.keywords["W"].values[0]
         try:
             self.actor.slit.moveTo(reference, posCoord =
                     map(float, liste_position))
