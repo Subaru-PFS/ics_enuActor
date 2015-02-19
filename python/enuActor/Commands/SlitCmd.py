@@ -18,7 +18,6 @@ class SlitCmd(object):
             ('slit', 'start [@(operation|simulation)]', self.set_mode),
             ('slit', 'GetHome', self.getHome),
             ('slit', 'GoHome', self.goHome),
-            ('slit', 'test [<X>] [<Y>]', self.jeteste),
             ('slit', 'SetHome <X> <Y> <Z> <U> <V> <W>',
                 self.setHome),
             ('slit', 'SetHome CURRENT', self.setHomeCurrent),
@@ -88,9 +87,9 @@ class SlitCmd(object):
 
     def set_mode(self, cmd):
         name = cmd.cmd.keywords[-1].name
-        if name in ['start','operation']:
+        if name.lower() in ['start','operation']:
             mode = 'operation'
-        elif name == 'simulation':
+        elif name.lower() == 'simulation':
             mode = 'simulated'
         else:
             cmd.error("text='unknow operation %s'" % name)
@@ -146,19 +145,6 @@ class SlitCmd(object):
         else:
             cmd.inform("text= 'setHome done successfully !!'")
 
-    def jeteste(self, cmd):
-        pipe = cmd.cmd.keywords
-        position = {
-                'X' : 0,
-                'Y' : 0,
-            }
-        while len(pipe) > 0:
-            item = pipe.pop()
-            if item.name != "test":
-                position[item.name] = float(item.values[0])
-        cmd.inform('Posiition : %s' %position.values())
-
-
     def moveTo(self, cmd):
         reference = None
         pipe = cmd.cmd.keywords
@@ -167,8 +153,8 @@ class SlitCmd(object):
         position = dict(X=0.0, Y=0.0, Z=0.0, U=0.0, V=0.0, W=0.0)
         while len(pipe) > 0:
             item = pipe.pop()
-            if item.name not in ["relative", "absolute", "MoveTo"]:
-                position[item.name] = item.values[0]
+            if item.name.lower() not in ["relative", "absolute", "moveto"]:
+                position[item.name] = float(item.values[0])
             elif item.name in ["relative", "absolute"]:
                 reference = item.name
         if reference is None:
@@ -179,8 +165,10 @@ expected and we have: %s"' % item.name)
                           for i in sorted(position, key=positionMap.__getitem__)]
 
         try:
-            self.actor.slit.moveTo(reference, posCoord =
-                    map(float, liste_position))
+            self.actor.slit.moveTo(
+                reference,
+                posCoord=map(float, liste_position)
+            )
         except Exception, e:
             cmd.error("text= '%s'" % e)
         else:

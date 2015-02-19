@@ -111,7 +111,6 @@ class Slit(DualModeDevice):
             self._hexapodMoveAbsolute(*posCoord)
         elif reference == 'relative' :
             self._hexapodMoveIncremental('Work', *posCoord)
-        self.currSimPos = posCoord
 
     ############################
     #  DITHER & THROUGH FOCUS  #
@@ -351,7 +350,7 @@ is not a direction")
                     self.groupName,
                     6)
         else:
-            return self.currPos
+            return self.currSimPos
 
     def _getStatus(self):
         if self.mode == 'operation':
@@ -425,7 +424,7 @@ is not a direction")
                     'Work',
                     x, y, z, u, v, w)
         else:
-            self.currPos = [x, y, z, u, v, w]
+            self.currSimPos = [x, y, z, u, v, w]
 
     def _hexapodMoveIncremental(self, coordSystem, x, y, z, u, v, w):
         """
@@ -441,7 +440,7 @@ is not a direction")
                     x, y, z, u, v, w)
         else:
             # TODO: add rotation algo
-            self.currPos = [
+            self.currSimPos = [
                     sum(i) for i in zip(self.currPos, [x, y, z, u, v, w])
                     ]
 

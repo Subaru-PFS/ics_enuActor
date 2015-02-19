@@ -44,9 +44,9 @@ class TemperatureCmd(object):
 
     def set_mode(self, cmd):
         name = cmd.cmd.keywords[-1].name
-        if name in ['start','operation']:
+        if name.lower() in ['start','operation']:
             mode = 'operation'
-        elif name == 'simulation':
+        elif name.lower() == 'simulation':
             mode = 'simulated'
         else:
             cmd.error("text='unknow operation %s'" % name)

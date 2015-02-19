@@ -49,9 +49,9 @@ class BiaCmd(object):
 
     def set_mode(self, cmd):
         name = cmd.cmd.keywords[-1].name
-        if name in ['start','operation']:
-            mode = 'operation'
-        elif name == 'simulation':
+        if name.lower() in ['start','operation']:
+            mode= 'operation'
+        elif name.lower() == 'simulation':
             mode = 'simulated'
         else:
             cmd.error("text='unknow operation %s'" % name)
