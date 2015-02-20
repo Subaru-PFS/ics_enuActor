@@ -41,7 +41,7 @@ class BiaCmd(object):
     def status(self, cmd):
         try:
             status = self.actor.bia.getStatus()
-            cmd.inform("text='{}'".format(status))
+            self.actor.bia.finish('status = %s' % status)
         except:
             cmd.error("text='Unexpected error: [%s] %s'" % (
                     sys.exc_info()[0],
@@ -54,18 +54,18 @@ class BiaCmd(object):
         elif name.lower() == 'simulation':
             mode = 'simulated'
         else:
-            cmd.error("text='unknow operation %s'" % name)
+            cmd.error("text='unknown operation %s'" % name)
 
         try:
             self.actor.bia.change_mode(mode)
         except CommErr as e:
-            cmd.error("text='%s'" % e)
+            self.actor.bia.error("text='%s'" % e)
         except:
             cmd.error("text='Unexpected error: [%s] %s'" % (
                     sys.exc_info()[0],
                     sys.exc_info()[1]))
         else:
-            cmd.inform("text='Bia mode %s enabled'" % mode)
+            self.actor.bia.finish('bia started/restarted well!')
 
     def set_state(self, cmd):
         state = cmd.cmd.keywords[0].name
@@ -74,7 +74,7 @@ class BiaCmd(object):
         except AttributeError as e:
             cmd.error("text='Bia did not start well. details: %s" % e)
         except FysomError as e:
-            cmd.error("text='%s'" % e)
+            self.actor.bia.error("text='%s'" % e)
 
     def bia(self, cmd):
         transition = cmd.cmd.keywords[0].name

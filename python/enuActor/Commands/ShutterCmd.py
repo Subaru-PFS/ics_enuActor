@@ -34,11 +34,12 @@ class ShutterCmd(object):
 
     def status(self, cmd):
         try:
-            cmd.inform("text='{}'".format(self.actor.shutter.getStatus()))
-        except AttributeError as e:
-            cmd.error("text='Shutter did not start well. details: %s" % e)
+            status = self.actor.shutter.getStatus()
+            self.actor.shutter.finish('status = %s' % status)
         except:
-            cmd.error("text='Unexpected error: %s'" % sys.exc_info()[0])
+            cmd.error("text='Unexpected error: [%s] %s'" % (
+                    sys.exc_info()[0],
+                    sys.exc_info()[1]))
 
     def command(self, cmd):
         """Opens a terminal to communicate directly with device"""
@@ -57,13 +58,13 @@ class ShutterCmd(object):
         try:
             self.actor.shutter.change_mode(mode)
         except CommErr as e:
-            cmd.error("text='%s'" % e)
+            self.actor.shutter.error("text='%s'" % e)
         except:
             cmd.error("text='Unexpected error: [%s] %s'" % (
                     sys.exc_info()[0],
                     sys.exc_info()[1]))
         else:
-            cmd.inform("text='Shutter mode %s enabled'" % mode)
+            self.actor.shutter.finish('started/restarted well!')
 
     def set_state(self, cmd):
         state = cmd.cmd.keywords[0].name
@@ -72,8 +73,7 @@ class ShutterCmd(object):
         except AttributeError as e:
             cmd.error("text='Shutter did not start well. details: %s" % e)
         except FysomError as e:
-            cmd.error("text= Can't go to this state: %s -x-> %s'" %
-            (self.actor.shutter.fsm.current, state.upper()))
+            self.actor.shutter.error("text='%s'" % e)
 
     def shutter(self, cmd):
         """Parse shutter command and arguments
@@ -84,8 +84,6 @@ class ShutterCmd(object):
             shutter_id = cmd.cmd.keywords[1].name
         elif( len(cmd.cmd.keywords)==1):
             shutter_id = 'all'
-        else:
-            raise ValueError("Number of args exceed")
         try:
             self.actor.shutter.putMsg(self.actor.shutter.shutter, transition)
         except AttributeError as e:

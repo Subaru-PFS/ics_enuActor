@@ -54,16 +54,16 @@ class Slit(DualModeDevice):
         - check status
         """
         self._kill()
-        print "initialising hxp ..."
+        self.inform("initialising hxp..._")
         self._initialize()
-        print "seeking home ..."
+        self.inform("seeking home ...")
         self._homeSearch()
         if self._home is None:
-            raise Exception("Bug: Home not initialised")
+            self.fail("Bug: Home not initialised")
         else:
             self.getHome()
             self.setHome(self._home)
-        print "going to home ..."
+        self.inform("going to home ...")
         self._hexapodMoveAbsolute(*[0, 0, 0, 0, 0, 0])
         self.check_status()
         self.check_position()
@@ -240,22 +240,22 @@ is not a direction")
         """Preprocessing before shutdown.
 
         """
-        print "seeking home ..."
+        self.inform("seeking home ...")
         self._hexapodMoveAbsolute(*[0] * 6)
-        print "killing connection ..."
+        self.inform("killing connection ...")
         self._kill()
-        print "shutdown!"
+        self.inform("Go to sleep")
 
     @transition(after_state = "ShutDown")
     def shutdown(self):
         """ Preprocessing before manual shutdowf
 
         """
-        print "seeking home ..."
+        self.inform("seeking home ...")
         self._hexapodMoveAbsolute(*[0] * 6)
-        print "killing connection ..."
+        self.inform("killing connection ...")
         self._kill()
-        print "shutdown!"
+        self.inform("Go to sleep")
 
     ############
     #  DEVICE  #
@@ -269,7 +269,6 @@ is not a direction")
         :raises: :class:`~.Error.CfgFileError`
 
         """
-        print "LOADING..."
         try:
             self.dither_axis = map(float, self._param['dither_axis'].split(','))
         except Exception, e:
@@ -302,7 +301,7 @@ is not a direction")
 
     def start_communication(self):
         #self.startDevice() # Instantiation of Operation/SimuDevice
-        print "Connecting to HXP..."
+        self.inform("Connecting to HXP...")
         self.myxps = hxp_drivers.XPS()
         self.socketId = self.myxps.TCP_ConnectToServer(
             str(self._cfg['ip']),

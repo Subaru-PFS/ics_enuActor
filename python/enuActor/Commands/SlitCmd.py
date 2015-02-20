@@ -69,12 +69,13 @@ class SlitCmd(object):
         elif self.actor.slit.fsm.current == "LOADED":
             self.actor.slit.shutdown()
         else:
-            print "It's impossible to halt system from current state: %s"\
-                    % self.actor.slit.current
+            self.actor.slit.warn("It's impossible to halt system from current state: %s"\
+                    % self.actor.slit.current)
 
     def status(self, cmd):
         try:
-            cmd.inform("text='{}'".format(self.actor.slit.getStatus()))
+            status = self.actor.slit.getStatus()
+            self.actor.slit.finish('status = %s' % status)
         except AttributeError as e:
             cmd.error("text='slit did not start well. details: %s" % e)
         except:
@@ -97,13 +98,13 @@ class SlitCmd(object):
         try:
             self.actor.slit.change_mode(mode)
         except CommErr as e:
-            cmd.error("text='%s'" % e)
+            self.actor.slit.error("text='%s'" % e)
         except:
             cmd.error("text='Unexpected error: [%s] %s'" % (
                     sys.exc_info()[0],
                     sys.exc_info()[1]))
         else:
-            cmd.inform("text='Slit mode %s enabled'" % mode)
+            self.actor.slit.finish('started/restarted well!')
 
     def set_state(self, cmd):
         state = cmd.cmd.keywords[0].name
@@ -118,7 +119,7 @@ class SlitCmd(object):
     def getHome(self, cmd):
         try:
             homePosition = self.actor.slit.getHome()
-            cmd.inform("text= 'Home position : %s'" % homePosition)
+            self.actor.slit.finish("Home position : %s" % homePosition)
         except Exception, e:
             cmd.error("text= %s" % e)
 
@@ -135,15 +136,15 @@ class SlitCmd(object):
         except Exception, e:
             cmd.error("text= '%s'" % e)
         else:
-            cmd.inform("text= 'setHome done successfully !!'")
+            self.actor.slit.finish("setHome done successfully!")
 
     def setHomeCurrent(self, cmd):
         try:
             self.actor.slit.setHome()
         except Exception, e:
             cmd.error("text= '%s'" % e)
-        else:
-            cmd.inform("text= 'setHome done successfully !!'")
+        elsen   :
+            self.actor.slit.finish("setHome done successfully!")
 
     def moveTo(self, cmd):
         reference = None
@@ -172,8 +173,7 @@ expected and we have: %s"' % item.name)
         except Exception, e:
             cmd.error("text= '%s'" % e)
         else:
-            cmd.inform("text= 'moveTo done successfully !!'")
-        cmd.finish()
+            cmd.finish("text= 'moveTo done successfully !!'")
 
     def goHome(self, cmd):
         try:
@@ -181,7 +181,7 @@ expected and we have: %s"' % item.name)
         except Exception, e:
             cmd.error("text= '%s'" % e)
         else:
-            cmd.inform("text= 'goHome done successfully !!'")
+            self.actor.slit.finish("goHome done successfully !!")
 
     def setDither(self, cmd):
         try:

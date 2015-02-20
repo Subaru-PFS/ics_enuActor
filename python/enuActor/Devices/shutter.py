@@ -74,6 +74,7 @@ class Shutter(DualModeDevice):
 
         """
         self.currSimPos = transition
+        self.inform("sending...")
         try:
             if transition == 'open':
                 self.send('open_sh\r\n')
@@ -90,6 +91,7 @@ class Shutter(DualModeDevice):
         except Error.CommErr, e:
             self.currSimPos = 'undef.'
             raise e
+        self.finish("operation done sucessfully!")
 
     @interlock
     @transition('init', 'idle')
@@ -99,10 +101,12 @@ class Shutter(DualModeDevice):
 
         """
         self.OnLoad()
+        self.inform("initialising...")
         self.check_status()
         self.currSimPos = self.home
         self.send('init_sh\r\n')
         self.check_position()
+        self.finish("initialisation done!")
 
     def terminal(self):
         """launch terminal connection to shutter device
@@ -152,7 +156,7 @@ class Shutter(DualModeDevice):
         if self.started:
             ss = self.send('status_sh')
             if ss == 'sherr':
-                self.fail("%s" % error)
+                self.fail("%s" % ss)
             elif self.fsm.current in ['INITIALISING', 'BUSY']:
                 if ss != 'shmov':
                     self.fsm.idle()

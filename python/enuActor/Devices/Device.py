@@ -75,14 +75,6 @@ class Device(object):
         #self.MAP['callbacks']['onload'] = lambda e: self.device.OnLoad()
         self.fsm = Fysom(self.MAP)
 
-    #callbacks: init, safe_off, shut_down
-    @transition('fail')
-    def fail(self, reason):
-        """ Routine launched when device go to FAILED state.
-
-        """
-        print "%s_FAILED : %s" % (self.deviceName, reason)
-
     def startFSM(self):
         """ Instantiate the :mod:`.MyFSM` class (create the State Machine).
 
@@ -97,7 +89,10 @@ class Device(object):
         :param e: event
 
         """
-        print 'state :%s %s' % (self.deviceName, e.dst)
+        if self.fsm.current == "FAILED":
+            self.thread.error("state changed = %s" % self.fsm.current)
+        else:
+            self.thread.inform("state changed = %s" % self.fsm.current)
 
 
     ############################
@@ -202,23 +197,24 @@ class SimulationDevice(Device):
     #  communication  #
     ###################
     def start_communication(self, *args, **kwargs):
-        print "[Simulation] %s: start communication" % self.deviceName
+        self.thread.inform("starting communication...")
         self.loadInlineCfg()
         self.startFSM()
         self.OnLoad()
 
     def start_serial(self, input_buff=None):
-        print "[Simulation] %s: start serial" % self.deviceName
+        self.thread.inform("start serial")
 
     def start_ethernet(self):
-        print "[Simulation] %s: start ethernet" % self.deviceName
+        self.thread.inform("start ethernet")
 
     def start_ttl(self):
-        print "[Simulation] %s: start ttl" % self.deviceName
+        self.thread.inform("start ttl")
 
     def send(self, input_buff=None):
-        print("[Simulation] %s: sending '%s'" %
-                (self.deviceName, input_buff))
+        """ Display what he is sent only in debug mode (to avoid spam)"""
+        if self.thread.actor.bcast.debug:
+            self.thread.inform("sending '%s'" % input_buff)
 
     #########
     #  FSM  #
@@ -231,7 +227,6 @@ class SimulationDevice(Device):
     def OnLoad(self):
         self.load_cfg(self.deviceName)
         if self.deviceName.lower() == 'slit':
-            print "Home: %s" %self.thread._home
             self.thread._home = map(float, self._param['home'].split(','))
 
     def check_status(self):
@@ -374,8 +369,6 @@ LINK: %s\nCfgFile: %s\n " % (self.link, self._cfg))
                     buff = self.connection.read(
                             self.connection.inWaiting())
                     cmpt += 1
-                    if cmpt > 1:
-                        print "repeat %s" % cmpt
                     print buff
                 if buff == '':
                     raise Error.CommErr("No response from serial port")
@@ -449,25 +442,12 @@ class DualModeDevice(QThread):
         """Called each time the Dictionary variable are changed
 
         """
-        cmd = self.actor.bcast #not sure
-        cmd.inform("Generator:")
-        cmd.inform(" -> device : %s" % self.deviceName)
-        cmd.inform(" -> variable value: %s" % var)
-        cmd.finish()
+        self.finish("Generator update dictionary")
 
 
     ############
     #  Device  #
     ############
-    #def start_communication(self, inline = False):
-        #""" Parser of start_communication. Default behaviour load the config file.
-        #Can be overriden for specific operation
-
-        #"""
-        #if inline is False:
-            #self.startDevice()
-        #self.curModeDevice.start_communication()
-
     def load_cfg(self):
         """Load configuration (call :meth:`.Devices.Device.load_cfg`) file of
         the device:
@@ -482,14 +462,10 @@ class DualModeDevice(QThread):
         self._cfg = dic['com']
         self.link = dic['link']
 
-    #@transition(after_state = 'load')
-    #def OnLoad(self):
-        #print "LOAD: Nothing to do"
-
     def getStatus(self):
-        """return status of Device (FSM)
+        """return status of Device (FSM) when asked from client MHS
 
-        :returns: ``'LOADED'``, ``'IDLE'``, ``'BUSY'``, ...
+        :returns: string. "(state, position)"
         """
         if self.currPos in [None, 'undef.']:
             currPos = 'undef.'
@@ -498,15 +474,52 @@ class DualModeDevice(QThread):
         else:
             currPos = self.currPos
         try:
-            return "[%s] %s status [%s, %s]" % (self.mode, self.deviceName.upper(),
-                    self.fsm.current, currPos)
+            return '(%s, %s)' % (self.fsm.current, self.currPos)
         except Error.DeviceErr as e:
             if e.code == 1000:
-                self.actor.bcast.warn("text=''GetStatus' called before device \
-%s started.'" % self.deviceName)
-                return "[%s] %s No status" % (self.mode, self.deviceName)
+                self.warn("'GetStatus' called before device \
+%s started." % self.deviceName)
             else:
                 raise e
+
+    @transition('fail')
+    def fail(self, reason=None):
+        """ Routine launched when device go to FAILED state.
+
+        """
+        raise Error.DeviceErr(reason, device = self.deviceName)
+
+    def inform(self, msg):
+        if self.deviceName.lower() == 'enu':
+            self.actor.bcast.inform("text='[%s] %s'" %\
+                                    (self.deviceName, msg))
+        else:
+            self.actor.bcast.inform("text='[%s, %s] %s'" %\
+                                    (self.deviceName, self.mode, msg))
+
+    def warn(self, msg):
+        if self.deviceName.lower() == 'enu':
+            self.actor.bcast.warn("text='[%s] %s'" %\
+                                    (self.deviceName, msg))
+        else:
+            self.actor.bcast.warn("text='[%s, %s] %s'" %\
+                                    (self.deviceName, self.mode, msg))
+
+    def error(self, msg):
+        if self.deviceName.lower() == 'enu':
+            self.actor.bcast.error("text='[%s] %s'" %\
+                                    (self.deviceName, msg))
+        else:
+            self.actor.bcast.error("text='[%s, %s] %s'" %\
+                                    (self.deviceName, self.mode, msg))
+
+    def finish(self, msg=None):
+        if self.deviceName.lower() == 'enu':
+            self.actor.bcast.finish("text='[%s] %s'" %\
+                                    (self.deviceName, msg))
+        else:
+            self.actor.bcast.finish("text='[%s, %s] %s'" %\
+                                (self.deviceName, self.mode, msg))
 
     #############
     #  Factory  #

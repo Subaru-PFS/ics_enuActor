@@ -50,12 +50,13 @@ class Bia(DualModeDevice):
         .. note:: Should be improved after getting hardware status
 
         """
-        #TODO: to improve
         self.OnLoad()
+        self.inform("initialising...")
         self.currSimPos = self.home
         self.send('set_bia_thresh%s\r\n' % self.intensity_thresh)
         self.check_status()
         self.check_position()
+        self.finish("initialisation done!")
 
     def setConfig(self, freq=None, dur=None, intensity=None):
         """It specifies parameters for light and strobe mode.
@@ -92,6 +93,7 @@ class Bia(DualModeDevice):
 
         """
         self.currSimPos = transition
+        self.inform("sending...")
         try:
             if transition == 'on':
                 self.send('bia_on\r\n')
@@ -120,11 +122,12 @@ class Bia(DualModeDevice):
             self.curSimPos = 'undef.'
             raise Error.CommErr(e)
         self.generate(self.currPos)
+        self.inform("check the status and position...")
         self.check_status()
         self.check_position()
+        self.finish("job done my friend!")
 
     def OnLoad(self):
-        print "LOADING..."
         self.home = self._param['home']
         self.strobe_period = self._param['strobe_period']
         self.strobe_duty = self._param['strobe_duty']
@@ -137,15 +140,12 @@ class Bia(DualModeDevice):
 
         .. warning: Can not check status yet (waiting for input)
         """
-        # TODO: to be changed whn input received
-        # Same as sim_check_status
-        OnOrOff = self.send('get_bia_status\r\n')
-        if OnOrOff == 1:
-            self.currPos = "on"
-        elif OnOrOff == 0:
-            self.currPos = "off"
-        else:
-            self.currPos = "undef."
+
+        status = self.send('ctrlstat\r\n')
+        if int(status) == 0:
+            self.fsm.idle()
+        elif int(status) == 1 and self.currPos == 'on':
+            self.error("Interlock hardware! - Didier : (┛ò__ó)┛")
 
     def check_position(self):
         """ Check position.
@@ -153,6 +153,13 @@ class Bia(DualModeDevice):
         .. warning: Can not check postion yet (waiting for input).
         So here Position simulated is same as real Position
         """
+        OnOrOff = self.send('get_bia_status\r\n')
+        if OnOrOff == 1:
+            self.currPos = "on"
+        elif OnOrOff == 0:
+            self.currPos = "off"
+        else:
+            self.currPos = "undef."
         if self.currSimPos is not None:
             self.currPos = self.currSimPos
         self.generate(self.currPos)

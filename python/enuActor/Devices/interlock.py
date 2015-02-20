@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# encoding: utf-8
 
 #######################################################################
 #                          Interlock routine                          #
@@ -24,11 +26,11 @@ def interlock(func):
                     and shutterState in ['IDLE']\
                     or shutterState in ['FAILED', 'BUSY', 'INITIALISING']:
                 if func.func_name == 'initialise':
-                    self.actor.bcast.warn('text="Interlock"')
+                    self.warn("(┛ò__ó)┛ Interlock")
                     return
                 elif func.func_name == 'bia':
                     if args[0] in ['on', None] or kwargs.has_key('strobe'):
-                        self.actor.bcast.warn('text="Interlock"')
+                        self.warn('(┛ò__ó)┛ Interlock')
                         return
                     else:
                         return func(self, *args, **kwargs)
@@ -46,11 +48,11 @@ def interlock(func):
                     and biaState in ['IDLE']\
                     or biaState in ['FAILED', 'BUSY', 'INITIALISING']:
                 if func.func_name == 'initialise':
-                    self.actor.bcast.warn('text="Interlock"')
+                    self.warn('(┛ò__ó)┛ Interlock')
                     return
                 elif func.func_name == 'shutter':
                     if args[0] in ['open', None, "undef."]:
-                        self.actor.bcast.warn('text="Interlock"')
+                        self.warn('(┛ò__ó)┛ Interlock')
                         return
                     else:
                         return func(self, *args, **kwargs)

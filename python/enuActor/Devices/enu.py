@@ -58,10 +58,10 @@ class Enu(DualModeDevice):
                 self.actor.slit.deviceStarted == False
         except Error.DeviceErr:
             if e.code == 1000:
-                self.actor.bcast.warn("checj qtatus")
+                self.warn("check status before started")
                 return
             else:
-                self.actor.bcast.error("text='%s'" % e.reason)
+                self.error('%s' % e.reason)
 
         if condition:
             return
@@ -73,17 +73,25 @@ class Enu(DualModeDevice):
                 self.fsm.current != 'IDLE':
             if self.fsm.current == 'LOADED':
                 self.fsm.init()
+            #if all device IDLE goto ENU IDLE
             self.fsm.idle()
+        elif 'LOADED' in [self.actor.bia.fsm.current,
+                          self.actor.shutter.fsm.current,
+                          self.actor.slit.fsm.current]\
+            and self.fsm.current != 'LOADED':
+            #if 1 Device LOADED goto ENU LOADED
+            self.fsm.load()
         elif 'FAILED' in [self.actor.bia.fsm.current,
                           self.actor.shutter.fsm.current,
                           self.actor.slit.fsm.current]\
-            and self.fsm.current != 'FAILED':
+            and self.fsm.current not in ['FAILED', 'LOADED']:
+            #if 1 Device FAILED and NO Device LOADED goto ENU FAILED
             self.fsm.fail()
         elif 'BUSY' in [self.actor.bia.fsm.current,
                           self.actor.shutter.fsm.current,
                           self.actor.slit.fsm.current]\
             and self.fsm.current != 'BUSY':
-            self.fsm.fail()
+            self.fsm.busy()
 
 
     def check_position(self):

@@ -28,6 +28,8 @@ class EnuCmd(object):
 
     def start(self, cmd):
         self.actor.enu.startUp()
+        self.actor.enu.initialise()
+        self.actor.enu.finish("start operation done successfully!")
 
     def set_state(self, cmd):
         state = cmd.cmd.keywords[0].name
@@ -42,8 +44,7 @@ class EnuCmd(object):
         """Report camera status and actor version. """
         self.actor.sendVersionKey(cmd)
         try:
-            status = self.actor.enu.getStatus()
-            cmd.inform("text='{}'".format(status))
+            self.actor.enu.inform("status:%s" % self.actor.enu.getStatus())
         except:
             cmd.error("text='Unexpected error: [%s] %s'" % (
                     sys.exc_info()[0],
