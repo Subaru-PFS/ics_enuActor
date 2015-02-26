@@ -104,7 +104,7 @@ class SlitCmd(object):
                     sys.exc_info()[0],
                     sys.exc_info()[1]))
         else:
-            self.actor.slit.finish('started/restarted well!')
+            self.actor.shutter.finish('started/restarted well!')
 
     def set_state(self, cmd):
         state = cmd.cmd.keywords[0].name
@@ -136,15 +136,15 @@ class SlitCmd(object):
         except Exception, e:
             cmd.error("text= '%s'" % e)
         else:
-            self.actor.slit.finish("setHome done successfully!")
+            cmd.inform("setHome done successfully !")
 
     def setHomeCurrent(self, cmd):
         try:
             self.actor.slit.setHome()
         except Exception, e:
             cmd.error("text= '%s'" % e)
-        elsen   :
-            self.actor.slit.finish("setHome done successfully!")
+        else:
+            cmd.inform("text= 'setHome done successfully !!'")
 
     def moveTo(self, cmd):
         reference = None
@@ -173,7 +173,8 @@ expected and we have: %s"' % item.name)
         except Exception, e:
             cmd.error("text= '%s'" % e)
         else:
-            cmd.finish("text= 'moveTo done successfully !!'")
+            cmd.inform("text= 'moveTo done successfully !!'")
+        cmd.finish()
 
     def goHome(self, cmd):
         try:
@@ -181,7 +182,7 @@ expected and we have: %s"' % item.name)
         except Exception, e:
             cmd.error("text= '%s'" % e)
         else:
-            self.actor.slit.finish("goHome done successfully !!")
+            cmd.inform("text= 'goHome done successfully !!'")
 
     def setDither(self, cmd):
         try:

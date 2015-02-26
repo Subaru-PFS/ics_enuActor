@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from Devices import shutter, bia, slit, temperature, enu
+from Devices import shutter, bia, slit, temperature, enu, rexm
 try:
     import actorcore.Actor
 except Exception, e:
@@ -16,6 +16,7 @@ class OurActor(actorcore.Actor.Actor):
         self.shutter = shutter.Shutter(actor=self)
         self.slit = slit.Slit(actor=self)
         self.bia = bia.Bia(actor=self)
+        self.rexm = rexm.Rexm(actor=self)
         self.temperature = temperature.Temperature(actor=self)
         self.enu = enu.Enu(actor=self)
 
