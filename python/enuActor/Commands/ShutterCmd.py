@@ -30,9 +30,15 @@ class ShutterCmd(object):
                                         )
 
     def init(self, cmd):
+        """ Initialise SHUTTER device
+
+        """
         self.actor.shutter.initialise()
 
     def status(self, cmd):
+        """ Get status and position of SHUTTER device
+
+        """
         try:
             status = self.actor.shutter.getStatus()
             self.actor.shutter.finish('status = %s' % status)
@@ -42,11 +48,14 @@ class ShutterCmd(object):
                     sys.exc_info()[1]))
 
     def command(self, cmd):
-        """Opens a terminal to communicate directly with device"""
+        """ Opens a terminal to communicate directly with device"""
         self.actor.shutter.send("%s\r\n" %
         cmd.cmd.keywords["cmd"].values[0])
 
     def set_mode(self, cmd):
+        """ Start/Restart SHUTTER device in operation/simulation mode (default operation)
+
+        """
         name = cmd.cmd.keywords[-1].name
         if name.lower() in ['start','operation']:
             mode = 'operation'
@@ -67,6 +76,9 @@ class ShutterCmd(object):
             self.actor.shutter.finish('started/restarted well!')
 
     def set_state(self, cmd):
+        """ Change current SHUTTER state to BUSY, IDLE, LOADED, ...
+
+        """
         state = cmd.cmd.keywords[0].name
         try:
             getattr(self.actor.shutter.fsm, state)()
@@ -76,8 +88,8 @@ class ShutterCmd(object):
             self.actor.shutter.error("text='%s'" % e)
 
     def shutter(self, cmd):
-        """Parse shutter command and arguments
-        :cmd: open or close shutter red or blue or both if no args
+        """ Open/Close/Reset shutter blue/red/all
+
         """
         transition = cmd.cmd.keywords[0].name
         if(len(cmd.cmd.keywords)==2):
