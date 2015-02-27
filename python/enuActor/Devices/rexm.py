@@ -17,7 +17,9 @@ class Rexm(DualModeDevice):
     def __init__(self, actor=None):
         super(Rexm, self).__init__(actor)
         self.currPos = None
-        self._home = None
+        self.home = None
+        self.medium = None
+        self.low = None
 
 
     @transition('init', 'idle')
@@ -27,10 +29,13 @@ class Rexm(DualModeDevice):
         .. note:: Should be improved after getting hardware status
 
         """
+        self.OnLoad()
+        self.goHome()
         self.check_status()
 
     def goHome(self):
-        return NotImplemented
+        #TODO : add routine go home
+        self.curSimPos = self.home
 
     def getHome(self):
         """ get home position.
@@ -38,7 +43,7 @@ class Rexm(DualModeDevice):
         :returns: x position of encoder
         :raises: :class:`~.Error.DeviceErr`, :class:`~.Error.CommErr`
         """
-        raise NotImplementedError
+        return self.home
 
     def setHome(self, X=None):
         """setHome.
@@ -49,8 +54,8 @@ class Rexm(DualModeDevice):
         """
         if X is None:
             #if None then X=CURRENT
-            curHome = self._getHome()
-        return NotImplemented
+            home = self.getHome()
+        self.home = home
 
     @transition('busy', 'idle')
     def moveTo(self, x=None):
@@ -61,14 +66,26 @@ class Rexm(DualModeDevice):
         :raises: :class:`~.Error.DeviceErr`, :class:`~.Error.CommErr`
         """
         if x is None:
-            x = self._home
-        return NotImplemented
+            x = self.home
+        self.currSimPos = x
 
     @transition('busy', 'idle')
     def switch(self, resolution):
         """Switch between low and medium resolution
         """
-        self.resolution = resolution
+        if resolution.lower() == 'medium':
+            self.currSimPos = self.medium
+            # TODO: add routine to put medium
+        elif resolution.lower() == 'low':
+            self.currSimPos = self.low
+            # TODO: add routine to put low
+        else:
+            raise Exception("Wrong format : %s" % resolution)
+
+    def OnLoad(self):
+        self.home = self._param['home']
+        self.medium = self._param['medium']
+        self.low = self._param['low']
 
     def check_status(self):
         """ Check status.

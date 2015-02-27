@@ -80,7 +80,7 @@ class RexmCmd(object):
         try:
             self.actor.rexm.switch(resolution)
         except Exception, e:
-            self.actor.rem.error("text= '%s'" % e)
+            self.actor.rexm.error("text= '%s'" % e)
         else:
             self.actor.rexm.finish("text= 'moveTo done successfully !!'")
 
@@ -89,7 +89,7 @@ class RexmCmd(object):
         try:
             self.actor.rexm.moveTo(X)
         except Exception, e:
-            self.actor.rem.error("text= '%s'" % e)
+            self.actor.rexm.error("text= '%s'" % e)
         else:
             self.actor.rexm.finish("text= 'moveTo done successfully !!'")
 
