@@ -23,8 +23,6 @@ class BiaCmd(object):
             ('bia', '@(off|load|busy|idle|SafeStop|fail)', self.set_state),
             ('bia', 'init', self.init),
             ('bia', 'SetConfig <freq> <dur> <int>', self.setconfig),
-            ('bia', 'stop',
-             lambda x : self.actor.bia.stop()),
         ]
 
         # Define typed command arguments for the above commands.
@@ -36,9 +34,15 @@ class BiaCmd(object):
                                         )
 
     def init(self, cmd):
+        """ Initialise BIA device
+
+        """
         self.actor.bia.initialise()
 
     def status(self, cmd):
+        """ Get status and position of BIA device
+
+        """
         try:
             status = self.actor.bia.getStatus()
             self.actor.bia.finish('status = %s' % status)
@@ -48,6 +52,9 @@ class BiaCmd(object):
                     sys.exc_info()[1]))
 
     def set_mode(self, cmd):
+        """ Start/Restart BIA device in operation/simulation mode (default operation)
+
+        """
         name = cmd.cmd.keywords[-1].name
         if name.lower() in ['start','operation']:
             mode= 'operation'
@@ -68,6 +75,9 @@ class BiaCmd(object):
             self.actor.bia.finish('bia started/restarted well!')
 
     def set_state(self, cmd):
+        """ Change current BIA state to BUSY, IDLE, LOADED, ...
+
+        """
         state = cmd.cmd.keywords[0].name
         try:
             getattr(self.actor.bia.fsm, state)()
@@ -77,6 +87,9 @@ class BiaCmd(object):
             self.actor.bia.error("text='%s'" % e)
 
     def bia(self, cmd):
+        """ Switch on/off BIA light
+
+        """
         transition = cmd.cmd.keywords[0].name
         try:
             self.actor.bia.putMsg(self.actor.bia.bia, transition)
@@ -88,6 +101,9 @@ class BiaCmd(object):
                     sys.exc_info()[1]))
 
     def strobe_int(self, cmd):
+        """ Stobe mode with intensity to define
+
+        """
         strobe = [
                 cmd.cmd.keywords["freq"].values[0],
                 cmd.cmd.keywords["dur"].values[0]
@@ -102,6 +118,9 @@ class BiaCmd(object):
                 sys.exc_info()[1]))
 
     def strobe_freq_dur(self, cmd):
+        """ Stobe mode with frequency and duration to define
+
+        """
         strobe = [
                 cmd.cmd.keywords["freq"].values[0],
                 cmd.cmd.keywords["dur"].values[0]
@@ -116,6 +135,9 @@ class BiaCmd(object):
                 sys.exc_info()[1]))
 
     def strobe_freq_dur_int(self, cmd):
+        """ Stobe mode with intensity, freq. and dur. to define
+
+        """
         strobe = [
                 cmd.cmd.keywords["freq"].values[0],
                 cmd.cmd.keywords["dur"].values[0],
@@ -131,6 +153,9 @@ class BiaCmd(object):
                 sys.exc_info()[1]))
 
     def strobeByDefault(self, cmd):
+        """ Stobe mode with default parameters (in cfg file)
+
+        """
         try:
             self.actor.bia.putMsg(self.actor.bia.bia, "strobe")
         except AttributeError as e:
@@ -141,6 +166,9 @@ class BiaCmd(object):
                 sys.exc_info()[1]))
 
     def setconfig(self, cmd):
+        """ Change current parameters (in development)
+
+        """
         freq = cmd.cmd.keywords["freq"].values[0]
         dur = cmd.cmd.keywords["dur"].values[0]
         try:
