@@ -26,14 +26,21 @@ class TemperatureCmd(object):
                                         )
 
     def init(self, cmd):
+        """ Initialise temperature device
+
+        """
         self.actor.temperature.initialise()
 
     def read(self, cmd):
+        """ Read the sensor value"""
         sensorId = cmd.cmd.keywords["sensorId"].values[0]
         value = self.actor.temperature.read(sensorId)
         cmd.inform("text='Temperature of sensor %s: %s'" % (sensorId, value))
 
     def status(self, cmd):
+        """ Get status and position of temperature device
+
+        """
         try:
             status = self.actor.temperature.getStatus()
             cmd.inform("text='{}'".format(status))
@@ -43,6 +50,9 @@ class TemperatureCmd(object):
             cmd.error("text='Unexpected error: %s'" % sys.exc_info()[0])
 
     def set_mode(self, cmd):
+        """ Start/Restart temperature device in operation/simulation mode (default operation)
+
+        """
         name = cmd.cmd.keywords[-1].name
         if name.lower() in ['start','operation']:
             mode = 'operation'
@@ -63,6 +73,9 @@ class TemperatureCmd(object):
             cmd.inform("text='Temperature mode %s enabled'" % mode)
 
     def set_state(self, cmd):
+        """ Change current temperature state to BUSY, IDLE, LOADED, ...
+
+        """
         state = cmd.cmd.keywords[0].name
         try:
             getattr(self.actor.temperature.fsm, state)()
