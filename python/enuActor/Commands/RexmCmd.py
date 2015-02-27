@@ -32,9 +32,15 @@ class RexmCmd(object):
                                         )
 
     def init(self, cmd):
-        self.actor.rexm.initialise()
+         """ Initialise REXM device
+
+         """
+         self.actor.rexm.initialise()
 
     def status(self, cmd):
+        """ Get status and position of REXM device
+
+        """
         try:
             status = self.actor.rexm.getStatus()
             cmd.inform("text='{}'".format(status))
@@ -44,6 +50,7 @@ class RexmCmd(object):
             cmd.error("text='Unexpected error: %s'" % sys.exc_info()[0])
 
     def getHome(self, cmd):
+        """ Get home encoder value"""
         try:
             homePosition = self.actor.rexm.getHome()
             self.actor.rexm.finish("Home position : %s" % homePosition)
@@ -51,6 +58,7 @@ class RexmCmd(object):
             cmd.error("text= %s" % e)
 
     def setHome(self, cmd):
+        """ Set home encoder value """
         X = cmd.cmd.keywords["X"].values[0]
         try:
             self.actor.rexm.setHome(X)
@@ -60,6 +68,7 @@ class RexmCmd(object):
             self.actor.rexm.finish("setHome done successfully!")
 
     def setHomeCurrent(self, cmd):
+        """ Set home value to current value"""
         try:
             self.actor.rexm.setHome()
         except Exception, e:
@@ -68,6 +77,7 @@ class RexmCmd(object):
             self.actor.rexm.finish("setHome done successfully!")
 
     def goHome(self, cmd):
+        """ Go to home encoder value"""
         try:
             self.actor.rexm.moveTo()
         except Exception, e:
@@ -76,6 +86,7 @@ class RexmCmd(object):
             self.actor.rexm.finish("goHome done successfully !!")
 
     def switch(self, cmd):
+        """ Switch to medium/low resolution (medium/low values are define in config files)"""
         resolution = cmd.cmd.keywords[0].name
         try:
             self.actor.rexm.switch(resolution)
@@ -85,6 +96,7 @@ class RexmCmd(object):
             self.actor.rexm.finish("text= 'moveTo done successfully !!'")
 
     def moveTo(self, cmd):
+        """ Move to position X"""
         X = cmd.cmd.keywords["X"].values[0]
         try:
             self.actor.rexm.moveTo(X)
@@ -94,6 +106,9 @@ class RexmCmd(object):
             self.actor.rexm.finish("text= 'moveTo done successfully !!'")
 
     def set_mode(self, cmd):
+        """ Start/Restart REXM device in operation/simulation mode (default operation)
+
+        """
         name = cmd.cmd.keywords[-1].name
         if name.lower() in ['start','operation']:
             mode = 'operation'
@@ -114,6 +129,9 @@ class RexmCmd(object):
             cmd.inform("text='rexm mode %s enabled'" % mode)
 
     def set_state(self, cmd):
+        """ Change current REXM state to BUSY, IDLE, LOADED, ...
+
+        """
         state = cmd.cmd.keywords[0].name
         try:
             getattr(self.actor.rexm.fsm, state)()
