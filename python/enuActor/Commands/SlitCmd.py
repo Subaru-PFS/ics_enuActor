@@ -61,9 +61,15 @@ class SlitCmd(object):
 
 
     def init(self, cmd):
+        """ Initialise SLIT device
+
+        """
         self.actor.slit.initialise()
 
     def halt(self, cmd):
+        """ Not implemented yet. It should stop movement.
+
+        """
         if self.actor.slit.fsm.current == "IDLE":
             self.actor.slit.safeOff()
         elif self.actor.slit.fsm.current == "LOADED":
@@ -73,6 +79,9 @@ class SlitCmd(object):
                     % self.actor.slit.current)
 
     def status(self, cmd):
+        """ Get status and position of SLIT device
+
+        """
         try:
             status = self.actor.slit.getStatus()
             self.actor.slit.finish('status = %s' % status)
@@ -87,6 +96,9 @@ class SlitCmd(object):
         cmd.cmd.keywords["cmd"].values[0])
 
     def set_mode(self, cmd):
+        """ Start/Restart SLIT device in operation/simulation mode (default operation)
+
+        """
         name = cmd.cmd.keywords[-1].name
         if name.lower() in ['start','operation']:
             mode = 'operation'
@@ -107,6 +119,9 @@ class SlitCmd(object):
             self.actor.shutter.finish('started/restarted well!')
 
     def set_state(self, cmd):
+        """ Change current SLIT state to BUSY, IDLE, LOADED, ...
+
+        """
         state = cmd.cmd.keywords[0].name
         try:
             getattr(self.actor.slit.fsm, state)()
@@ -117,6 +132,9 @@ class SlitCmd(object):
             (self.actor.slit.fsm.current, state.upper()))
 
     def getHome(self, cmd):
+        """ Return Home value position
+
+        """
         try:
             homePosition = self.actor.slit.getHome()
             self.actor.slit.finish("Home position : %s" % homePosition)
@@ -124,6 +142,9 @@ class SlitCmd(object):
             cmd.error("text= %s" % e)
 
     def setHome(self, cmd):
+        """ Change Home value position
+
+        """
         X = cmd.cmd.keywords["X"].values[0]
         Y = cmd.cmd.keywords["Y"].values[0]
         Z = cmd.cmd.keywords["Z"].values[0]
@@ -139,6 +160,9 @@ class SlitCmd(object):
             cmd.inform("setHome done successfully !")
 
     def setHomeCurrent(self, cmd):
+        """ Define Home value position as the current value position
+
+        """
         try:
             self.actor.slit.setHome()
         except Exception, e:
@@ -147,6 +171,10 @@ class SlitCmd(object):
             cmd.inform("text= 'setHome done successfully !!'")
 
     def moveTo(self, cmd):
+        """ Move to (X, Y, Z, U, V, W) rel. to home if absolute specified\
+else if relative then incremental move. NB: In relative move parameters are optional.
+
+        """
         reference = None
         pipe = cmd.cmd.keywords
         # we want to map to a list [x,y,z,...]
@@ -177,6 +205,9 @@ expected and we have: %s"' % item.name)
         cmd.finish()
 
     def goHome(self, cmd):
+        """ Move to home value position.
+
+        """
         try:
             self.actor.slit.moveTo('absolute')
         except Exception, e:
@@ -185,6 +216,9 @@ expected and we have: %s"' % item.name)
             cmd.inform("text= 'goHome done successfully !!'")
 
     def setDither(self, cmd):
+        """ Define Dithering axis enabled value are 1, 0 or -1.
+
+        """
         try:
             self.actor.slit.dither_axis = map(
                     float,
@@ -199,12 +233,18 @@ expected and we have: %s"' % item.name)
             cmd.inform("text= 'set dither done!'")
 
     def getDither(self, cmd):
+        """ Get the current dithering value
+
+        """
         try:
             cmd.inform("text=='%s'" % self.actor.slit.dither_axis)
         except Exception, e:
             cmd.error("text='%s'" % e)
 
     def setFocus(self, cmd):
+        """ Define focus axis enabled value are 1, 0 or -1.
+
+        """
         try:
             self.actor.slit.focus_axis = map(
                     float,
@@ -219,12 +259,18 @@ expected and we have: %s"' % item.name)
             cmd.inform("text= 'set focus done!'")
 
     def getFocus(self, cmd):
+        """ Get the current focus value
+
+        """
         try:
             cmd.inform("text='%s'" % self.actor.slit.focus_axis)
         except Exception, e:
             cmd.error("text='%s'" % e)
 
     def setMagnification(self, cmd):
+        """ Define magnification value
+
+        """
         try:
             self.actor.slit.magnification =\
                     cmd.cmd.keywords["magnification"].values[0]
@@ -234,6 +280,9 @@ expected and we have: %s"' % item.name)
             cmd.inform("text= 'set magnification done!'")
 
     def getMagnification(self, cmd):
+        """ Read the current magnification value
+
+        """
         try:
             cmd.inform("text='Magnification = %s'" %
                     self.actor.slit.magnification)
@@ -241,6 +290,9 @@ expected and we have: %s"' % item.name)
             cmd.error("text='%s'" % e)
 
     def goDither(self, cmd):
+        """ Move along dither.
+
+        """
         if cmd.cmd.keywords["dither"].values == []:
             #dithering undefined value
             length = self.actor.slit.dithering_value
@@ -259,6 +311,9 @@ expected and we have: %s"' % item.name)
             cmd.inform("text='Dithering done successfully!'")
 
     def goFocus(self, cmd):
+        """ Move along focus
+
+        """
         if cmd.cmd.keywords["focus"].values == []:
             #dithering undefined value
             length = self.actor.slit.focus_value
