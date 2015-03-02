@@ -8,7 +8,11 @@
 from enuActor.QThread import *
 from Device import *
 import Error
+import ConfigParser
+import os
 
+here = os.path.dirname(os.path.realpath(__file__))
+path = here + '/cfg/'
 
 class Enu(DualModeDevice):
 
@@ -21,7 +25,8 @@ class Enu(DualModeDevice):
         self.d_devMode ={
             'bia' : None,
             'shutter' : None,
-            'slit' : None
+            'slit' : None,
+            'rexm' : None
         }
 
     def startUp(self):
@@ -33,6 +38,52 @@ class Enu(DualModeDevice):
         #ENU is always in operation MODE as it is an abstract device
         self.change_mode('operation')
 
+    def saveConfig(self, dir=None):
+        """Save ENUs parameter into config file
+
+        :param dir: @todo
+        :returns: @todo
+        :raises: @todo
+
+        """
+        if self.actor.bia.deviceStarted == 0 or\
+                self.actor.slit.deviceStarted == 0 or\
+                self.actor.enu.deviceStarted == 0 or\
+                self.actor.rexm.deviceStarted == 0:
+            self.warn("Some device are not started. Config file not complete.")
+        config = ConfigParser.RawConfigParser()
+        config.add_section('ENU')
+        config.set('ENU', 'shutter', self.actor.shutter.mode)
+        config.set('ENU', 'bia', self.actor.bia.mode)
+        config.set('ENU', 'slit', self.actor.slit.mode)
+        config.set('ENU', 'temperature', self.actor.temperature.mode)
+        config.add_section('BIA')
+        config.set('BIA', 'home', self.actor.bia.home)
+        config.set('BIA', 'period', self.actor.bia.dimmer_period)
+        config.set('BIA', 'duty', self.actor.bia.dimmer_duty)
+        config.set('BIA', 'strobe_period', self.actor.bia.strobe_period)
+        config.set('BIA', 'strobe_duty', self.actor.bia.strobe_duty)
+        config.set('BIA', 'intensity_thres', self.actor.bia.intensity_thresh)
+        config.add_section('SHUTTER')
+        config.set('SHUTTER', 'home', self.actor.shutter.home)
+        config.add_section('SLIT')
+        config.set('SLIT', 'home', self.actor.slit._home)
+        config.set('SLIT', 'slit_position', self.actor.slit._slit_position)
+        config.set('SLIT', 'dither_axis', self.actor.slit.dither_axis)
+        config.set('SLIT', 'focus_axis', self.actor.slit.focus_axis)
+        config.set('SLIT', 'magnification', self.actor.slit.magnification)
+        config.set('SLIT', 'focus_value', self.actor.slit.focus_value)
+        config.set('SLIT', 'dithering_value', self.actor.slit.dithering_value)
+        config.add_section('REXM')
+        config.set('REXM', 'home', self.actor.rexm.home)
+        config.set('REXM', 'medium', self.actor.rexm.medium)
+        config.set('REXM',  'low', self.actor.rexm.low)
+        config.add_section('TEMPERATURE')
+
+        dir = path + 'MyParam.cfg'
+        with open(dir, 'wb') as configfile:
+            config.write(configfile)
+        return dir
 
     @transition('init', 'idle')
     def initialise(self):
@@ -47,6 +98,8 @@ class Enu(DualModeDevice):
         self.actor.shutter.putMsg(self.actor.shutter.shutter, 'close')
         self.actor.slit.change_mode(self.d_devMode['slit'])
         self.actor.slit.initialise()
+        self.actor.rexm.change_mode(self.d_devMode['rexm'])
+        self.actor.rexm.initialise()
         self.check_status()
 
     def check_status(self):

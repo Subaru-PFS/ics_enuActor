@@ -13,6 +13,7 @@ class EnuCmd(object):
         self.vocab = [
             ('status', '', self.status),
             ('start', '', self.start),
+            ('SaveConfig', '', self.saveCfg),
             ('@(off|load|busy|idle|SafeStop|fail)', '', self.set_state),
             ('init', '', self.init),
             ('ping', '', self.ping),
@@ -22,6 +23,17 @@ class EnuCmd(object):
         self.keys = keys.KeysDictionary("enu_enu", (1, 1),
                                         )
 
+    def saveCfg(self, cmd):
+        """Save session data into config file (device_parameter.cfg)
+
+        """
+        dir = None
+        try:
+            dir = self.actor.enu.saveConfig()
+        except Exception as e:
+            self.actor.enu.error("Config file not saved. Err:%s" % e)
+        else:
+            self.actor.enu.inform("Config file saved into: %s" % dir)
 
     def ping(self, cmd):
         """Query the actor for liveness/happiness."""
