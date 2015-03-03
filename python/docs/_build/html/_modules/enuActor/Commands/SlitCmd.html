@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -10,9 +8,8 @@
     
     <title>enuActor.Commands.SlitCmd &mdash; ENtrance Unit actor</title>
     
-    <link rel="stylesheet" href="../../../_static/cloud.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
     <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
-    <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Noticia+Text|Open+Sans|Droid+Sans+Mono" type="text/css" />
     
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
@@ -27,15 +24,10 @@
     <script type="text/javascript" src="../../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../../_static/doctools.js"></script>
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <script type="text/javascript" src="../../../_static/jquery.cookie.js"></script>
-    <script type="text/javascript" src="../../../_static/cloud.js"></script>
     <link rel="top" title="ENtrance Unit actor" href="../../../index.html" />
     <link rel="up" title="Module code" href="../../index.html" /> 
-        <meta name="viewport" content="width=device-width, initial-scale=1">
   </head>
   <body>
-    <div class="relbar-top">
-        
     <div class="related">
       <h3>Navigation</h3>
       <ul>
@@ -44,14 +36,11 @@
              accesskey="I">index</a></li>
         <li class="right" >
           <a href="../../../py-modindex.html" title="Python Module Index"
-             >modules</a> &nbsp; &nbsp;</li>
-    <li><a href="../../../enuActor.html">ENtrance Unit actor</a> &raquo;</li>
-
+             >modules</a> |</li>
+        <li><a href="../../../index.html">ENtrance Unit actor</a> &raquo;</li>
           <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
       </ul>
-    </div>
-    </div>
-  
+    </div>  
 
     <div class="document">
       <div class="documentwrapper">
@@ -75,9 +64,8 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">actor</span> <span class="o">=</span> <span class="n">actor</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">vocab</span> <span class="o">=</span> <span class="p">[</span>
             <span class="p">(</span><span class="s">&#39;slit&#39;</span><span class="p">,</span> <span class="s">&#39;status&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">status</span><span class="p">),</span>
-            <span class="p">(</span><span class="s">&#39;slit&#39;</span><span class="p">,</span> <span class="s">&#39;start&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">start</span><span class="p">),</span>
             <span class="p">(</span><span class="s">&#39;slit&#39;</span><span class="p">,</span> <span class="s">&#39;&lt;cmd&gt;&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">command</span><span class="p">),</span>
-            <span class="p">(</span><span class="s">&#39;slit&#39;</span><span class="p">,</span> <span class="s">&#39;@(simulated|operation)&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">set_mode</span><span class="p">),</span>
+            <span class="p">(</span><span class="s">&#39;slit&#39;</span><span class="p">,</span> <span class="s">&#39;start [@(operation|simulation)]&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">set_mode</span><span class="p">),</span>
             <span class="p">(</span><span class="s">&#39;slit&#39;</span><span class="p">,</span> <span class="s">&#39;GetHome&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">getHome</span><span class="p">),</span>
             <span class="p">(</span><span class="s">&#39;slit&#39;</span><span class="p">,</span> <span class="s">&#39;GoHome&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">goHome</span><span class="p">),</span>
             <span class="p">(</span><span class="s">&#39;slit&#39;</span><span class="p">,</span> <span class="s">&#39;SetHome &lt;X&gt; &lt;Y&gt; &lt;Z&gt; &lt;U&gt; &lt;V&gt; &lt;W&gt;&#39;</span><span class="p">,</span>
@@ -85,11 +73,11 @@
             <span class="p">(</span><span class="s">&#39;slit&#39;</span><span class="p">,</span> <span class="s">&#39;SetHome CURRENT&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">setHomeCurrent</span><span class="p">),</span>
             <span class="p">(</span><span class="s">&#39;slit&#39;</span><span class="p">,</span> <span class="s">&#39;MoveTo absolute &lt;X&gt; &lt;Y&gt; &lt;Z&gt; &lt;U&gt; &lt;V&gt; &lt;W&gt;&#39;</span><span class="p">,</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">moveTo</span><span class="p">),</span>
-            <span class="p">(</span><span class="s">&#39;slit&#39;</span><span class="p">,</span> <span class="s">&#39;MoveTo relative &lt;X&gt; &lt;Y&gt; &lt;Z&gt; &lt;U&gt; &lt;V&gt; &lt;W&gt;&#39;</span><span class="p">,</span>
+            <span class="p">(</span><span class="s">&#39;slit&#39;</span><span class="p">,</span> <span class="s">&#39;MoveTo relative [&lt;X&gt;] [&lt;Y&gt;] [&lt;Z&gt;] [&lt;U&gt;] [&lt;V&gt;] [&lt;W&gt;]&#39;</span><span class="p">,</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">moveTo</span><span class="p">),</span>
-            <span class="c">#(&#39;slit&#39;, &#39;dither axis &lt;X&gt; &lt;Y&gt; &lt;Z&gt;&#39;, self.setDither),</span>
+            <span class="p">(</span><span class="s">&#39;slit&#39;</span><span class="p">,</span> <span class="s">&#39;SetDither &lt;X&gt; &lt;Y&gt; &lt;Z&gt;&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">setDither</span><span class="p">),</span>
             <span class="p">(</span><span class="s">&#39;slit&#39;</span><span class="p">,</span> <span class="s">&#39;dither axis&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">getDither</span><span class="p">),</span>
-            <span class="c">#(&#39;slit&#39;, &#39;focus axis &lt;X&gt; &lt;Y&gt; &lt;Z&gt;&#39;, self.setFocus),</span>
+            <span class="p">(</span><span class="s">&#39;slit&#39;</span><span class="p">,</span> <span class="s">&#39;SetFocus &lt;X&gt; &lt;Y&gt; &lt;Z&gt;&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">setFocus</span><span class="p">),</span>
             <span class="p">(</span><span class="s">&#39;slit&#39;</span><span class="p">,</span> <span class="s">&#39;focus axis&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">getFocus</span><span class="p">),</span>
             <span class="p">(</span><span class="s">&#39;slit&#39;</span><span class="p">,</span> <span class="s">&#39;dither&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">goDither</span><span class="p">),</span>
             <span class="p">(</span><span class="s">&#39;slit&#39;</span><span class="p">,</span> <span class="s">&#39;&lt;dither&gt;&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">goDither</span><span class="p">),</span>
@@ -121,40 +109,36 @@
                     <span class="n">help</span><span class="o">=</span><span class="s">&quot;magnification value&quot;</span><span class="p">),</span>
                                         <span class="p">)</span>
 
+
 <div class="viewcode-block" id="SlitCmd.init"><a class="viewcode-back" href="../../../enuActor.Commands.html#enuActor.Commands.SlitCmd.SlitCmd.init">[docs]</a>    <span class="k">def</span> <span class="nf">init</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cmd</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Initialise SLIT device</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">slit</span><span class="o">.</span><span class="n">initialise</span><span class="p">()</span>
 </div>
 <div class="viewcode-block" id="SlitCmd.halt"><a class="viewcode-back" href="../../../enuActor.Commands.html#enuActor.Commands.SlitCmd.SlitCmd.halt">[docs]</a>    <span class="k">def</span> <span class="nf">halt</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cmd</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Not implemented yet. It should stop movement.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">slit</span><span class="o">.</span><span class="n">fsm</span><span class="o">.</span><span class="n">current</span> <span class="o">==</span> <span class="s">&quot;IDLE&quot;</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">slit</span><span class="o">.</span><span class="n">safeOff</span><span class="p">()</span>
         <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">slit</span><span class="o">.</span><span class="n">fsm</span><span class="o">.</span><span class="n">current</span> <span class="o">==</span> <span class="s">&quot;LOADED&quot;</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">slit</span><span class="o">.</span><span class="n">shutdown</span><span class="p">()</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">print</span> <span class="s">&quot;It&#39;s impossible to halt system from current state: </span><span class="si">%s</span><span class="s">&quot;</span>\
-                    <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">slit</span><span class="o">.</span><span class="n">current</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">slit</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;It&#39;s impossible to halt system from current state: </span><span class="si">%s</span><span class="s">&quot;</span>\
+                    <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">slit</span><span class="o">.</span><span class="n">current</span><span class="p">)</span>
 </div>
 <div class="viewcode-block" id="SlitCmd.status"><a class="viewcode-back" href="../../../enuActor.Commands.html#enuActor.Commands.SlitCmd.SlitCmd.status">[docs]</a>    <span class="k">def</span> <span class="nf">status</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cmd</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Get status and position of SLIT device</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="n">cmd</span><span class="o">.</span><span class="n">inform</span><span class="p">(</span><span class="s">&quot;text=&#39;{}&#39;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">slit</span><span class="o">.</span><span class="n">getStatus</span><span class="p">()))</span>
+            <span class="n">status</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">slit</span><span class="o">.</span><span class="n">getStatus</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">slit</span><span class="o">.</span><span class="n">finish</span><span class="p">(</span><span class="s">&#39;status = </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">status</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">AttributeError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
             <span class="n">cmd</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&quot;text=&#39;slit did not start well. details: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">e</span><span class="p">)</span>
         <span class="k">except</span><span class="p">:</span>
             <span class="n">cmd</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&quot;text=&#39;Unexpected error: </span><span class="si">%s</span><span class="s">&#39;&quot;</span> <span class="o">%</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span>
-</div>
-<div class="viewcode-block" id="SlitCmd.start"><a class="viewcode-back" href="../../../enuActor.Commands.html#enuActor.Commands.SlitCmd.SlitCmd.start">[docs]</a>    <span class="k">def</span> <span class="nf">start</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cmd</span><span class="p">):</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">slit</span><span class="o">.</span><span class="n">start_communication</span><span class="p">()</span>
-        <span class="k">except</span> <span class="n">CommErr</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span> <span class="c"># ISSUE : I cannot catch timeout error</span>
-            <span class="n">cmd</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&quot;text=&#39;</span><span class="si">%s</span><span class="s">&#39;&quot;</span> <span class="o">%</span> <span class="n">e</span><span class="p">)</span>
-        <span class="k">except</span> <span class="n">FysomError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-            <span class="n">cmd</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&quot;text=&#39;Can&#39;t start when device is in </span><span class="si">%s</span><span class="s"> state&#39;&quot;</span> <span class="o">%</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">slit</span><span class="o">.</span><span class="n">fsm</span><span class="o">.</span><span class="n">current</span><span class="p">)</span>
-        <span class="k">except</span><span class="p">:</span>
-            <span class="n">cmd</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&quot;text=&#39;Unexpected error: [</span><span class="si">%s</span><span class="s">] </span><span class="si">%s</span><span class="s">&#39;&quot;</span> <span class="o">%</span> <span class="p">(</span>
-                    <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()[</span><span class="mi">0</span><span class="p">],</span>
-                    <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()[</span><span class="mi">1</span><span class="p">]))</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">cmd</span><span class="o">.</span><span class="n">inform</span><span class="p">(</span><span class="s">&quot;text=&#39;slit started successfully!&#39;&quot;</span><span class="p">)</span>
 </div>
 <div class="viewcode-block" id="SlitCmd.command"><a class="viewcode-back" href="../../../enuActor.Commands.html#enuActor.Commands.SlitCmd.SlitCmd.command">[docs]</a>    <span class="k">def</span> <span class="nf">command</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cmd</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Opens a terminal to communicate directly with device&quot;&quot;&quot;</span>
@@ -162,11 +146,32 @@
         <span class="n">cmd</span><span class="o">.</span><span class="n">cmd</span><span class="o">.</span><span class="n">keywords</span><span class="p">[</span><span class="s">&quot;cmd&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
 </div>
 <div class="viewcode-block" id="SlitCmd.set_mode"><a class="viewcode-back" href="../../../enuActor.Commands.html#enuActor.Commands.SlitCmd.SlitCmd.set_mode">[docs]</a>    <span class="k">def</span> <span class="nf">set_mode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cmd</span><span class="p">):</span>
-        <span class="n">mode</span> <span class="o">=</span> <span class="n">cmd</span><span class="o">.</span><span class="n">cmd</span><span class="o">.</span><span class="n">keywords</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">name</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">slit</span><span class="o">.</span><span class="n">change_mode</span><span class="p">(</span><span class="n">mode</span><span class="p">)</span>
-        <span class="n">cmd</span><span class="o">.</span><span class="n">inform</span><span class="p">(</span><span class="s">&quot;text=&#39;Slit mode </span><span class="si">%s</span><span class="s"> enabled&#39;&quot;</span> <span class="o">%</span> <span class="n">mode</span><span class="p">)</span>
+        <span class="sd">&quot;&quot;&quot; Start/Restart SLIT device in operation/simulation mode (default operation)</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">cmd</span><span class="o">.</span><span class="n">cmd</span><span class="o">.</span><span class="n">keywords</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">name</span>
+        <span class="k">if</span> <span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&#39;start&#39;</span><span class="p">,</span><span class="s">&#39;operation&#39;</span><span class="p">]:</span>
+            <span class="n">mode</span> <span class="o">=</span> <span class="s">&#39;operation&#39;</span>
+        <span class="k">elif</span> <span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s">&#39;simulation&#39;</span><span class="p">:</span>
+            <span class="n">mode</span> <span class="o">=</span> <span class="s">&#39;simulated&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">cmd</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&quot;text=&#39;unknow operation </span><span class="si">%s</span><span class="s">&#39;&quot;</span> <span class="o">%</span> <span class="n">name</span><span class="p">)</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">slit</span><span class="o">.</span><span class="n">change_mode</span><span class="p">(</span><span class="n">mode</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">CommErr</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">slit</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&quot;text=&#39;</span><span class="si">%s</span><span class="s">&#39;&quot;</span> <span class="o">%</span> <span class="n">e</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">cmd</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&quot;text=&#39;Unexpected error: [</span><span class="si">%s</span><span class="s">] </span><span class="si">%s</span><span class="s">&#39;&quot;</span> <span class="o">%</span> <span class="p">(</span>
+                    <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()[</span><span class="mi">0</span><span class="p">],</span>
+                    <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()[</span><span class="mi">1</span><span class="p">]))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">shutter</span><span class="o">.</span><span class="n">finish</span><span class="p">(</span><span class="s">&#39;started/restarted well!&#39;</span><span class="p">)</span>
 </div>
 <div class="viewcode-block" id="SlitCmd.set_state"><a class="viewcode-back" href="../../../enuActor.Commands.html#enuActor.Commands.SlitCmd.SlitCmd.set_state">[docs]</a>    <span class="k">def</span> <span class="nf">set_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cmd</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Change current SLIT state to BUSY, IDLE, LOADED, ...</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">state</span> <span class="o">=</span> <span class="n">cmd</span><span class="o">.</span><span class="n">cmd</span><span class="o">.</span><span class="n">keywords</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">name</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">slit</span><span class="o">.</span><span class="n">fsm</span><span class="p">,</span> <span class="n">state</span><span class="p">)()</span>
@@ -177,13 +182,19 @@
             <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">slit</span><span class="o">.</span><span class="n">fsm</span><span class="o">.</span><span class="n">current</span><span class="p">,</span> <span class="n">state</span><span class="o">.</span><span class="n">upper</span><span class="p">()))</span>
 </div>
 <div class="viewcode-block" id="SlitCmd.getHome"><a class="viewcode-back" href="../../../enuActor.Commands.html#enuActor.Commands.SlitCmd.SlitCmd.getHome">[docs]</a>    <span class="k">def</span> <span class="nf">getHome</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cmd</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return Home value position</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">homePosition</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">slit</span><span class="o">.</span><span class="n">getHome</span><span class="p">()</span>
-            <span class="n">cmd</span><span class="o">.</span><span class="n">inform</span><span class="p">(</span><span class="s">&quot;text= &#39;Home position : </span><span class="si">%s</span><span class="s">&#39;&quot;</span> <span class="o">%</span> <span class="n">homePosition</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">slit</span><span class="o">.</span><span class="n">finish</span><span class="p">(</span><span class="s">&quot;Home position : </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">homePosition</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
             <span class="n">cmd</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&quot;text= </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">e</span><span class="p">)</span>
 </div>
 <div class="viewcode-block" id="SlitCmd.setHome"><a class="viewcode-back" href="../../../enuActor.Commands.html#enuActor.Commands.SlitCmd.SlitCmd.setHome">[docs]</a>    <span class="k">def</span> <span class="nf">setHome</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cmd</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Change Home value position</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">X</span> <span class="o">=</span> <span class="n">cmd</span><span class="o">.</span><span class="n">cmd</span><span class="o">.</span><span class="n">keywords</span><span class="p">[</span><span class="s">&quot;X&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="n">Y</span> <span class="o">=</span> <span class="n">cmd</span><span class="o">.</span><span class="n">cmd</span><span class="o">.</span><span class="n">keywords</span><span class="p">[</span><span class="s">&quot;Y&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="n">Z</span> <span class="o">=</span> <span class="n">cmd</span><span class="o">.</span><span class="n">cmd</span><span class="o">.</span><span class="n">keywords</span><span class="p">[</span><span class="s">&quot;Z&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
@@ -196,9 +207,12 @@
         <span class="k">except</span> <span class="ne">Exception</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
             <span class="n">cmd</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&quot;text= &#39;</span><span class="si">%s</span><span class="s">&#39;&quot;</span> <span class="o">%</span> <span class="n">e</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">cmd</span><span class="o">.</span><span class="n">inform</span><span class="p">(</span><span class="s">&quot;text= &#39;setHome done successfully !!&#39;&quot;</span><span class="p">)</span>
+            <span class="n">cmd</span><span class="o">.</span><span class="n">inform</span><span class="p">(</span><span class="s">&quot;setHome done successfully !&quot;</span><span class="p">)</span>
 </div>
 <div class="viewcode-block" id="SlitCmd.setHomeCurrent"><a class="viewcode-back" href="../../../enuActor.Commands.html#enuActor.Commands.SlitCmd.SlitCmd.setHomeCurrent">[docs]</a>    <span class="k">def</span> <span class="nf">setHomeCurrent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cmd</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Define Home value position as the current value position</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">slit</span><span class="o">.</span><span class="n">setHome</span><span class="p">()</span>
         <span class="k">except</span> <span class="ne">Exception</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
@@ -207,71 +221,106 @@
             <span class="n">cmd</span><span class="o">.</span><span class="n">inform</span><span class="p">(</span><span class="s">&quot;text= &#39;setHome done successfully !!&#39;&quot;</span><span class="p">)</span>
 </div>
 <div class="viewcode-block" id="SlitCmd.moveTo"><a class="viewcode-back" href="../../../enuActor.Commands.html#enuActor.Commands.SlitCmd.SlitCmd.moveTo">[docs]</a>    <span class="k">def</span> <span class="nf">moveTo</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cmd</span><span class="p">):</span>
-        <span class="c"># Remove &quot;MoveTo&quot;</span>
-        <span class="n">reference</span> <span class="o">=</span> <span class="n">cmd</span><span class="o">.</span><span class="n">cmd</span><span class="o">.</span><span class="n">keywords</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">name</span>
-        <span class="n">X</span> <span class="o">=</span> <span class="n">cmd</span><span class="o">.</span><span class="n">cmd</span><span class="o">.</span><span class="n">keywords</span><span class="p">[</span><span class="s">&quot;X&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="n">Y</span> <span class="o">=</span> <span class="n">cmd</span><span class="o">.</span><span class="n">cmd</span><span class="o">.</span><span class="n">keywords</span><span class="p">[</span><span class="s">&quot;Y&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="n">Z</span> <span class="o">=</span> <span class="n">cmd</span><span class="o">.</span><span class="n">cmd</span><span class="o">.</span><span class="n">keywords</span><span class="p">[</span><span class="s">&quot;Z&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="n">U</span> <span class="o">=</span> <span class="n">cmd</span><span class="o">.</span><span class="n">cmd</span><span class="o">.</span><span class="n">keywords</span><span class="p">[</span><span class="s">&quot;U&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="n">V</span> <span class="o">=</span> <span class="n">cmd</span><span class="o">.</span><span class="n">cmd</span><span class="o">.</span><span class="n">keywords</span><span class="p">[</span><span class="s">&quot;V&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="n">W</span> <span class="o">=</span> <span class="n">cmd</span><span class="o">.</span><span class="n">cmd</span><span class="o">.</span><span class="n">keywords</span><span class="p">[</span><span class="s">&quot;W&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="sd">&quot;&quot;&quot; Move to (X, Y, Z, U, V, W) rel. to home if absolute specified\</span>
+<span class="sd">else if relative then incremental move. NB: In relative move parameters are optional.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">reference</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="n">pipe</span> <span class="o">=</span> <span class="n">cmd</span><span class="o">.</span><span class="n">cmd</span><span class="o">.</span><span class="n">keywords</span>
+        <span class="c"># we want to map to a list [x,y,z,...]</span>
+        <span class="n">positionMap</span> <span class="o">=</span> <span class="p">{</span> <span class="s">&#39;X&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s">&#39;Y&#39;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s">&#39;Z&#39;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span> <span class="s">&#39;U&#39;</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span> <span class="s">&#39;V&#39;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="s">&#39;W&#39;</span><span class="p">:</span> <span class="mi">6</span><span class="p">}</span>
+        <span class="n">position</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">X</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">Y</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">Z</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">U</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">V</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">W</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+        <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">pipe</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">item</span> <span class="o">=</span> <span class="n">pipe</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">item</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&quot;relative&quot;</span><span class="p">,</span> <span class="s">&quot;absolute&quot;</span><span class="p">,</span> <span class="s">&quot;moveto&quot;</span><span class="p">]:</span>
+                <span class="n">position</span><span class="p">[</span><span class="n">item</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">item</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="k">elif</span> <span class="n">item</span><span class="o">.</span><span class="n">name</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&quot;relative&quot;</span><span class="p">,</span> <span class="s">&quot;absolute&quot;</span><span class="p">]:</span>
+                <span class="n">reference</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">name</span>
+        <span class="k">if</span> <span class="n">reference</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">cmd</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&#39;text=&quot;Error syntax &quot;absolute or relative&quot; </span><span class="se">\</span>
+<span class="s">expected and we have: </span><span class="si">%s</span><span class="s">&quot;&#39;</span> <span class="o">%</span> <span class="n">item</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+
+        <span class="n">liste_position</span> <span class="o">=</span> <span class="p">[</span><span class="n">position</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> \
+                          <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">position</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">positionMap</span><span class="o">.</span><span class="n">__getitem__</span><span class="p">)]</span>
+
         <span class="k">try</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">slit</span><span class="o">.</span><span class="n">moveTo</span><span class="p">(</span><span class="n">reference</span><span class="p">,</span> <span class="n">posCoord</span> <span class="o">=</span>
-                    <span class="nb">map</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="p">[</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">,</span> <span class="n">Z</span><span class="p">,</span> <span class="n">U</span><span class="p">,</span> <span class="n">V</span><span class="p">,</span> <span class="n">W</span><span class="p">]))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">slit</span><span class="o">.</span><span class="n">moveTo</span><span class="p">(</span>
+                <span class="n">reference</span><span class="p">,</span>
+                <span class="n">posCoord</span><span class="o">=</span><span class="nb">map</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="n">liste_position</span><span class="p">)</span>
+            <span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
             <span class="n">cmd</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&quot;text= &#39;</span><span class="si">%s</span><span class="s">&#39;&quot;</span> <span class="o">%</span> <span class="n">e</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">cmd</span><span class="o">.</span><span class="n">inform</span><span class="p">(</span><span class="s">&quot;text= &#39;moveTo done successfully !!&#39;&quot;</span><span class="p">)</span>
+        <span class="n">cmd</span><span class="o">.</span><span class="n">finish</span><span class="p">()</span>
 </div>
 <div class="viewcode-block" id="SlitCmd.goHome"><a class="viewcode-back" href="../../../enuActor.Commands.html#enuActor.Commands.SlitCmd.SlitCmd.goHome">[docs]</a>    <span class="k">def</span> <span class="nf">goHome</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cmd</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Move to home value position.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">slit</span><span class="o">.</span><span class="n">moveTo</span><span class="p">(</span><span class="s">&#39;absolute&#39;</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
             <span class="n">cmd</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&quot;text= &#39;</span><span class="si">%s</span><span class="s">&#39;&quot;</span> <span class="o">%</span> <span class="n">e</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">cmd</span><span class="o">.</span><span class="n">inform</span><span class="p">(</span><span class="s">&quot;text= &#39;goHome done successfully !!&#39;&quot;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="SlitCmd.setDither"><a class="viewcode-back" href="../../../enuActor.Commands.html#enuActor.Commands.SlitCmd.SlitCmd.setDither">[docs]</a>    <span class="k">def</span> <span class="nf">setDither</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cmd</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Define Dithering axis enabled value are 1, 0 or -1.</span>
 
-    <span class="c">#def setDither(self, cmd):</span>
-        <span class="c">#try:</span>
-            <span class="c">#self.actor.slit.dither_axis = map(</span>
-                    <span class="c">#float,</span>
-                    <span class="c">#[</span>
-                        <span class="c">#cmd.cmd.keywords[&quot;X&quot;].values[0],</span>
-                        <span class="c">#cmd.cmd.keywords[&quot;Y&quot;].values[0],</span>
-                        <span class="c">#cmd.cmd.keywords[&quot;Z&quot;].values[0]</span>
-                    <span class="c">#])</span>
-        <span class="c">#except Exception, e:</span>
-            <span class="c">#cmd.error(&quot;text=&#39;%s&#39;&quot; % e)</span>
-        <span class="c">#else:</span>
-            <span class="c">#cmd.inform(&quot;text= &#39;set dither done!&#39;&quot;)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">slit</span><span class="o">.</span><span class="n">dither_axis</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span>
+                    <span class="nb">float</span><span class="p">,</span>
+                    <span class="p">[</span>
+                        <span class="n">cmd</span><span class="o">.</span><span class="n">cmd</span><span class="o">.</span><span class="n">keywords</span><span class="p">[</span><span class="s">&quot;X&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                        <span class="n">cmd</span><span class="o">.</span><span class="n">cmd</span><span class="o">.</span><span class="n">keywords</span><span class="p">[</span><span class="s">&quot;Y&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                        <span class="n">cmd</span><span class="o">.</span><span class="n">cmd</span><span class="o">.</span><span class="n">keywords</span><span class="p">[</span><span class="s">&quot;Z&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="p">])</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">cmd</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&quot;text=&#39;</span><span class="si">%s</span><span class="s">&#39;&quot;</span> <span class="o">%</span> <span class="n">e</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">cmd</span><span class="o">.</span><span class="n">inform</span><span class="p">(</span><span class="s">&quot;text= &#39;set dither done!&#39;&quot;</span><span class="p">)</span>
 </div>
 <div class="viewcode-block" id="SlitCmd.getDither"><a class="viewcode-back" href="../../../enuActor.Commands.html#enuActor.Commands.SlitCmd.SlitCmd.getDither">[docs]</a>    <span class="k">def</span> <span class="nf">getDither</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cmd</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Get the current dithering value</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">cmd</span><span class="o">.</span><span class="n">inform</span><span class="p">(</span><span class="s">&quot;text==&#39;</span><span class="si">%s</span><span class="s">&#39;&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">slit</span><span class="o">.</span><span class="n">dither_axis</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
             <span class="n">cmd</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&quot;text=&#39;</span><span class="si">%s</span><span class="s">&#39;&quot;</span> <span class="o">%</span> <span class="n">e</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="SlitCmd.setFocus"><a class="viewcode-back" href="../../../enuActor.Commands.html#enuActor.Commands.SlitCmd.SlitCmd.setFocus">[docs]</a>    <span class="k">def</span> <span class="nf">setFocus</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cmd</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Define focus axis enabled value are 1, 0 or -1.</span>
 
-    <span class="c">#def setFocus(self, cmd):</span>
-        <span class="c">#try:</span>
-            <span class="c">#self.actor.slit.focus_axis = map(</span>
-                    <span class="c">#float,</span>
-                    <span class="c">#[</span>
-                        <span class="c">#cmd.cmd.keywords[&quot;X&quot;].values[0],</span>
-                        <span class="c">#cmd.cmd.keywords[&quot;Y&quot;].values[0],</span>
-                        <span class="c">#cmd.cmd.keywords[&quot;Z&quot;].values[0]</span>
-                    <span class="c">#])</span>
-        <span class="c">#except Exception, e:</span>
-            <span class="c">#cmd.error(&quot;text=&#39;%s&#39;&quot; % e)</span>
-        <span class="c">#else:</span>
-            <span class="c">#cmd.inform(&quot;text= &#39;set focus done!&#39;&quot;)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">slit</span><span class="o">.</span><span class="n">focus_axis</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span>
+                    <span class="nb">float</span><span class="p">,</span>
+                    <span class="p">[</span>
+                        <span class="n">cmd</span><span class="o">.</span><span class="n">cmd</span><span class="o">.</span><span class="n">keywords</span><span class="p">[</span><span class="s">&quot;X&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                        <span class="n">cmd</span><span class="o">.</span><span class="n">cmd</span><span class="o">.</span><span class="n">keywords</span><span class="p">[</span><span class="s">&quot;Y&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                        <span class="n">cmd</span><span class="o">.</span><span class="n">cmd</span><span class="o">.</span><span class="n">keywords</span><span class="p">[</span><span class="s">&quot;Z&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="p">])</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">cmd</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&quot;text=&#39;</span><span class="si">%s</span><span class="s">&#39;&quot;</span> <span class="o">%</span> <span class="n">e</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">cmd</span><span class="o">.</span><span class="n">inform</span><span class="p">(</span><span class="s">&quot;text= &#39;set focus done!&#39;&quot;</span><span class="p">)</span>
 </div>
 <div class="viewcode-block" id="SlitCmd.getFocus"><a class="viewcode-back" href="../../../enuActor.Commands.html#enuActor.Commands.SlitCmd.SlitCmd.getFocus">[docs]</a>    <span class="k">def</span> <span class="nf">getFocus</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cmd</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Get the current focus value</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">cmd</span><span class="o">.</span><span class="n">inform</span><span class="p">(</span><span class="s">&quot;text=&#39;</span><span class="si">%s</span><span class="s">&#39;&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">slit</span><span class="o">.</span><span class="n">focus_axis</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
             <span class="n">cmd</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&quot;text=&#39;</span><span class="si">%s</span><span class="s">&#39;&quot;</span> <span class="o">%</span> <span class="n">e</span><span class="p">)</span>
 </div>
 <div class="viewcode-block" id="SlitCmd.setMagnification"><a class="viewcode-back" href="../../../enuActor.Commands.html#enuActor.Commands.SlitCmd.SlitCmd.setMagnification">[docs]</a>    <span class="k">def</span> <span class="nf">setMagnification</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cmd</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Define magnification value</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">slit</span><span class="o">.</span><span class="n">magnification</span> <span class="o">=</span>\
                     <span class="n">cmd</span><span class="o">.</span><span class="n">cmd</span><span class="o">.</span><span class="n">keywords</span><span class="p">[</span><span class="s">&quot;magnification&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
@@ -281,6 +330,9 @@
             <span class="n">cmd</span><span class="o">.</span><span class="n">inform</span><span class="p">(</span><span class="s">&quot;text= &#39;set magnification done!&#39;&quot;</span><span class="p">)</span>
 </div>
 <div class="viewcode-block" id="SlitCmd.getMagnification"><a class="viewcode-back" href="../../../enuActor.Commands.html#enuActor.Commands.SlitCmd.SlitCmd.getMagnification">[docs]</a>    <span class="k">def</span> <span class="nf">getMagnification</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cmd</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Read the current magnification value</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">cmd</span><span class="o">.</span><span class="n">inform</span><span class="p">(</span><span class="s">&quot;text=&#39;Magnification = </span><span class="si">%s</span><span class="s">&#39;&quot;</span> <span class="o">%</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">slit</span><span class="o">.</span><span class="n">magnification</span><span class="p">)</span>
@@ -288,6 +340,9 @@
             <span class="n">cmd</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&quot;text=&#39;</span><span class="si">%s</span><span class="s">&#39;&quot;</span> <span class="o">%</span> <span class="n">e</span><span class="p">)</span>
 </div>
 <div class="viewcode-block" id="SlitCmd.goDither"><a class="viewcode-back" href="../../../enuActor.Commands.html#enuActor.Commands.SlitCmd.SlitCmd.goDither">[docs]</a>    <span class="k">def</span> <span class="nf">goDither</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cmd</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Move along dither.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">cmd</span><span class="o">.</span><span class="n">cmd</span><span class="o">.</span><span class="n">keywords</span><span class="p">[</span><span class="s">&quot;dither&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span> <span class="o">==</span> <span class="p">[]:</span>
             <span class="c">#dithering undefined value</span>
             <span class="n">length</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">slit</span><span class="o">.</span><span class="n">dithering_value</span>
@@ -306,6 +361,9 @@
             <span class="n">cmd</span><span class="o">.</span><span class="n">inform</span><span class="p">(</span><span class="s">&quot;text=&#39;Dithering done successfully!&#39;&quot;</span><span class="p">)</span>
 </div>
 <div class="viewcode-block" id="SlitCmd.goFocus"><a class="viewcode-back" href="../../../enuActor.Commands.html#enuActor.Commands.SlitCmd.SlitCmd.goFocus">[docs]</a>    <span class="k">def</span> <span class="nf">goFocus</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cmd</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Move along focus</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">cmd</span><span class="o">.</span><span class="n">cmd</span><span class="o">.</span><span class="n">keywords</span><span class="p">[</span><span class="s">&quot;focus&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span> <span class="o">==</span> <span class="p">[]:</span>
             <span class="c">#dithering undefined value</span>
             <span class="n">length</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">slit</span><span class="o">.</span><span class="n">focus_value</span>
@@ -346,8 +404,6 @@
       </div>
       <div class="clearer"></div>
     </div>
-    <div class="relbar-bottom">
-        
     <div class="related">
       <h3>Navigation</h3>
       <ul>
@@ -356,18 +412,14 @@
              >index</a></li>
         <li class="right" >
           <a href="../../../py-modindex.html" title="Python Module Index"
-             >modules</a> &nbsp; &nbsp;</li>
-    <li><a href="../../../enuActor.html">ENtrance Unit actor</a> &raquo;</li>
-
+             >modules</a> |</li>
+        <li><a href="../../../index.html">ENtrance Unit actor</a> &raquo;</li>
           <li><a href="../../index.html" >Module code</a> &raquo;</li> 
       </ul>
     </div>
-    </div>
-
     <div class="footer">
         &copy; Copyright 2014, Pégot-Ogier Thomas.
       Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
     </div>
-    <!-- cloud_sptheme 1.4 -->
   </body>
 </html>

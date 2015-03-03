@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -10,9 +8,8 @@
     
     <title>enuActor.Commands.EnuCmd &mdash; ENtrance Unit actor</title>
     
-    <link rel="stylesheet" href="../../../_static/cloud.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
     <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
-    <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Noticia+Text|Open+Sans|Droid+Sans+Mono" type="text/css" />
     
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
@@ -27,15 +24,10 @@
     <script type="text/javascript" src="../../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../../_static/doctools.js"></script>
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <script type="text/javascript" src="../../../_static/jquery.cookie.js"></script>
-    <script type="text/javascript" src="../../../_static/cloud.js"></script>
     <link rel="top" title="ENtrance Unit actor" href="../../../index.html" />
     <link rel="up" title="Module code" href="../../index.html" /> 
-        <meta name="viewport" content="width=device-width, initial-scale=1">
   </head>
   <body>
-    <div class="relbar-top">
-        
     <div class="related">
       <h3>Navigation</h3>
       <ul>
@@ -44,14 +36,11 @@
              accesskey="I">index</a></li>
         <li class="right" >
           <a href="../../../py-modindex.html" title="Python Module Index"
-             >modules</a> &nbsp; &nbsp;</li>
-    <li><a href="../../../enuActor.html">ENtrance Unit actor</a> &raquo;</li>
-
+             >modules</a> |</li>
+        <li><a href="../../../index.html">ENtrance Unit actor</a> &raquo;</li>
           <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
       </ul>
-    </div>
-    </div>
-  
+    </div>  
 
     <div class="document">
       <div class="documentwrapper">
@@ -61,32 +50,79 @@
   <h1>Source code for enuActor.Commands.EnuCmd</h1><div class="highlight"><pre>
 <span class="c">#!/usr/bin/env python</span>
 
+<span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">import</span> <span class="nn">opscore.protocols.keys</span> <span class="kn">as</span> <span class="nn">keys</span>
 <span class="kn">import</span> <span class="nn">opscore.protocols.types</span> <span class="kn">as</span> <span class="nn">types</span>
 <span class="kn">from</span> <span class="nn">opscore.utility.qstr</span> <span class="kn">import</span> <span class="n">qstr</span>
-
+<span class="kn">from</span> <span class="nn">enuActor.MyFSM</span> <span class="kn">import</span> <span class="n">FysomError</span>
 
 <div class="viewcode-block" id="EnuCmd"><a class="viewcode-back" href="../../../enuActor.Commands.html#enuActor.Commands.EnuCmd.EnuCmd">[docs]</a><span class="k">class</span> <span class="nc">EnuCmd</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">actor</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">actor</span> <span class="o">=</span> <span class="n">actor</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">vocab</span> <span class="o">=</span> <span class="p">[</span>
-            <span class="p">(</span><span class="s">&#39;ping&#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ping</span><span class="p">),</span>
             <span class="p">(</span><span class="s">&#39;status&#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">status</span><span class="p">),</span>
+            <span class="p">(</span><span class="s">&#39;start&#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">start</span><span class="p">),</span>
+            <span class="p">(</span><span class="s">&#39;SaveConfig&#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">saveCfg</span><span class="p">),</span>
+            <span class="p">(</span><span class="s">&#39;@(off|load|busy|idle|SafeStop|fail)&#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">set_state</span><span class="p">),</span>
+            <span class="p">(</span><span class="s">&#39;init&#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">init</span><span class="p">),</span>
+            <span class="p">(</span><span class="s">&#39;ping&#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ping</span><span class="p">),</span>
              <span class="p">]</span>
 
+        <span class="c"># Define typed command arguments for the above commands.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">keys</span> <span class="o">=</span> <span class="n">keys</span><span class="o">.</span><span class="n">KeysDictionary</span><span class="p">(</span><span class="s">&quot;enu_enu&quot;</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                                        <span class="p">)</span>
+
+<div class="viewcode-block" id="EnuCmd.saveCfg"><a class="viewcode-back" href="../../../enuActor.Commands.html#enuActor.Commands.EnuCmd.EnuCmd.saveCfg">[docs]</a>    <span class="k">def</span> <span class="nf">saveCfg</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cmd</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Save session data into config file (device_parameter.cfg)</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">dir</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="nb">dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">enu</span><span class="o">.</span><span class="n">saveConfig</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">enu</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&quot;Config file not saved. Err:</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">e</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">enu</span><span class="o">.</span><span class="n">inform</span><span class="p">(</span><span class="s">&quot;Config file saved into: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">dir</span><span class="p">)</span>
+</div>
 <div class="viewcode-block" id="EnuCmd.ping"><a class="viewcode-back" href="../../../enuActor.Commands.html#enuActor.Commands.EnuCmd.EnuCmd.ping">[docs]</a>    <span class="k">def</span> <span class="nf">ping</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cmd</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Query the actor for liveness/happiness.&quot;&quot;&quot;</span>
 
         <span class="n">cmd</span><span class="o">.</span><span class="n">finish</span><span class="p">(</span><span class="s">&quot;text=&#39;Enu Actor: o/&#39;&quot;</span><span class="p">)</span>
 </div>
+<div class="viewcode-block" id="EnuCmd.init"><a class="viewcode-back" href="../../../enuActor.Commands.html#enuActor.Commands.EnuCmd.EnuCmd.init">[docs]</a>    <span class="k">def</span> <span class="nf">init</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cmd</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Initialise Enu device</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">enu</span><span class="o">.</span><span class="n">initialise</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="EnuCmd.start"><a class="viewcode-back" href="../../../enuActor.Commands.html#enuActor.Commands.EnuCmd.EnuCmd.start">[docs]</a>    <span class="k">def</span> <span class="nf">start</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cmd</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Start and initialise Enu actor&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">enu</span><span class="o">.</span><span class="n">startUp</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">enu</span><span class="o">.</span><span class="n">initialise</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">enu</span><span class="o">.</span><span class="n">finish</span><span class="p">(</span><span class="s">&quot;start operation done successfully!&quot;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="EnuCmd.set_state"><a class="viewcode-back" href="../../../enuActor.Commands.html#enuActor.Commands.EnuCmd.EnuCmd.set_state">[docs]</a>    <span class="k">def</span> <span class="nf">set_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cmd</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Change current Enu state to BUSY, IDLE, LOADED, ...</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">state</span> <span class="o">=</span> <span class="n">cmd</span><span class="o">.</span><span class="n">cmd</span><span class="o">.</span><span class="n">keywords</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">name</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">enu</span><span class="o">.</span><span class="n">fsm</span><span class="p">,</span> <span class="n">state</span><span class="p">)()</span>
+        <span class="k">except</span> <span class="ne">AttributeError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">cmd</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&quot;text=&#39;Enu did not start well. details: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">e</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">FysomError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">cmd</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&quot;text=&#39;</span><span class="si">%s</span><span class="s">&#39;&quot;</span> <span class="o">%</span> <span class="n">e</span><span class="p">)</span>
+</div>
 <div class="viewcode-block" id="EnuCmd.status"><a class="viewcode-back" href="../../../enuActor.Commands.html#enuActor.Commands.EnuCmd.EnuCmd.status">[docs]</a>    <span class="k">def</span> <span class="nf">status</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cmd</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Report camera status and actor version. &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">sendVersionKey</span><span class="p">(</span><span class="n">cmd</span><span class="p">)</span>
-        <span class="n">cmd</span><span class="o">.</span><span class="n">inform</span><span class="p">(</span><span class="s">&quot;&#39;text=&#39;Present!&quot;</span><span class="p">)</span>
-        <span class="c">#cmd.inform(&#39;text=&quot;thread isAlive: %s&quot;&#39; % self.actor.shutter.isAlive())</span>
-        <span class="c">#cmd.inform(&#39;text=&quot;%s&quot;&#39;%self.actor.shutter.status())</span>
-        <span class="n">cmd</span><span class="o">.</span><span class="n">finish</span><span class="p">()</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">enu</span><span class="o">.</span><span class="n">inform</span><span class="p">(</span><span class="s">&quot;status:</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">enu</span><span class="o">.</span><span class="n">getStatus</span><span class="p">())</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">cmd</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&quot;text=&#39;Unexpected error: [</span><span class="si">%s</span><span class="s">] </span><span class="si">%s</span><span class="s">&#39;&quot;</span> <span class="o">%</span> <span class="p">(</span>
+                    <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()[</span><span class="mi">0</span><span class="p">],</span>
+                    <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()[</span><span class="mi">1</span><span class="p">]))</span>
 </pre></div></div></div>
 
           </div>
@@ -111,8 +147,6 @@
       </div>
       <div class="clearer"></div>
     </div>
-    <div class="relbar-bottom">
-        
     <div class="related">
       <h3>Navigation</h3>
       <ul>
@@ -121,18 +155,14 @@
              >index</a></li>
         <li class="right" >
           <a href="../../../py-modindex.html" title="Python Module Index"
-             >modules</a> &nbsp; &nbsp;</li>
-    <li><a href="../../../enuActor.html">ENtrance Unit actor</a> &raquo;</li>
-
+             >modules</a> |</li>
+        <li><a href="../../../index.html">ENtrance Unit actor</a> &raquo;</li>
           <li><a href="../../index.html" >Module code</a> &raquo;</li> 
       </ul>
     </div>
-    </div>
-
     <div class="footer">
         &copy; Copyright 2014, Pégot-Ogier Thomas.
       Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
     </div>
-    <!-- cloud_sptheme 1.4 -->
   </body>
 </html>

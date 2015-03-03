@@ -36,17 +36,4 @@ Also others convention are defined like those for motorized devices:
  * ``enu <motorized-device> GetGome``: Get Home position
  * ``enu <motorized-device> GoHome`` : Go to Home
 
-Here are devices classified :
-
-=====    ========     ===========    =======     ====     =====
- NON MOTORIZED                 MOTORIZED
------------------     -----------------------------------------
-BIA      IISOURCE     Environment    Shutter     REXM     FPS
-=====    ========     ===========    =======     ====     =====
-todo       todo          todo          todo      todo     todo
-=====    ========     ===========    =======     ====     =====
-
-
-.. note:: Shutter is a motorized device but the SW device won't provide motorized features.
-
 """

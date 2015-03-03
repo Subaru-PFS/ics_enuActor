@@ -78,7 +78,7 @@ copyright = u'2014, Pégot-Ogier Thomas'
 # built documents.
 #
 # The short X.Y version.
-version = ''
+version = '0.3'
 # The full version, including alpha/beta/rc tags.
 release = ''
 
@@ -125,16 +125,16 @@ pygments_style = 'sphinx'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'cloud' #bootstrap
+#html_theme = 'cloud' #bootstrap
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-html_theme_options = {"roottarget": "enuActor"}#{'bootswatch_theme': "cosmo"}
+#html_theme_options = {"roottarget": "enuActor"}#{'bootswatch_theme': "cosmo"}
 
 # Add any path that contain custom themes here, relative to this directory.
 #html_theme_path = sphinx_bootstrap_theme.get_html_theme_path()#[csp.get_theme_dir()]
-html_theme_path = [csp.get_theme_dir()]
+#html_theme_path = [csp.get_theme_dir()]
 
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
@@ -211,13 +211,13 @@ htmlhelp_basename = 'enuActordoc'
 
 latex_elements = {
 # The paper size ('letterpaper' or 'a4paper').
-#'papersize': 'letterpaper',
+'papersize': 'a4paper',
 
 # The font size ('10pt', '11pt' or '12pt').
-#'pointsize': '10pt',
+'pointsize': '10pt',
 
 # Additional stuff for the LaTeX preamble.
-#'preamble': '',
+'preamble': '',
 }
 
 # Grouping the document tree into LaTeX files. List of tuples
@@ -225,7 +225,7 @@ latex_elements = {
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
   ('index', 'enuActor.tex', u'enuActor Documentation',
-   u'Author', 'manual'),
+   u'Thomas Pégot-Ogier', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of

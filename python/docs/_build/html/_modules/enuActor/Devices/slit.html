@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -10,9 +8,8 @@
     
     <title>enuActor.Devices.slit &mdash; ENtrance Unit actor</title>
     
-    <link rel="stylesheet" href="../../../_static/cloud.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
     <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
-    <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Noticia+Text|Open+Sans|Droid+Sans+Mono" type="text/css" />
     
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
@@ -27,15 +24,10 @@
     <script type="text/javascript" src="../../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../../_static/doctools.js"></script>
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <script type="text/javascript" src="../../../_static/jquery.cookie.js"></script>
-    <script type="text/javascript" src="../../../_static/cloud.js"></script>
     <link rel="top" title="ENtrance Unit actor" href="../../../index.html" />
     <link rel="up" title="Module code" href="../../index.html" /> 
-        <meta name="viewport" content="width=device-width, initial-scale=1">
   </head>
   <body>
-    <div class="relbar-top">
-        
     <div class="related">
       <h3>Navigation</h3>
       <ul>
@@ -44,14 +36,11 @@
              accesskey="I">index</a></li>
         <li class="right" >
           <a href="../../../py-modindex.html" title="Python Module Index"
-             >modules</a> &nbsp; &nbsp;</li>
-    <li><a href="../../../enuActor.html">ENtrance Unit actor</a> &raquo;</li>
-
+             >modules</a> |</li>
+        <li><a href="../../../index.html">ENtrance Unit actor</a> &raquo;</li>
           <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
       </ul>
-    </div>
-    </div>
-  
+    </div>  
 
     <div class="document">
       <div class="documentwrapper">
@@ -65,11 +54,10 @@
 <span class="c">#######################################################################</span>
 <span class="c">#                        FPSA SW device module                        #</span>
 <span class="c">#######################################################################</span>
-
 <span class="kn">from</span> <span class="nn">enuActor.QThread</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">Device</span> <span class="kn">import</span> <span class="o">*</span>
 <span class="kn">import</span> <span class="nn">serial</span><span class="o">,</span> <span class="nn">time</span>
 <span class="kn">import</span> <span class="nn">Error</span>
-<span class="kn">from</span> <span class="nn">Device</span> <span class="kn">import</span> <span class="o">*</span>
 <span class="kn">from</span> <span class="nn">utils</span> <span class="kn">import</span> <span class="n">hxp_drivers</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">re</span>
@@ -108,24 +96,27 @@
 
     <span class="nd">@transition</span><span class="p">(</span><span class="s">&#39;init&#39;</span><span class="p">,</span> <span class="s">&#39;idle&#39;</span><span class="p">)</span>
 <div class="viewcode-block" id="Slit.initialise"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.slit.Slit.initialise">[docs]</a>    <span class="k">def</span> <span class="nf">initialise</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Initialise shutter.</span>
+        <span class="sd">&quot;&quot;&quot; Initialise slit</span>
 
-<span class="sd">        Here just trigger the FSM to INITIALISING and IDLE</span>
-
+<span class="sd">        - init hxp</span>
+<span class="sd">        - search home</span>
+<span class="sd">        - go home</span>
+<span class="sd">        - check status</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_kill</span><span class="p">()</span>
-        <span class="k">print</span> <span class="s">&quot;initialising hxp ...&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inform</span><span class="p">(</span><span class="s">&quot;initialising hxp..._&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_initialize</span><span class="p">()</span>
-        <span class="k">print</span> <span class="s">&quot;seeking home ...&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inform</span><span class="p">(</span><span class="s">&quot;seeking home ...&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_homeSearch</span><span class="p">()</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_home</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;Bug: Home not initialised&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fail</span><span class="p">(</span><span class="s">&quot;Bug: Home not initialised&quot;</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">getHome</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">setHome</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_home</span><span class="p">)</span>
-        <span class="k">print</span> <span class="s">&quot;going to home ...&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inform</span><span class="p">(</span><span class="s">&quot;going to home ...&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_hexapodMoveAbsolute</span><span class="p">(</span><span class="o">*</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">check_status</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">check_position</span><span class="p">()</span>
 
     <span class="c">#############</span>
     <span class="c">#  HEXAPOD  #</span>
@@ -170,7 +161,6 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">_hexapodMoveAbsolute</span><span class="p">(</span><span class="o">*</span><span class="n">posCoord</span><span class="p">)</span>
         <span class="k">elif</span> <span class="n">reference</span> <span class="o">==</span> <span class="s">&#39;relative&#39;</span> <span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_hexapodMoveIncremental</span><span class="p">(</span><span class="s">&#39;Work&#39;</span><span class="p">,</span> <span class="o">*</span><span class="n">posCoord</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">currSimPos</span> <span class="o">=</span> <span class="n">posCoord</span>
 
     <span class="c">############################</span>
     <span class="c">#  DITHER &amp; THROUGH FOCUS  #</span>
@@ -300,27 +290,26 @@
         <span class="sd">&quot;&quot;&quot;Preprocessing before shutdown.</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">print</span> <span class="s">&quot;seeking home ...&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inform</span><span class="p">(</span><span class="s">&quot;seeking home ...&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_hexapodMoveAbsolute</span><span class="p">(</span><span class="o">*</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="mi">6</span><span class="p">)</span>
-        <span class="k">print</span> <span class="s">&quot;killing connection ...&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inform</span><span class="p">(</span><span class="s">&quot;killing connection ...&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_kill</span><span class="p">()</span>
-        <span class="k">print</span> <span class="s">&quot;shutdown!&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inform</span><span class="p">(</span><span class="s">&quot;Go to sleep&quot;</span><span class="p">)</span>
 </div>
     <span class="nd">@transition</span><span class="p">(</span><span class="n">after_state</span> <span class="o">=</span> <span class="s">&quot;ShutDown&quot;</span><span class="p">)</span>
 <div class="viewcode-block" id="Slit.shutdown"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.slit.Slit.shutdown">[docs]</a>    <span class="k">def</span> <span class="nf">shutdown</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Preprocessing before manual shutdowf</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">print</span> <span class="s">&quot;seeking home ...&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inform</span><span class="p">(</span><span class="s">&quot;seeking home ...&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_hexapodMoveAbsolute</span><span class="p">(</span><span class="o">*</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="mi">6</span><span class="p">)</span>
-        <span class="k">print</span> <span class="s">&quot;killing connection ...&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inform</span><span class="p">(</span><span class="s">&quot;killing connection ...&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_kill</span><span class="p">()</span>
-        <span class="k">print</span> <span class="s">&quot;shutdown!&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inform</span><span class="p">(</span><span class="s">&quot;Go to sleep&quot;</span><span class="p">)</span>
 
     <span class="c">############</span>
     <span class="c">#  DEVICE  #</span>
     <span class="c">############o</span></div>
-    <span class="nd">@transition</span><span class="p">(</span><span class="n">after_state</span> <span class="o">=</span> <span class="s">&#39;load&#39;</span><span class="p">)</span>
 <div class="viewcode-block" id="Slit.OnLoad"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.slit.Slit.OnLoad">[docs]</a>    <span class="k">def</span> <span class="nf">OnLoad</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Override callback of load transition (FSM):</span>
 <span class="sd">            load all parameter from cfg file.</span>
@@ -330,7 +319,6 @@
 <span class="sd">        :raises: :class:`~.Error.CfgFileError`</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">print</span> <span class="s">&quot;LOADING...&quot;</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">dither_axis</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_param</span><span class="p">[</span><span class="s">&#39;dither_axis&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;,&#39;</span><span class="p">))</span>
         <span class="k">except</span> <span class="ne">Exception</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
@@ -362,8 +350,8 @@
 
 </div>
 <div class="viewcode-block" id="Slit.start_communication"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.slit.Slit.start_communication">[docs]</a>    <span class="k">def</span> <span class="nf">start_communication</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">startDevice</span><span class="p">()</span> <span class="c"># Instantiation of Operation/SimuDevice</span>
-        <span class="k">print</span> <span class="s">&quot;Connecting to HXP...&quot;</span>
+        <span class="c">#self.startDevice() # Instantiation of Operation/SimuDevice</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inform</span><span class="p">(</span><span class="s">&quot;Connecting to HXP...&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">myxps</span> <span class="o">=</span> <span class="n">hxp_drivers</span><span class="o">.</span><span class="n">XPS</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">socketId</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">myxps</span><span class="o">.</span><span class="n">TCP_ConnectToServer</span><span class="p">(</span>
             <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_cfg</span><span class="p">[</span><span class="s">&#39;ip&#39;</span><span class="p">]),</span>
@@ -398,6 +386,7 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">currPos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getCurrentPosition</span><span class="p">()</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">currPos</span> <span class="o">=</span> <span class="s">&quot;undef.&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">currPos</span><span class="p">)</span>
 
     <span class="c">#############</span>
     <span class="c">#  Parsers  #</span>
@@ -410,7 +399,7 @@
                     <span class="bp">self</span><span class="o">.</span><span class="n">groupName</span><span class="p">,</span>
                     <span class="mi">6</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">currPos</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">currSimPos</span>
 
     <span class="k">def</span> <span class="nf">_getStatus</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s">&#39;operation&#39;</span><span class="p">:</span>
@@ -484,7 +473,7 @@
                     <span class="s">&#39;Work&#39;</span><span class="p">,</span>
                     <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">w</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">currPos</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">w</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">currSimPos</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">w</span><span class="p">]</span>
 
     <span class="k">def</span> <span class="nf">_hexapodMoveIncremental</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">coordSystem</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">w</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -500,10 +489,9 @@
                     <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">w</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="c"># TODO: add rotation algo</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">currPos</span> <span class="o">=</span> <span class="p">[</span>
-                    <span class="nb">sum</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">currPos</span><span class="p">,</span> <span class="p">[</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">w</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">currSimPos</span> <span class="o">=</span> <span class="p">[</span>
+                    <span class="nb">sum</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">currPos</span><span class="p">,</span> <span class="p">[</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">w</span><span class="p">])</span>
                     <span class="p">]</span>
-            <span class="k">print</span> <span class="bp">self</span><span class="o">.</span><span class="n">currPos</span>
 
 <div class="viewcode-block" id="Slit.errorChecker"><a class="viewcode-back" href="../../../enuActor.Devices.html#enuActor.Devices.slit.Slit.errorChecker">[docs]</a>    <span class="k">def</span> <span class="nf">errorChecker</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Kind of decorator who check error after routine.</span>
@@ -564,8 +552,6 @@
       </div>
       <div class="clearer"></div>
     </div>
-    <div class="relbar-bottom">
-        
     <div class="related">
       <h3>Navigation</h3>
       <ul>
@@ -574,18 +560,14 @@
              >index</a></li>
         <li class="right" >
           <a href="../../../py-modindex.html" title="Python Module Index"
-             >modules</a> &nbsp; &nbsp;</li>
-    <li><a href="../../../enuActor.html">ENtrance Unit actor</a> &raquo;</li>
-
+             >modules</a> |</li>
+        <li><a href="../../../index.html">ENtrance Unit actor</a> &raquo;</li>
           <li><a href="../../index.html" >Module code</a> &raquo;</li> 
       </ul>
     </div>
-    </div>
-
     <div class="footer">
         &copy; Copyright 2014, Pégot-Ogier Thomas.
       Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
     </div>
-    <!-- cloud_sptheme 1.4 -->
   </body>
 </html>

@@ -82,21 +82,24 @@ Shutter
 .. inheritance-diagram:: enuActor.Devices.shutter
     :parts: 1
 
-Shutter is open or close ...
+Shutter device has  links ethernet and serial:
+- ethernet : connection is made throw arduino (interlock).
+- serial: connection is directly made to the shutter (more commands).
 
-.. todo:: add more details
+
+.. todo:: ATM the shutter device can't handle 2 connection at a time
 
 
 BIA
 ^^^
 
-
-.. todo:: add more details
+BIA device has 3 positions on, off and strobe. Position on and strobe are defined respectively by
+the parameters (dimmer_duty, dimmer_period) and (strobe_duty, strobe_period).
 
 REXM
 ^^^^
 
-.. todo:: add more details
+ReXM is defined by 3 positions medium, low, and parking.
 
 IISOURCE
 ^^^^^^^^
@@ -106,12 +109,18 @@ IISOURCE
 ENU
 ^^^
 
-.. todo:: add more details
+ENU abstract device permit to see all each devices in one entity. The state of ENU is defined by the lowest state
+of all device.
+When ENU is initialising it launch a sequence of command to initialise all device safely.
 
 FPSA
 ^^^^
 
-.. todo:: add more details
-
+Slit device is composed of:
+  - slit position: position of slit related to upper carriage
+  - focus axis: direction of focus
+  - dither axis: direction of dither
+  - magnification:
+  - dither_value, focus_value: step of dither, focus
 """
 
