@@ -75,7 +75,6 @@ class Bia(DualModeDevice):
         #TODO: check values and types
         self._param["duty"] = freq
         self._param["period"] = dur
-        self._param["intensity"] = intensity
 
     @interlock
     @transition('busy', 'idle')

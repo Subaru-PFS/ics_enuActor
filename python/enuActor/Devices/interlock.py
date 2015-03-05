@@ -39,7 +39,7 @@ def interlock(func):
                                               % (func.func_name, self.deviceName))
             else:
                 return func(self, *args, **kwargs)
-        elif self.deviceName.lower() == 'shutter':
+        elif self.deviceName.lower() == 'shutters':
             if self.actor.bia.deviceStarted is False:
                 return func(self, *args, **kwargs)
             biaState = self.actor.bia.fsm.current

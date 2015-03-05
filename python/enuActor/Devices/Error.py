@@ -19,10 +19,7 @@ class RuleError(Exception):
         return self._priority
 
     def __str__(self):
-        return "{}".format(
-                #self.__class__.__name__,
-                self.strerror)
-                #self.errno
+        return "{}".format(self._reason)
 
 
 class CfgFileErr(RuleError):

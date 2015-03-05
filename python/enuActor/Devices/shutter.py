@@ -14,7 +14,7 @@ import numpy as np
 import re
 
 
-class Shutter(DualModeDevice):
+class Shutters(DualModeDevice):
 
     """SW device: Shutter
 
@@ -57,7 +57,7 @@ class Shutter(DualModeDevice):
 
     def __init__(self, actor=None):
         """Inherit QThread and start the Thread (with FSM)"""
-        super(Shutter, self).__init__(actor)
+        super(Shutters, self).__init__(actor)
         self.home = None
         self.currPos = None     #current position
         self.shutter_id = None      #current id
@@ -74,7 +74,7 @@ class Shutter(DualModeDevice):
 
         """
         self.currSimPos = transition
-        self.inform("sending...")
+        self.inform("sending %s..." % transition)
         try:
             if transition == 'open':
                 self.send('open_sh\r\n')
@@ -205,3 +205,4 @@ class Shutter(DualModeDevice):
         mask.reverse()
         arr_mask = np.array(mask[0: len(getattr(Shutter, 'STATUS_BYTE_%i' % sb))])
         return arr_mask
+

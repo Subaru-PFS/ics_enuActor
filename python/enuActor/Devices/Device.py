@@ -102,7 +102,7 @@ class Device(object):
     def load_cfg(device):
         """ Load configuration file of the device:
 
-            * load data files to self._cfg and self._param
+            * load data files to self._cfg an self._param
 
         :param device: name of the device (``'SHUTTER'``, ``'BIA'``, ...)
         :type device: str.

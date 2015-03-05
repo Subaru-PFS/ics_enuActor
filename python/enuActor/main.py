@@ -13,7 +13,7 @@ class OurActor(actorcore.Actor.Actor):
         actorcore.Actor.Actor.__init__(self, name,
                                        productName=productName,
                                        configFile=configFile)
-        self.shutter = shutter.Shutter(actor=self)
+        self.shutter = shutter.Shutters(actor=self)
         self.slit = slit.Slit(actor=self)
         self.bia = bia.Bia(actor=self)
         self.rexm = rexm.Rexm(actor=self)

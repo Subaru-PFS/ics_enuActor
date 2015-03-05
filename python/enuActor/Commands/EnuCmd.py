@@ -5,6 +5,7 @@ import opscore.protocols.keys as keys
 import opscore.protocols.types as types
 from opscore.utility.qstr import qstr
 from enuActor.MyFSM import FysomError
+import enuActor.Devices.Error as Error
 
 class EnuCmd(object):
 
@@ -49,8 +50,12 @@ class EnuCmd(object):
     def start(self, cmd):
         """ Start and initialise Enu actor"""
         self.actor.enu.startUp()
-        self.actor.enu.initialise()
-        self.actor.enu.finish("start operation done successfully!")
+        try:
+            self.actor.enu.initialise()
+        except Error.CfgFileErr, e:
+            self.actor.enu.inform(e)
+        else:
+            self.actor.enu.finish("start operation done successfully!")
 
     def set_state(self, cmd):
         """ Change current Enu state to BUSY, IDLE, LOADED, ...

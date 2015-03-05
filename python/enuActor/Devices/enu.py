@@ -77,7 +77,7 @@ class Enu(DualModeDevice):
         config.add_section('REXM')
         config.set('REXM', 'home', self.actor.rexm.home)
         config.set('REXM', 'medium', self.actor.rexm.medium)
-        config.set('REXM',  'low', self.actor.rexm.low)
+        config.set('REXM', 'low', self.actor.rexm.low)
         config.add_section('TEMPERATURE')
 
         dir = path + 'MyParam.cfg'
