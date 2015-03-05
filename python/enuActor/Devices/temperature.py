@@ -4,11 +4,8 @@
 #######################################################################
 #                    Temperature SW device module                     #
 #######################################################################
-try:
-    from enuActor.QThread import *
-    from Device import *
-except ImportError:
-    pass
+from enuActor.QThread import *
+from Device import *
 
 
 class Temperature(DualModeDevice):
@@ -31,6 +28,7 @@ class Temperature(DualModeDevice):
         """
         self.check_status()
 
+    @transition('busy', 'idle')
     def read(self, sensorId):
         """Read sensorId value
         """
@@ -41,6 +39,8 @@ class Temperature(DualModeDevice):
         """
         pass
 
+    def OnLoad(self):
+        pass
 
 
 

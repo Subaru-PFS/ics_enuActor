@@ -26,6 +26,7 @@ class Enu(DualModeDevice):
             'bia' : None,
             'shutter' : None,
             'slit' : None,
+            'temperature' : None,
             'rexm' : None
         }
 
@@ -37,6 +38,7 @@ class Enu(DualModeDevice):
         """
         #ENU is always in operation MODE as it is an abstract device
         self.change_mode('operation')
+        self.OnLoad()
 
     def saveConfig(self, dir=None):
         """Save ENUs parameter into config file
@@ -53,10 +55,11 @@ class Enu(DualModeDevice):
             self.warn("Some device are not started. Config file not complete.")
         config = ConfigParser.RawConfigParser()
         config.add_section('ENU')
-        config.set('ENU', 'shutter', self.actor.shutter.mode)
+        config.set('ENU', 'shutters', self.actor.shutter.mode)
         config.set('ENU', 'bia', self.actor.bia.mode)
         config.set('ENU', 'slit', self.actor.slit.mode)
         config.set('ENU', 'temperature', self.actor.temperature.mode)
+        config.set('ENU', 'rexm', self.actor.temperature.mode)
         config.add_section('BIA')
         config.set('BIA', 'home', self.actor.bia.home)
         config.set('BIA', 'period', self.actor.bia.dimmer_period)
@@ -64,8 +67,8 @@ class Enu(DualModeDevice):
         config.set('BIA', 'strobe_period', self.actor.bia.strobe_period)
         config.set('BIA', 'strobe_duty', self.actor.bia.strobe_duty)
         config.set('BIA', 'intensity_thres', self.actor.bia.intensity_thresh)
-        config.add_section('SHUTTER')
-        config.set('SHUTTER', 'home', self.actor.shutter.home)
+        config.add_section('SHUTTERS')
+        config.set('SHUTTERS', 'home', self.actor.shutter.home)
         config.add_section('SLIT')
         config.set('SLIT', 'home', self.actor.slit._home)
         config.set('SLIT', 'slit_position', self.actor.slit._slit_position)
@@ -80,7 +83,9 @@ class Enu(DualModeDevice):
         config.set('REXM', 'low', self.actor.rexm.low)
         config.add_section('TEMPERATURE')
 
-        dir = path + 'MyParam.cfg'
+
+        import time
+        dir = '%sMyParam_%s.cfg' % (path, time.ctime())
         with open(dir, 'wb') as configfile:
             config.write(configfile)
         return dir
@@ -88,7 +93,6 @@ class Enu(DualModeDevice):
     @transition('init', 'idle')
     def initialise(self):
         """ Perform a sequence of action for all device"""
-        self.OnLoad()
         self.actor.bcast.inform("text='Start sequence init ENU'")
         self.actor.bia.change_mode(self.d_devMode['bia'])
         self.actor.bia.initialise()
@@ -100,6 +104,8 @@ class Enu(DualModeDevice):
         self.actor.slit.initialise()
         self.actor.rexm.change_mode(self.d_devMode['rexm'])
         self.actor.rexm.initialise()
+        self.actor.temperature.change_mode(self.d_devMode['temperature'])
+        self.actor.temperature.initialise()
         self.check_status()
 
     def check_status(self):

@@ -5,7 +5,7 @@
 class RuleError(Exception):
     """Define rule and how it is displaied """
     PRIORITY_DEFAULT = 1
-    def __init__(self, reason, lvl=PRIORITY_DEFAULT):
+    def __init__(self, reason,  lvl=PRIORITY_DEFAULT):
         super(RuleError, self).__init__(self)
         self._reason = reason
         self._priority = lvl

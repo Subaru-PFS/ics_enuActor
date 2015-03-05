@@ -59,7 +59,7 @@ class TemperatureCmd(object):
         elif name.lower() == 'simulation':
             mode = 'simulated'
         else:
-            cmd.error("text='unknow operation %s'" % name)
+            cmd.error("text='unknown operation %s'" % name)
 
         try:
             self.actor.temperature.change_mode(mode)

@@ -21,7 +21,6 @@ class Rexm(DualModeDevice):
         self.medium = None
         self.low = None
 
-
     @transition('init', 'idle')
     def initialise(self):
         """Initialise Rexm.

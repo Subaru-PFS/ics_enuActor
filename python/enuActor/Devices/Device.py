@@ -121,7 +121,10 @@ class Device(object):
 
         # Communication section
         config = ConfigParser.ConfigParser()
-        config.readfp(open(cfg_files['communication']))
+        try:
+            config.readfp(open(cfg_files['communication']))
+        except IOError, e:
+            raise e
         links = dict(config.items('LINK'))
         if not links.has_key(device.lower()):
             raise Error.CfgFileErr(\
@@ -408,7 +411,7 @@ class DualModeDevice(QThread):
         self._param = None
 
         #factory part
-        self.mode = "operation"
+        self.mode = None
         self.deviceStarted = False
         self._map = {
                 'operation' : OperationDevice,
