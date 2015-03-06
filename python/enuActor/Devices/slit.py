@@ -401,9 +401,13 @@ is not a direction")
                     self.groupName,
                     coordSystem)
         else:
-            return self._home # TODO: take care of reference : 'Work' or 'Base'
+            # Take care hexa return home hexa we have to add slit position
+            return [xi - xj for xi, xj  in
+                      zip(self._home, self._slit_position)]
 
     def _hexapodCoordinateSytemSet(self, coordSystem, x, y, z, u, v, w):
+        self._home = [xi + xj for xi, xj  in
+                      zip([x, y, z, u, v, w], self._slit_position)]
         if self.mode == 'operation':
             return self.errorChecker(
                     self.myxps.HexapodCoordinateSystemSet,
@@ -411,7 +415,6 @@ is not a direction")
                     self.groupName,
                     coordSystem,
                     x, y, z, u, v, w)
-        self._home = [x, y, z, u, v, w]
 
     def _hexapodMoveAbsolute(self, x, y, z, u, v, w):
         """
