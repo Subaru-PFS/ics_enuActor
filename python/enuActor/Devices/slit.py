@@ -84,6 +84,9 @@ class Slit(DualModeDevice):
         """setHome.
         setHome to posCoord or to current if posCoord is None
 
+        .. warning:: posCoord requires the position of slit in world\
+and not position of upper carriage of hexapod.
+
         :param posCoord: [x, y, z, u, v, w] or nothing if current
         :raises: :class:`~.Error.DeviceErr`, :class:`~.Error.CommErr`
         """

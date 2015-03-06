@@ -22,13 +22,6 @@ class Enu(DualModeDevice):
         """@todo: to be defined1. """
         super(Enu, self).__init__(actor)
         self.currPos = None
-        self.d_devMode ={
-            'bia' : None,
-            'shutter' : None,
-            'slit' : None,
-            'temperature' : None,
-            'rexm' : None
-        }
 
     def startUp(self):
         """Abstract start
@@ -48,6 +41,9 @@ class Enu(DualModeDevice):
         :raises: @todo
 
         """
+        def rmBracket(stringList):
+            return str(stringList).replace('[', '').replace(']', '')
+
         if self.actor.bia.deviceStarted == 0 or\
                 self.actor.slit.deviceStarted == 0 or\
                 self.actor.enu.deviceStarted == 0 or\
@@ -70,10 +66,10 @@ class Enu(DualModeDevice):
         config.add_section('SHUTTERS')
         config.set('SHUTTERS', 'home', self.actor.shutter.home)
         config.add_section('SLIT')
-        config.set('SLIT', 'home', self.actor.slit._home)
-        config.set('SLIT', 'slit_position', self.actor.slit._slit_position)
-        config.set('SLIT', 'dither_axis', self.actor.slit.dither_axis)
-        config.set('SLIT', 'focus_axis', self.actor.slit.focus_axis)
+        config.set('SLIT', 'home', rmBracket(self.actor.slit._home))
+        config.set('SLIT', 'slit_position', rmBracket(self.actor.slit._slit_position))
+        config.set('SLIT', 'dither_axis', rmBracket(self.actor.slit.dither_axis))
+        config.set('SLIT', 'focus_axis', rmBracket(self.actor.slit.focus_axis))
         config.set('SLIT', 'magnification', self.actor.slit.magnification)
         config.set('SLIT', 'focus_value', self.actor.slit.focus_value)
         config.set('SLIT', 'dithering_value', self.actor.slit.dithering_value)
@@ -93,18 +89,26 @@ class Enu(DualModeDevice):
     @transition('init', 'idle')
     def initialise(self):
         """ Perform a sequence of action for all device"""
+        def nameOf(device):
+            return device.deviceName.lower()
+
         self.actor.bcast.inform("text='Start sequence init ENU'")
-        self.actor.bia.change_mode(self.d_devMode['bia'])
+        self.actor.bia.change_mode(
+            self._param[nameOf(self.actor.bia)])
         self.actor.bia.initialise()
         self.actor.bia.putMsg(self.actor.bia.bia, 'off')
-        self.actor.shutter.change_mode(self.d_devMode['shutter'])
+        self.actor.shutter.change_mode(
+            self._param[nameOf(self.actor.shutter)])
         self.actor.shutter.initialise()
         self.actor.shutter.putMsg(self.actor.shutter.shutter, 'close')
-        self.actor.slit.change_mode(self.d_devMode['slit'])
+        self.actor.slit.change_mode(
+            self._param[nameOf(self.actor.slit)])
         self.actor.slit.initialise()
-        self.actor.rexm.change_mode(self.d_devMode['rexm'])
+        self.actor.rexm.change_mode(
+            self._param[nameOf(self.actor.rexm)])
         self.actor.rexm.initialise()
-        self.actor.temperature.change_mode(self.d_devMode['temperature'])
+        self.actor.temperature.change_mode(
+            self._param[nameOf(self.actor.temperature)])
         self.actor.temperature.initialise()
         self.check_status()
 
@@ -158,5 +162,4 @@ class Enu(DualModeDevice):
 
     def OnLoad(self):
         """ Load all param of all device"""
-        for devName in self._param.keys():
-            self.d_devMode[devName] = self._param[devName]
+        pass

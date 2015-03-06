@@ -32,9 +32,9 @@ class EnuCmd(object):
         try:
             dir = self.actor.enu.saveConfig()
         except Exception as e:
-            self.actor.enu.error("Config file not saved. Err:%s" % e)
+            self.actor.enu.error("Cfg file not saved. Err:%s" % e)
         else:
-            self.actor.enu.inform("Config file saved into: %s" % dir)
+            self.actor.enu.inform("Cfg file saved into: %s" % dir)
 
     def ping(self, cmd):
         """Query the actor for liveness/happiness."""
