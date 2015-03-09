@@ -263,7 +263,6 @@ is not a direction")
     ############
     #  DEVICE  #
     ############o
-
     def OnLoad(self):
         """Override callback of load transition (FSM):
             load all parameter from cfg file.
@@ -303,6 +302,7 @@ is not a direction")
             raise Error.CfgFileErr("Wrong value home (%s)" % e)
 
 
+    @transition(after_state = 'load')
     def start_communication(self):
         #self.startDevice() # Instantiation of Operation/SimuDevice
         self.inform("Connecting to HXP...")
@@ -316,7 +316,6 @@ is not a direction")
             raise Error.CommErr("Connection to Hexapod failed check IP & Port")
         else:
             self.startFSM()
-            self.OnLoad()
 
     def check_status(self):
         """Check status of hexapod

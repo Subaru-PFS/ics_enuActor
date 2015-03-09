@@ -199,10 +199,10 @@ class SimulationDevice(Device):
     ###################
     #  communication  #
     ###################
+    @transition(after_state='load')
     def start_communication(self, *args, **kwargs):
         self.thread.inform("starting communication...")
         self.loadInlineCfg()
-        self.startFSM()
         self.OnLoad()
 
     def start_serial(self, input_buff=None):
@@ -226,7 +226,6 @@ class SimulationDevice(Device):
     def initialise(self):
         pass
 
-    @transition('load')
     def OnLoad(self):
         self.load_cfg(self.deviceName)
         if self.deviceName.lower() == 'slit':
@@ -252,6 +251,7 @@ class OperationDevice(Device):
     def __init__(self, device, thread=None, cfg_path=path):
         super(OperationDevice, self).__init__(device, thread, cfg_path)
 
+    @transition(after_state = 'load')
     def start_communication(self, *args, **kwargs):
         """ Process to start communication following interface definition.
 
@@ -289,8 +289,6 @@ class OperationDevice(Device):
         elif self.link != 'NOTSPECIFIED':
             raise Error.CfgFileErr("LINK section error in config file :\n\
 LINK: %s\nCfgFile: %s\n " % (self.link, self._cfg))
-        self.startFSM()
-        self.OnLoad()
 
     @transition(after_state = 'load')
     def OnLoad(self):
@@ -418,6 +416,9 @@ class DualModeDevice(QThread):
                 'simulated' : SimulationDevice
                 }
 
+        #debug
+        self.debug = False
+
     def startDevice(self):
         """ Preprocessing before instantiation of a device when the\
                 command start is launched. Maybe function can be refactored
@@ -445,7 +446,8 @@ class DualModeDevice(QThread):
         """Called each time the Dictionary variable are changed
 
         """
-        self.finish("Generator update dictionary")
+        if self.debug:
+            self.finish("Generator update dictionary")
 
 
     ############
@@ -472,12 +474,12 @@ class DualModeDevice(QThread):
         """
         if self.currPos in [None, 'undef.']:
             currPos = 'undef.'
-        elif type(self.currPos) == float:
+        elif type(self.currPos) == list:
             currPos = map(lambda x: round(x, 2), self.currPos)
         else:
             currPos = self.currPos
         try:
-            return '(%s, %s)' % (self.fsm.current, self.currPos)
+            return '(%s, %s)' % (self.fsm.current, currPos)
         except Error.DeviceErr as e:
             if e.code == 1000:
                 self.warn("'GetStatus' called before device \
@@ -548,6 +550,7 @@ class DualModeDevice(QThread):
         self.mode = mode
         # it calls start device which create new Op/SimDevice
         self.startDevice()
+        self.curModeDevice.startFSM()
         self.start_communication()
         self.OnLoad()
 
