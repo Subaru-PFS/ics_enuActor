@@ -263,6 +263,7 @@ is not a direction")
     ############
     #  DEVICE  #
     ############o
+
     def OnLoad(self):
         """Override callback of load transition (FSM):
             load all parameter from cfg file.

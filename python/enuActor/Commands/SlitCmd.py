@@ -14,6 +14,7 @@ class SlitCmd(object):
         self.actor = actor
         self.vocab = [
             ('slit', 'status', self.status),
+            ('slit', 'test <coord>', self.test),
             ('slit', '<cmd>', self.command),
             ('slit', 'start [@(operation|simulation)]', self.set_mode),
             ('slit', 'GetHome', self.getHome),
@@ -45,6 +46,8 @@ class SlitCmd(object):
         self.keys = keys.KeysDictionary("slit_slit", (1, 1),
                 #keys.Key("test", types.Coordinate(), help=""),
                 keys.Key("cmd", types.Float(), help="Command ascii"),
+                keys.Key("coord", types.Float()*(6, 6),
+                         help="X,Y,Z,U,V,W coordinate (exaxtly 6 param)"),
                 keys.Key("X", types.Float(), help="X coordinate"),
                 keys.Key("Y", types.Float(), help="Y coordinate"),
                 keys.Key("Z", types.Float(), help="Z coordinate"),
@@ -59,6 +62,9 @@ class SlitCmd(object):
                     help="magnification value"),
                                         )
 
+    def test(self, cmd):
+        self.actor.slit.coord = cmd.cmd.keywords["coord"]
+        print self.actor.slit.coord.values
 
     def init(self, cmd):
         """ Initialise SLIT device
@@ -116,7 +122,7 @@ class SlitCmd(object):
                     sys.exc_info()[0],
                     sys.exc_info()[1]))
         else:
-            self.actor.shutter.finish('started/restarted well!')
+            self.actor.slit.finish('started/restarted well!')
 
     def set_state(self, cmd):
         """ Change current SLIT state to BUSY, IDLE, LOADED, ...
