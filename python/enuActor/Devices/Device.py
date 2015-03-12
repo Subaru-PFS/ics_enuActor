@@ -526,6 +526,15 @@ class DualModeDevice(QThread):
             self.actor.bcast.finish("text='[%s, %s] %s'" %\
                                 (self.deviceName, self.mode, msg))
 
+    def diag(self, msg):
+        if self.deviceName.lower() == 'enu':
+            self.actor.bcast.diag("text='[%s] %s'" %\
+                                    (self.deviceName, msg))
+        else:
+            self.actor.bcast.diag("text='[%s, %s] %s'" %\
+                                    (self.deviceName, self.mode, msg))
+
+
     #############
     #  Factory  #
     #############

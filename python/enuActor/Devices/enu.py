@@ -66,7 +66,7 @@ class Enu(DualModeDevice):
         config.add_section('SHUTTERS')
         config.set('SHUTTERS', 'home', self.actor.shutter.home)
         config.add_section('SLIT')
-        config.set('SLIT', 'home', rmBracket(self.actor.slit._home))
+        config.set('SLIT', 'home', rmBracket(self.actor.slit._homeHexa))
         config.set('SLIT', 'slit_position', rmBracket(self.actor.slit._slit_position))
         config.set('SLIT', 'dither_axis', rmBracket(self.actor.slit.dither_axis))
         config.set('SLIT', 'focus_axis', rmBracket(self.actor.slit.focus_axis))

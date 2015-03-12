@@ -43,6 +43,7 @@ class Slit(DualModeDevice):
         self._dithering_value = None
         self._focus_value = None
         self._home = None
+        self._homeHexa = None
 
     @transition('init', 'idle')
     def initialise(self):
@@ -53,16 +54,18 @@ class Slit(DualModeDevice):
         - go home
         - check status
         """
+        # Kill existing socket
         self._kill()
         self.inform("initialising hxp..._")
         self._initialize()
         self.inform("seeking home ...")
         self._homeSearch()
-        if self._home is None:
-            self.fail("Bug: Home not initialised")
-        else:
-            self.getHome()
-            self.setHome(self._home)
+        # Set Work to slit home coord
+        self.setHome(self._home)
+        # Tool z = 20 + z_slit with 20 height of upper carriage
+        tool_value = [sum(i) for i in zip(self._slit_position, [0, 0, 20, 0, 0 ,0])]
+        # Set Tool to slit home coord instead of center of hexa
+        self._hexapodCoordinateSytemSet('Tool', *tool_value)
         self.inform("going to home ...")
         self._hexapodMoveAbsolute(*[0, 0, 0, 0, 0, 0])
         self.check_status()
@@ -77,8 +80,7 @@ class Slit(DualModeDevice):
         :returns: [x, y, z, u, v, w]
         :raises: :class:`~.Error.DeviceErr`, :class:`~.Error.CommErr`
         """
-        hxpHome = self._hexapodCoordinateSytemGet('Tool')
-        return [sum(x) for x in zip(hxpHome, self._slit_position)]
+        return self._hexapodCoordinateSytemGet('Work')
 
     def setHome(self, posCoord=None):
         """setHome.
@@ -91,11 +93,18 @@ and not position of upper carriage of hexapod.
         :raises: :class:`~.Error.DeviceErr`, :class:`~.Error.CommErr`
         """
         if posCoord is None:
+            #position related to work
             posCoord = self._getCurrentPosition()
-            curHome = self._hexapodCoordinateSytemGet('Tool')
+            # work related to WORLD
+            curHome = self._hexapodCoordinateSytemGet('Work')
+            # position related to WORLD
             posCoord = [sum(x) for x in zip(posCoord, curHome)]
-        curHome = [xi - xj for xi, xj  in zip(posCoord, self._slit_position)]
-        self._hexapodCoordinateSytemSet('Work', *curHome)
+        # update Home hexapod
+        self._homeHexa = [xi - xj for xi, xj in
+                          zip(posCoord, self._slit_position)]
+        # update Home slit related to WORLD
+        self._home = posCoord
+        self._hexapodCoordinateSytemSet('Work', *posCoord)
 
     @transition('busy', 'idle')
     def moveTo(self, reference, posCoord=None):
@@ -293,13 +302,16 @@ is not a direction")
         except Exception, e:
             raise Error.CfgFileErr("Wrong value dithering_value")
         try:
-            self._home = map(float, self._param['home'].split(','))
+            self._homeHexa = map(float, self._param['home'].split(','))
         except Exception, e:
             raise Error.CfgFileErr("Wrong value home (%s)" % e)
         try:
             self._slit_position = map(float, self._param['slit_position'].split(','))
         except Exception, e:
             raise Error.CfgFileErr("Wrong value home (%s)" % e)
+        # home slit
+        self._home = [sum(i) for i in zip(self._homeHexa, self._slit_position)]
+        self.diag("Home slit: %s /World" % self._home)
 
 
     @transition(after_state = 'load')
@@ -328,6 +340,7 @@ is not a direction")
             # check status
             status_code = self._getStatus()
             status = self._getStatusString(int(status_code))
+            self.diag('status hexa=%s' % status)
 
     def check_position(self):
         """Check position of hexapod
@@ -401,13 +414,10 @@ is not a direction")
                     self.groupName,
                     coordSystem)
         else:
-            # Take care hexa return home hexa we have to add slit position
-            return [xi - xj for xi, xj  in
-                      zip(self._home, self._slit_position)]
+            return self._home
 
     def _hexapodCoordinateSytemSet(self, coordSystem, x, y, z, u, v, w):
-        self._home = [xi + xj for xi, xj  in
-                      zip([x, y, z, u, v, w], self._slit_position)]
+        self.diag("set %s to %s" % (coordSystem, [x, y, z, u, v, w]))
         if self.mode == 'operation':
             return self.errorChecker(
                     self.myxps.HexapodCoordinateSystemSet,
