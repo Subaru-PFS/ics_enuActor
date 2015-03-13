@@ -97,7 +97,12 @@ class ShuttersCmd(object):
         elif( len(cmd.cmd.keywords)==1):
             shutter_id = 'all'
         try:
-            self.actor.shutter.putMsg(self.actor.shutter.shutter, transition)
+            if shutter_id == 'all':
+                self.actor.shutter.putMsg(self.actor.shutter.shutter, transition)
+            elif shutter_id == 'red':
+                self.actor.shutter.putMsg(self.actor.shutter.shutter, transition + 'red')
+            elif shutter_id == 'blue':
+                self.actor.shutter.putMsg(self.actor.shutter.shutter, transition + 'blue')
         except AttributeError as e:
             cmd.error("text='Shutter did not start well. details: %s" % e)
         except:

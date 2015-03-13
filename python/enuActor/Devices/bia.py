@@ -95,7 +95,7 @@ class Bia(DualModeDevice):
         self.inform("sending...")
         try:
             if transition == 'on':
-                self.send('bia_on\r\n')
+                self.send('cia_on\r\n')
                 time.sleep(.5)
                 self.send('set_bia_period%s\r\n' % self.dimmer_period)
                 time.sleep(.5)
@@ -141,8 +141,17 @@ class Bia(DualModeDevice):
         """
 
         status = self.send('ctrlstat\r\n')
-        if int(status) == 0:
-            self.fsm.idle()
+        # We have to remove all \r and \n
+        status = status.split('\r')[0].split('\n')[0]
+        if status == 'nok':
+            if self.debug:
+                #To much talkative
+                self.diag("sent ctrlstat and received nok.")
+        elif status == '':
+            # weird case scenario wait for next check²
+            return
+        elif status not in ['0', '1', '2']:
+            self.warn("ctrlstat returned: '%s'" % status )
         elif int(status) == 1 and self.currPos == 'on':
             self.error("Interlock hardware! - Didier : (┛ò__ó)┛")
 
@@ -153,6 +162,15 @@ class Bia(DualModeDevice):
         So here Position simulated is same as real Position
         """
         OnOrOff = self.send('get_bia_status\r\n')
+        # We have to remove all \r and \n
+        OnOrOff = OnOrOff.split('\r')[0].split('\n')[0]
+        if OnOrOff == 'nok':
+            if self.debug:
+                #To much talkative
+                self.diag("sent get_bia_status and received nok.")
+        elif OnOrOff == '':
+            # weird case scenario wait for next check²
+            return
         if OnOrOff == 1:
             self.currPos = "on"
         elif OnOrOff == 0:

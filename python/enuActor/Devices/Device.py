@@ -64,6 +64,7 @@ class Device(object):
         self._cfg = None
         self.link = None
         self.connection = None
+        self._connection = None
 
         # Device attributes
         self.thread = thread
@@ -277,13 +278,15 @@ class OperationDevice(Device):
         # Start communication
         if self.link == 'SERIAL':
             if kwargs.has_key('startCmd'):
-                self.connection = self.start_serial(kwargs['startCmd'])
+                self._connection = self.start_serial(kwargs['startCmd'])
             else:
-                self.connection = self.start_serial()
+                self._connection = self.start_serial()
                 # check connection
                 #self.check_status()
         elif self.link == 'ETHERNET':
-            self.connection = self.start_ethernet()
+            if self.connection != None:
+                self.connection.close()
+            self._connection = self.start_ethernet()
         elif self.link == 'TTL':
             raise NotImplementedError
         elif self.link != 'NOTSPECIFIED':
@@ -333,7 +336,7 @@ LINK: %s\nCfgFile: %s\n " % (self.link, self._cfg))
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(float(self._cfg['timeout']))
             sock.connect((self._cfg['ip_dst'], int(self._cfg['port'])))
-            sock.settimeout(None)
+            #sock.settimeout(None)
         except IOError as e:
             raise Error.CommErr(e)
         return sock
@@ -379,10 +382,10 @@ LINK: %s\nCfgFile: %s\n " % (self.link, self._cfg))
             #TODO: To improve
             try:
                 self.connection.send(input_buff)
-                data = self.connection.recv(1)
+                data = self.connection.recv(512)
                 return data #TODO: Tobe improve
             except socket.error as e:
-                raise Error.CommErr(e)
+                raise Exception(e)
         elif self.link == 'TTL':
             raise NotImplementedError
         elif self.link == 'NOTSPECIFIED':
@@ -400,7 +403,7 @@ class DualModeDevice(QThread):
 
     def __init__(self, actor=None):
         self.deviceName = self.__class__.__name__
-        super(DualModeDevice, self).__init__(actor, self.deviceName)
+        super(DualModeDevice, self).__init__(actor, self.deviceName, timeout = 2)
         self.start()
 
         #communication part
@@ -448,6 +451,49 @@ class DualModeDevice(QThread):
         """
         if self.debug:
             self.finish("Generator update dictionary")
+
+    #############
+    #  Factory  #
+    #############
+    def updateFactory(self):
+        """Update attributes of curModeDevice object (of current "Device")
+
+        """
+        self.curModeDevice.currPos = self.currPos
+        self.curModeDevice._param = self._param
+        self.curModeDevice._cfg = self._cfg
+        self.curModeDevice.link = self.link
+
+    def change_mode(self, mode):
+        """It does all pre/post processing for changing mode :
+                * reallocate & instanciate a Device
+                * Start the device
+
+        :param mode: ``operation``, ``simulated``
+
+        """
+        self.currPos = None
+        self.mode = mode
+        # it calls start device which create new Op/SimDevice
+        self.startDevice()
+        self.curModeDevice.startFSM()
+        self.start_communication()
+        if self.deviceName.lower() == 'shutters':
+            if self.actor.bia.deviceStarted:
+                #Bia and Shutter are same connection through arduino
+                #So point to other connection (socket)
+                self.curModeDevice.connection =\
+                    self.actor.bia.curModeDevice.connection
+        if self.deviceName.lower() == 'bia':
+            if self.actor.shutter.deviceStarted:
+                #Bia and Shutter are same connection through arduino
+                #So point to other connection (socket)
+                self.curModeDevice.connection =\
+                    self.actor.shutter.curModeDevice.connection
+        else:
+            #Else overwrite connection
+            self.curModeDevice.connection = self.curModeDevice._connection
+        self.OnLoad()
 
 
     ############
@@ -533,36 +579,6 @@ class DualModeDevice(QThread):
         else:
             self.actor.bcast.diag("text='[%s, %s] %s'" %\
                                     (self.deviceName, self.mode, msg))
-
-
-    #############
-    #  Factory  #
-    #############
-    def updateFactory(self):
-        """Update attributes of curModeDevice object (of current "Device")
-
-        """
-        self.curModeDevice.currPos = self.currPos
-        self.curModeDevice._param = self._param
-        self.curModeDevice._cfg = self._cfg
-        self.curModeDevice.link = self.link
-
-    def change_mode(self, mode):
-        """It does all pre/post processing for changing mode :
-                * reallocate & instanciate a Device
-                * Start the device
-
-        :param mode: ``operation``, ``simulated``
-
-        """
-        self.currPos = None
-        self.mode = mode
-        # it calls start device which create new Op/SimDevice
-        self.startDevice()
-        self.curModeDevice.startFSM()
-        self.start_communication()
-        self.OnLoad()
-
 
     def __getattr__(self, name):
         if self.deviceStarted is True:
