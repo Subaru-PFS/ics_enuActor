@@ -429,7 +429,6 @@ class DualModeDevice(QThread):
         """
         self.load_cfg()
         self.curModeDevice = self._map[self.mode](self.deviceName, thread = self)
-        self.deviceStarted = True
 
     def handleTimeout(self):
         """Override method :meth:`.QThread.handleTimeout`.
@@ -476,23 +475,30 @@ class DualModeDevice(QThread):
         self.mode = mode
         # it calls start device which create new Op/SimDevice
         self.startDevice()
+        #Have to go throw curModeDevice avoid bug Exception 1000 device not started yet
         self.curModeDevice.startFSM()
-        self.start_communication()
+        self.curModeDevice.start_communication()
         if self.deviceName.lower() == 'shutters':
             if self.actor.bia.deviceStarted:
                 #Bia and Shutter are same connection through arduino
                 #So point to other connection (socket)
                 self.curModeDevice.connection =\
                     self.actor.bia.curModeDevice.connection
-        if self.deviceName.lower() == 'bia':
+            else:
+                #Else overwrite connection
+                self.curModeDevice.connection = self.curModeDevice._connection
+        elif self.deviceName.lower() == 'bia':
             if self.actor.shutter.deviceStarted:
                 #Bia and Shutter are same connection through arduino
                 #So point to other connection (socket)
                 self.curModeDevice.connection =\
                     self.actor.shutter.curModeDevice.connection
-        else:
-            #Else overwrite connection
-            self.curModeDevice.connection = self.curModeDevice._connection
+            else:
+                #Else overwrite connection
+                self.curModeDevice.connection = self.curModeDevice._connection
+        # We tell deviceStarted here because of handleTimeout which checkstatus
+        # So we need to have connection set before
+        self.deviceStarted = True
         self.OnLoad()
 
 
