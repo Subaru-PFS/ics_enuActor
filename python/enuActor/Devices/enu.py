@@ -68,6 +68,7 @@ class Enu(DualModeDevice):
         config.add_section('SLIT')
         config.set('SLIT', 'home', rmBracket(self.actor.slit._homeHexa))
         config.set('SLIT', 'slit_position', rmBracket(self.actor.slit._slit_position))
+        config.set('SLIT', 'thicknessCarriage', self.actor.slit.thicknessCarriage)
         config.set('SLIT', 'dither_axis', rmBracket(self.actor.slit.dither_axis))
         config.set('SLIT', 'focus_axis', rmBracket(self.actor.slit.focus_axis))
         config.set('SLIT', 'magnification', self.actor.slit.magnification)

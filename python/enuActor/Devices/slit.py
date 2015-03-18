@@ -62,8 +62,8 @@ class Slit(DualModeDevice):
         self._homeSearch()
         # Set Work to slit home coord
         self.setHome(self._home)
-        # Tool z = 20 + z_slit with 20 height of upper carriage
-        tool_value = [sum(i) for i in zip(self._slit_position, [0, 0, 20, 0, 0 ,0])]
+        # Tool z = 21 + z_slit with 21 height of upper carriage
+        tool_value = [sum(i) for i in zip(self._slit_position, [0, 0, self.thicknessCarriage, 0, 0 ,0])]
         # Set Tool to slit home coord instead of center of hexa
         self._hexapodCoordinateSytemSet('Tool', *tool_value)
         self.inform("going to home ...")
@@ -296,7 +296,11 @@ is not a direction")
         try:
             self.focus_value = float(self._param['focus_value'])
         except Exception, e:
-            raise Error.CfgFileErr("Wrong value focus_value")
+            raise Error.CfgFileErr("Wrong value focus_value (%s)" % e)
+        try:
+            self.thicknessCarriage = float(self._param['thicknessCarriage'])
+        except Exception, e:
+            raise Error.CfgFileErr("Wrong value thicknessCarriage (%s)" % e)
         try:
             self.dithering_value = float(self._param['dithering_value'])
         except Exception, e:
@@ -335,7 +339,7 @@ is not a direction")
         :raises: :class:`~.Error.DeviceErr`, :class:`~.Error.CommErr`
         """
 
-        if self.fsm.current not in ['none', 'INITIALISING']:
+        if self.fsm.current not in ['none', 'INITIALISING'] and self.deviceStarted:
             time.sleep(.1)# have to wait else return busy socke
             # check status
             status_code = self._getStatus()

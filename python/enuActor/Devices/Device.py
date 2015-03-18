@@ -380,12 +380,9 @@ LINK: %s\nCfgFile: %s\n " % (self.link, self._cfg))
                     return buff
         elif self.link == 'ETHERNET':
             #TODO: To improve
-            try:
-                self.connection.send(input_buff)
-                data = self.connection.recv(512)
-                return data #TODO: Tobe improve
-            except socket.error as e:
-                raise Exception(e)
+            self.connection.send(input_buff)
+            data = self.connection.recv(512)
+            return data #TODO: Tobe improve
         elif self.link == 'TTL':
             raise NotImplementedError
         elif self.link == 'NOTSPECIFIED':
@@ -429,6 +426,7 @@ class DualModeDevice(QThread):
         """
         self.load_cfg()
         self.curModeDevice = self._map[self.mode](self.deviceName, thread = self)
+        self.deviceStarted = True
 
     def handleTimeout(self):
         """Override method :meth:`.QThread.handleTimeout`.
@@ -437,7 +435,7 @@ class DualModeDevice(QThread):
         :raises: :class:`~.Error.CommErr`
 
         """
-        if self.deviceStarted:
+        if self.deviceStarted and self.fsm.current not in ['none', 'LOADED', 'INITIALISING']:
             self.check_status()
             self.check_position()
             self.updateFactory()
@@ -475,9 +473,8 @@ class DualModeDevice(QThread):
         self.mode = mode
         # it calls start device which create new Op/SimDevice
         self.startDevice()
-        #Have to go throw curModeDevice avoid bug Exception 1000 device not started yet
-        self.curModeDevice.startFSM()
-        self.curModeDevice.start_communication()
+        self.startFSM()
+        self.start_communication()
         if self.deviceName.lower() == 'shutters':
             if self.actor.bia.deviceStarted:
                 #Bia and Shutter are same connection through arduino
@@ -496,9 +493,6 @@ class DualModeDevice(QThread):
             else:
                 #Else overwrite connection
                 self.curModeDevice.connection = self.curModeDevice._connection
-        # We tell deviceStarted here because of handleTimeout which checkstatus
-        # So we need to have connection set before
-        self.deviceStarted = True
         self.OnLoad()
 
 

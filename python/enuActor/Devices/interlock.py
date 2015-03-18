@@ -51,7 +51,7 @@ def interlock(func):
                     self.warn('(┛ò__ó)┛ Interlock')
                     return
                 elif func.func_name == 'shutter':
-                    if args[0] in ['open', None, "undef."]:
+                    if args[0] in ['open', None, "undef.","openred", "openblue"]:
                         self.warn('(┛ò__ó)┛ Interlock')
                         return
                     else:

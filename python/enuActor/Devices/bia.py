@@ -93,6 +93,9 @@ class Bia(DualModeDevice):
         """
         self.currSimPos = transition
         self.inform("sending...")
+        # wait 0.2s after check_status (during handleTimeout) sending message
+        # not necesary just safer
+        time.sleep(0.2)
         try:
             if transition == 'on':
                 self.send('cia_on\r\n')

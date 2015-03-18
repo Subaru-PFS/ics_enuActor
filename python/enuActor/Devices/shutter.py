@@ -96,6 +96,10 @@ class Shutters(DualModeDevice):
         :raises: :class:`~.Error.CommErr`, :class:`~.Error.DeviceErr`
 
         """
+        # wait 0.2s after check_status (during handleTimeout) sending message
+        # not necesary just safer
+        time.sleep(0.2)
+
         self.currSimPos = transition
         self.inform("sending %s..." % transition)
         try:
