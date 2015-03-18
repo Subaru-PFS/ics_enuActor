@@ -298,9 +298,9 @@ is not a direction")
         except Exception, e:
             raise Error.CfgFileErr("Wrong value focus_value (%s)" % e)
         try:
-            self.thicknessCarriage = float(self._param['thicknessCarriage'])
+            self.thicknessCarriage = float(self._param['thicknesscarriage'])
         except Exception, e:
-            raise Error.CfgFileErr("Wrong value thicknessCarriage (%s)" % e)
+            raise Error.CfgFileErr("thicknessCarriage (%s)" % e)
         try:
             self.dithering_value = float(self._param['dithering_value'])
         except Exception, e:
