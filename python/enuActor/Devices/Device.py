@@ -64,7 +64,6 @@ class Device(object):
         self._cfg = None
         self.link = None
         self.connection = None
-        self._connection = None
 
         # Device attributes
         self.thread = thread
@@ -278,15 +277,15 @@ class OperationDevice(Device):
         # Start communication
         if self.link == 'SERIAL':
             if kwargs.has_key('startCmd'):
-                self._connection = self.start_serial(kwargs['startCmd'])
+                self.connection = self.start_serial(kwargs['startCmd'])
             else:
-                self._connection = self.start_serial()
+                self.connection = self.start_serial()
                 # check connection
                 #self.check_status()
         elif self.link == 'ETHERNET':
             if self.connection != None:
                 self.connection.close()
-            self._connection = self.start_ethernet()
+            self.connection = self.start_ethernet()
         elif self.link == 'TTL':
             raise NotImplementedError
         elif self.link != 'NOTSPECIFIED':
@@ -475,24 +474,6 @@ class DualModeDevice(QThread):
         self.startDevice()
         self.startFSM()
         self.start_communication()
-        if self.deviceName.lower() == 'shutters':
-            if self.actor.bia.deviceStarted:
-                #Bia and Shutter are same connection through arduino
-                #So point to other connection (socket)
-                self.curModeDevice.connection =\
-                    self.actor.bia.curModeDevice.connection
-            else:
-                #Else overwrite connection
-                self.curModeDevice.connection = self.curModeDevice._connection
-        elif self.deviceName.lower() == 'bia':
-            if self.actor.shutter.deviceStarted:
-                #Bia and Shutter are same connection through arduino
-                #So point to other connection (socket)
-                self.curModeDevice.connection =\
-                    self.actor.shutter.curModeDevice.connection
-            else:
-                #Else overwrite connection
-                self.curModeDevice.connection = self.curModeDevice._connection
         self.OnLoad()
 
 
