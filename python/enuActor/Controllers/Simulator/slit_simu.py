@@ -3,9 +3,9 @@ import time
 from random import randint
 
 
-class HxpSimulator(object):
+class SlitSimulator(object):
     def __init__(self, home):
-        super(HxpSimulator, self).__init__()
+        super(SlitSimulator, self).__init__()
         self.home = home
         self.pos = [0 for i in range(6)]
         self.tool = [0 for i in range(6)]

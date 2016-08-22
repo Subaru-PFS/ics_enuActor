@@ -5,16 +5,16 @@ import time
 import numpy as np
 
 from Controllers.device import Device
-from Controllers.Simulator.hxpsimulator import HxpSimulator
+from Controllers.Simulator.slit_simu import SlitSimulator
 from Controllers.utils import hxp_drivers
 
-class hxp(Device):
+class slit(Device):
     timeout = 5
 
     def __init__(self, actor, name):
         # This sets up the connections to/from the hub, the logger, and the twisted reactor.
         #
-        super(hxp, self).__init__(actor, name)
+        super(slit, self).__init__(actor, name)
          # Hexapod Attributes
         self.groupName = 'HEXAPOD'
         self.myxps = None
@@ -23,17 +23,17 @@ class hxp(Device):
         self.currPos = [np.nan] * 6
 
     def loadCfg(self, cmd):
-        cmd.inform("text='Loading %s parameters from config file...'"%self.name)
-        self.currMode = self.actor.config.get('hxp', 'mode')
-        self.host = self.actor.config.get('hxp', 'host')
-        self.port = int(self.actor.config.get('hxp', 'port'))
 
-        self.home = [float(val) for val in self.actor.config.get('hxp', 'home').split(',')]
-        self.slit_position = [float(val) for val in self.actor.config.get('hxp', 'slit_position').split(',')]
-        self.dither_axis = [float(val) for val in self.actor.config.get('hxp', 'dither_axis').split(',')]
-        self.focus_axis = [float(val) for val in self.actor.config.get('hxp', 'focus_axis').split(',')]
-        self.thicknessCarriage = float(self.actor.config.get('hxp', 'thicknessCarriage'))
-        self.magnification = float(self.actor.config.get('hxp', 'magnification'))
+        self.currMode = self.actor.config.get('slit', 'mode')
+        self.host = self.actor.config.get('slit', 'host')
+        self.port = int(self.actor.config.get('slit', 'port'))
+
+        self.home = [float(val) for val in self.actor.config.get('slit', 'home').split(',')]
+        self.slit_position = [float(val) for val in self.actor.config.get('slit', 'slit_position').split(',')]
+        self.dither_axis = [float(val) for val in self.actor.config.get('slit', 'dither_axis').split(',')]
+        self.focus_axis = [float(val) for val in self.actor.config.get('slit', 'focus_axis').split(',')]
+        self.thicknessCarriage = float(self.actor.config.get('slit', 'thicknessCarriage'))
+        self.magnification = float(self.actor.config.get('slit', 'magnification'))
 
         return True
 
@@ -50,11 +50,11 @@ class hxp(Device):
         if self.currMode == 'operation':
             cmd.inform("text='Connecting to HXP...'")
             self.myxps = hxp_drivers.XPS()
-            self.socketId = self.myxps.TCP_ConnectToServer(self.host, self.port, hxp.timeout)
+            self.socketId = self.myxps.TCP_ConnectToServer(self.host, self.port, slit.timeout)
 
         else:
-            cmd.inform("text='Connecting to HXP Simulator'")
-            self.myxps = HxpSimulator(self.home)
+            cmd.inform("text='Connecting to Slit Simulator'")
+            self.myxps = SlitSimulator(self.home)
             self.socketId = 1
 
         if self.socketId == -1:
@@ -74,7 +74,8 @@ class hxp(Device):
         :return: True : if every steps are successfully operated, cmd not finished,
                  False : if a command fail, command is finished with cmd.fail
         """
-
+        import time
+        time.sleep(10)
         # Kill existing socket
         if self._kill(cmd):
             cmd.inform("text='killing existing socket..._'")

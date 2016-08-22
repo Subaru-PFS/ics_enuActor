@@ -1,14 +1,11 @@
 #!/usr/bin/env python
-
-from random import randrange
 import time
 
-import numpy as np
 
-
-class TempSimulator(object):
+class RexmSimulator(object):
     def __init__(self):
-        super(TempSimulator, self).__init__()
+        super(RexmSimulator, self).__init__()
+
         self.buf = []
 
     def settimeout(self, timeout):
@@ -23,8 +20,8 @@ class TempSimulator(object):
             raise TypeError
 
     def send(self, message):
-        temps = 20 * np.ones(8)
-        self.buf.append(','.join(['%.2f' % (t + 0.1 * randrange(-2, 2)) for t in temps]))
+
+        self.buf.append("medium")
 
     def recv(self, buffer_size):
         time.sleep(0.5)

@@ -22,6 +22,7 @@ class TopCmd(object):
             ('connect', '<controller> [<name>]', self.connect),
             ('disconnect', '<controller>', self.disconnect),
             ('monitor', '<controllers> <period>', self.monitor),
+            ('start', '', self.initControllers),
         ]
 
         # Define typed command arguments for the above commands.
@@ -97,6 +98,12 @@ class TopCmd(object):
             cmd.fail('text="failed to disconnect controller %s: %s"' % (controller, e))
             return
         cmd.finish(self.controllerKey())
+
+    def initControllers(self, cmd):
+        for c in self.actor.controllers:
+            print "c=", c
+            self.actor.callCommand("%s init" % c)
+        cmd.finish()
 
     def ping(self, cmd):
         """Query the actor for liveness/happiness."""

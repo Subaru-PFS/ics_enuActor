@@ -1,34 +1,35 @@
 #!/usr/bin/env python
-# encoding: utf-8
 
 import logging
 import socket
 
 from Controllers.device import Device
-from Controllers.Simulator.temps_simu import TempsSimulator
+from Controllers.Simulator.rexm_simu import RexmSimulator
 
 
-class temps(Device):
+class rexm(Device):
     timeout = 5
 
     def __init__(self, actor, name, loglevel=logging.DEBUG):
-        super(temps, self).__init__(actor, name)
+        super(rexm, self).__init__(actor, name)
 
-        self.logger = logging.getLogger('temps')
+        self.logger = logging.getLogger('rexm')
         self.logger.setLevel(loglevel)
 
         self.EOL = '\n'
+        self.currPos = 'nan'
+
 
     def loadCfg(self, cmd):
-        self.currMode = self.actor.config.get('temps', 'mode')
-        self.host = self.actor.config.get('temps', 'host')
-        self.port = int(self.actor.config.get('temps', 'port'))
+        self.currMode = self.actor.config.get('rexm', 'mode')
+        self.host = self.actor.config.get('rexm', 'host')
+        self.port = int(self.actor.config.get('rexm', 'port'))
         return True
 
     def startCommunication(self, cmd):
-        self._s = socket.socket(socket.AF_INET, socket.SOCK_STREAM) if self.currMode == 'operation' else TempsSimulator()
-        self._s.settimeout(temps.timeout)
-        cmd.inform("text='Connecting to LAKESHORE Controller in %s ...'" % self.currMode)
+        self._s = socket.socket(socket.AF_INET, socket.SOCK_STREAM) if self.currMode == 'operation' else RexmSimulator()
+        self._s.settimeout(rexm.timeout)
+        cmd.inform("text='Connecting to REXM Controller in %s ...'" % self.currMode)
 
         try:
             self._s.connect((self.host, self.port))
@@ -39,17 +40,22 @@ class temps(Device):
         return True
 
     def initialise(self, cmd):
-        ok, ret = self.fetchTemps(cmd)
-        return ok
-
-    def fetchTemps(self, cmd):
-        message = "MEAS"
+        message = "origin search"
         if self.safeSend(cmd, message):
             ok, ret = self.safeRecv(cmd)
             if ok:
-                return True, ret
+                return True
+        return False
 
-        return False, ''
+    def getPosition(self, cmd):
+        message = "position ?"
+        if self.safeSend(cmd, message):
+            ok, pos = self.safeRecv(cmd)
+            if ok:
+                self.currPos = pos
+                return True
+        return False
+
 
     def safeSend(self, cmd, message):
         try:

@@ -32,14 +32,14 @@ class Device(QThread):
         self.fsm.onchangestate = self.printstatechange
 
     def changeMode(self, cmd=None, mode=None):
+        """change mode from config file or from argument """
+
         cmd = self.actor.bcast if not cmd else cmd
-        ret = self.loadCfg(cmd)
-        if mode:
-            self.currMode = mode
-        if ret:
+        if self.loadCfg(cmd):
+            cmd.inform("text='Loading %s parameters from config file...'"%self.name)
+            self.currMode = mode if mode else self.currMode
             self.fsm.loadOk()
-            ret = self.startCommunication(cmd)
-            if ret:
+            if self.startCommunication(cmd):
                 self.fsm.commOk()
                 return True
             else:
@@ -48,6 +48,19 @@ class Device(QThread):
         else:
             self.fsm.loadFailed()
             return False
+
+    def loadCfg(self, cmd):
+        """prototype """
+        self.currMode = self.actor.config.get(self.name, 'mode')
+        return True
+
+    def startCommunication(self, cmd):
+        """prototype """
+        return True
+
+    def initialise(self, cmd):
+        """prototype """
+        return True
 
     def printstatechange(self, e):
         self.actor.bcast.inform('state=%s' % self.fsm.current)

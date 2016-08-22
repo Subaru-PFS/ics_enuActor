@@ -7,11 +7,11 @@ import opscore.protocols.types as types
 from wrap import threaded
 
 
-class HxpCmd(object):
+class SlitCmd(object):
     def __init__(self, actor):
         # This lets us access the rest of the actor.
         self.actor = actor
-        self.name = "hxp"
+        self.name = "slit"
 
         # Declare the commands we implement. When the actor is started
         # these are registered with the parser, which will call the
@@ -56,39 +56,39 @@ class HxpCmd(object):
     def status(self, cmd, doFinish=True):
         """Report state, mode, position"""
         ender = cmd.finish if doFinish else cmd.inform
-        cmd.inform('state=%s' % self.actor.controllers['hxp'].fsm.current)
-        cmd.inform('mode=%s' % self.actor.controllers['hxp'].currMode)
-        ok, pos = self.actor.controllers['hxp'].getPosition(cmd)
+        cmd.inform('state=%s' % self.actor.controllers['slit'].fsm.current)
+        cmd.inform('mode=%s' % self.actor.controllers['slit'].currMode)
+        ok, pos = self.actor.controllers['slit'].getPosition(cmd)
         if ok:
             ender('position=%s' % ','.join(["%.2f" % p for p in pos]))
         else:
-            self.actor.controllers['hxp'].fsm.cmdFailed()
+            self.actor.controllers['slit'].fsm.cmdFailed()
 
     @threaded
     def initialise(self, cmd):
         """Initialise Device LOADED -> INIT
         """
-        if self.actor.controllers['hxp'].initialise(cmd):
-            self.actor.controllers['hxp'].fsm.initOk()
+        if self.actor.controllers['slit'].initialise(cmd):
+            self.actor.controllers['slit'].fsm.initOk()
             self.status(cmd)
         else:
-            self.actor.controllers['hxp'].fsm.initFailed()
+            self.actor.controllers['slit'].fsm.initFailed()
 
     @threaded
     def changeMode(self, cmd, doFinish=True):
         """Change device mode operation|simulation"""
         cmdKeys = cmd.cmd.keywords
         mode = "simulation" if "simulation" in cmdKeys else "operation"
-        self.actor.controllers['hxp'].fsm.changeMode()
-        if self.actor.controllers['hxp'].changeMode(cmd, mode):
+        self.actor.controllers['slit'].fsm.changeMode()
+        if self.actor.controllers['slit'].changeMode(cmd, mode):
             self.status(cmd, doFinish)
 
     @threaded
     def getHome(self, cmd):
         """ Return Home value position
         """
-        if not self.actor.controllers['hxp'].getHome(cmd):
-            self.actor.controllers['hxp'].fsm.cmdFailed()
+        if not self.actor.controllers['slit'].getHome(cmd):
+            self.actor.controllers['slit'].fsm.cmdFailed()
 
     @threaded
     def setHome(self, cmd):
@@ -100,26 +100,26 @@ class HxpCmd(object):
         U = cmd.cmd.keywords["U"].values[0]
         V = cmd.cmd.keywords["V"].values[0]
         W = cmd.cmd.keywords["W"].values[0]
-        if self.actor.controllers['hxp'].setHome(cmd, [X, Y, Z, U, V, W]):
+        if self.actor.controllers['slit'].setHome(cmd, [X, Y, Z, U, V, W]):
             cmd.finish()
         else:
-            self.actor.controllers['hxp'].fsm.cmdFailed()
+            self.actor.controllers['slit'].fsm.cmdFailed()
 
     @threaded
     def setHomeCurrent(self, cmd):
         """ Change Home value position according to current
         """
-        if self.actor.controllers['hxp'].setHome(cmd):
+        if self.actor.controllers['slit'].setHome(cmd):
             cmd.finish()
         else:
-            self.actor.controllers['hxp'].fsm.cmdFailed()
+            self.actor.controllers['slit'].fsm.cmdFailed()
 
     def goHome(self, cmd):
-        self.actor.controllers['hxp'].fsm.getBusy()
-        if not self.actor.controllers['hxp'].moveTo(cmd, 'absolute'):
-            self.actor.controllers['hxp'].fsm.cmdFailed()
+        self.actor.controllers['slit'].fsm.getBusy()
+        if not self.actor.controllers['slit'].moveTo(cmd, 'absolute'):
+            self.actor.controllers['slit'].fsm.cmdFailed()
         else:
-            self.actor.controllers['hxp'].fsm.getIdle()
+            self.actor.controllers['slit'].fsm.getIdle()
             self.status(cmd)
 
     @threaded
@@ -131,40 +131,40 @@ class HxpCmd(object):
         mode = "absolute" if "absolute" in cmdKeys else "relative"
         posCoord = [cmd.cmd.keywords[coord].values[0] if coord in cmdKeys else 0 for coord in
                     ['X', 'Y', 'Z', 'U', 'V', 'W']]
-        self.actor.controllers['hxp'].fsm.getBusy()
-        if not self.actor.controllers['hxp'].moveTo(cmd, mode, posCoord):
-            self.actor.controllers['hxp'].fsm.cmdFailed()
+        self.actor.controllers['slit'].fsm.getBusy()
+        if not self.actor.controllers['slit'].moveTo(cmd, mode, posCoord):
+            self.actor.controllers['slit'].fsm.cmdFailed()
         else:
-            self.actor.controllers['hxp'].fsm.getIdle()
+            self.actor.controllers['slit'].fsm.getIdle()
             self.status(cmd)
 
     @threaded
     def halt(self, cmd):
         """ Not implemented yet. It should stop movement.
         """
-        if self.actor.controllers['hxp'].fsm.current in ["INIT", "IDLE"]:
-            if self.actor.controllers['hxp'].shutdown(cmd):
+        if self.actor.controllers['slit'].fsm.current in ["INIT", "IDLE"]:
+            if self.actor.controllers['slit'].shutdown(cmd):
                 cmd.finish("text='Go to sleep'")
-                self.actor.controllers['hxp'].fsm.shutdown()
+                self.actor.controllers['slit'].fsm.shutdown()
             else:
-                self.actor.controllers['hxp'].fsm.cmdFailed()
+                self.actor.controllers['slit'].fsm.cmdFailed()
 
         else:
             cmd.fail("text='It's impossible to halt system from current state: %s'" % self.actor.controllers[
-                'hxp'].fsm.current)
-            self.actor.controllers['hxp'].fsm.cmdFailed()
+                'slit'].fsm.current)
+            self.actor.controllers['slit'].fsm.cmdFailed()
 
     @threaded
     def goDither(self, cmd):
         """ Move along dither.
         """
         pix = cmd.cmd.keywords["pix"].values[0]
-        posCoord = self.actor.controllers['hxp'].compute("dither", pix)
-        self.actor.controllers['hxp'].fsm.getBusy()
-        if not self.actor.controllers['hxp'].moveTo(cmd, 'relative', posCoord):
-            self.actor.controllers['hxp'].fsm.cmdFailed()
+        posCoord = self.actor.controllers['slit'].compute("dither", pix)
+        self.actor.controllers['slit'].fsm.getBusy()
+        if not self.actor.controllers['slit'].moveTo(cmd, 'relative', posCoord):
+            self.actor.controllers['slit'].fsm.cmdFailed()
         else:
-            self.actor.controllers['hxp'].fsm.getIdle()
+            self.actor.controllers['slit'].fsm.getIdle()
             self.status(cmd)
 
     @threaded
@@ -172,11 +172,11 @@ class HxpCmd(object):
         """ Move along focus.
         """
         pix = cmd.cmd.keywords["pix"].values[0]
-        posCoord = self.actor.controllers['hxp'].compute("focus", pix)
+        posCoord = self.actor.controllers['slit'].compute("focus", pix)
 
-        self.actor.controllers['hxp'].fsm.getBusy()
-        if not self.actor.controllers['hxp'].moveTo(cmd, 'relative', posCoord):
-            self.actor.controllers['hxp'].fsm.cmdFailed()
+        self.actor.controllers['slit'].fsm.getBusy()
+        if not self.actor.controllers['slit'].moveTo(cmd, 'relative', posCoord):
+            self.actor.controllers['slit'].fsm.cmdFailed()
         else:
-            self.actor.controllers['hxp'].fsm.getIdle()
+            self.actor.controllers['slit'].fsm.getIdle()
             self.status(cmd)

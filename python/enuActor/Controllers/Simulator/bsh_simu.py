@@ -68,7 +68,6 @@ class BshSimulator(object):
             self.cmdnok = 0
 
         if mycommand == "statword\r\n":
-            print "self.statword = ", self.statword
             self.buf.append(self.statword)
             self.cmdnok = 1
 

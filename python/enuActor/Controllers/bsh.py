@@ -2,9 +2,8 @@
 
 import socket
 import datetime as dt
-
 from Controllers.device import Device
-from Controllers.Simulator.bshsimulator import BshSimulator
+from Controllers.Simulator.bsh_simu import BshSimulator
 
 
 class bsh(Device):
@@ -55,6 +54,8 @@ class bsh(Device):
         return True
 
     def initialise(self, cmd):
+        import time
+        time.sleep(6)
         if not self.errorChecker(cmd, "set_period%i" % self.bia_period):
             return False
         if not self.errorChecker(cmd, "set_duty%i" % int(self.bia_duty * 1024)):
