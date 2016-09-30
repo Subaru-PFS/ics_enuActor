@@ -159,6 +159,22 @@ class slit(Device):
             ender("home=%s" % ','.join(["%.2f" % p for p in ret]))
             return True
 
+    # def getHome(self, cmd, doFinish=True):
+    #     """getHome.
+    #
+    #     :param:cmd
+    #     :param:doFinish
+    #     :return: True : if every steps are successfully operated, cmd is finished if doFinish
+    #              False : if a command fail, command is finished with cmd.fail
+    #     """
+    #     ender = cmd.finish if doFinish else cmd.inform
+    #     ok, ret = self._hexapodCoordinateSysGet(cmd, 'Work')
+    #     if not ok:
+    #         return False
+    #     else:
+    #         ender("home=%s" % ','.join(["%.2f" % p for p in ret]))
+    #         return True
+
     def getPosition(self, cmd):
         """getPosition
         position is nan if we can't ask the controller
@@ -335,13 +351,13 @@ class slit(Device):
         :raises: :class:`~.Error.DeviceErr`, :class:`~.Error.CommErr`
         """
         # Check if sending or receiving
-        if self.link_busy == True:
-            time.sleep(0.1)
-            return self.errorChecker(func, *args)
-        else:
-            self.link_busy = True
+        # if self.link_busy == True:
+        #     time.sleep(0.1)
+        #     return self.errorChecker(func, *args)
+        # else:
+        #     self.link_busy = True
         buf = func(*args)
-        self.link_busy = False
+        #self.link_busy = False
         if buf[0] != 0:
             if buf[0] not in [-2, -108]:
                 [errorCode, errorString] = self.myxps.ErrorStringGet(self.socketId, buf[0])

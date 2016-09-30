@@ -46,6 +46,13 @@ class SlitCmd(object):
                                         keys.Key("pix", types.Float(), help="Number of pixel"),
                                         )
 
+    @property
+    def controller(self):
+        try:
+            return self.actor.controllers[self.name]
+        except KeyError:
+            raise RuntimeError('%s controller is not connected.' % (self.name))
+
     @threaded
     def ping(self, cmd):
         """Query the actor for liveness/happiness."""
@@ -55,40 +62,48 @@ class SlitCmd(object):
     @threaded
     def status(self, cmd, doFinish=True):
         """Report state, mode, position"""
+
         ender = cmd.finish if doFinish else cmd.inform
-        cmd.inform('state=%s' % self.actor.controllers['slit'].fsm.current)
-        cmd.inform('mode=%s' % self.actor.controllers['slit'].currMode)
-        ok, pos = self.actor.controllers['slit'].getPosition(cmd)
-        if ok:
-            ender('position=%s' % ','.join(["%.2f" % p for p in pos]))
-        else:
-            self.actor.controllers['slit'].fsm.cmdFailed()
+        ok, pos = self.controller.getPosition(cmd)
+        if not ok:
+            self.controller.fsm.cmdFailed()
+
+        ender('slit=%s,%s,%s' % (self.controller.fsm.current,
+                                 self.controller.currMode,
+                                 ','.join(["%.2f" % p for p in pos])))
+        # cmd.inform('state=%s' % self.controller.fsm.current)
+        # cmd.inform('mode=%s' % self.controller.currMode)
+        # ok, pos = self.controller.getPosition(cmd)
+        # if ok:
+        #     ender('position=%s' % ','.join(["%.2f" % p for p in pos]))
+        # else:
+        #     self.controller.fsm.cmdFailed()
 
     @threaded
     def initialise(self, cmd):
         """Initialise Device LOADED -> INIT
         """
-        if self.actor.controllers['slit'].initialise(cmd):
-            self.actor.controllers['slit'].fsm.initOk()
+        if self.controller.initialise(cmd):
+            self.controller.fsm.initOk()
             self.status(cmd)
         else:
-            self.actor.controllers['slit'].fsm.initFailed()
+            self.controller.fsm.initFailed()
 
     @threaded
     def changeMode(self, cmd, doFinish=True):
         """Change device mode operation|simulation"""
         cmdKeys = cmd.cmd.keywords
         mode = "simulation" if "simulation" in cmdKeys else "operation"
-        self.actor.controllers['slit'].fsm.changeMode()
-        if self.actor.controllers['slit'].changeMode(cmd, mode):
+        self.controller.fsm.changeMode()
+        if self.controller.changeMode(cmd, mode):
             self.status(cmd, doFinish)
 
     @threaded
     def getHome(self, cmd):
         """ Return Home value position
         """
-        if not self.actor.controllers['slit'].getHome(cmd):
-            self.actor.controllers['slit'].fsm.cmdFailed()
+        if not self.controller.getHome(cmd):
+            self.controller.fsm.cmdFailed()
 
     @threaded
     def setHome(self, cmd):
@@ -100,26 +115,26 @@ class SlitCmd(object):
         U = cmd.cmd.keywords["U"].values[0]
         V = cmd.cmd.keywords["V"].values[0]
         W = cmd.cmd.keywords["W"].values[0]
-        if self.actor.controllers['slit'].setHome(cmd, [X, Y, Z, U, V, W]):
+        if self.controller.setHome(cmd, [X, Y, Z, U, V, W]):
             cmd.finish()
         else:
-            self.actor.controllers['slit'].fsm.cmdFailed()
+            self.controller.fsm.cmdFailed()
 
     @threaded
     def setHomeCurrent(self, cmd):
         """ Change Home value position according to current
         """
-        if self.actor.controllers['slit'].setHome(cmd):
+        if self.controller.setHome(cmd):
             cmd.finish()
         else:
-            self.actor.controllers['slit'].fsm.cmdFailed()
+            self.controller.fsm.cmdFailed()
 
     def goHome(self, cmd):
-        self.actor.controllers['slit'].fsm.getBusy()
-        if not self.actor.controllers['slit'].moveTo(cmd, 'absolute'):
-            self.actor.controllers['slit'].fsm.cmdFailed()
+        self.controller.fsm.getBusy()
+        if not self.controller.moveTo(cmd, 'absolute'):
+            self.controller.fsm.cmdFailed()
         else:
-            self.actor.controllers['slit'].fsm.getIdle()
+            self.controller.fsm.getIdle()
             self.status(cmd)
 
     @threaded
@@ -131,40 +146,40 @@ class SlitCmd(object):
         mode = "absolute" if "absolute" in cmdKeys else "relative"
         posCoord = [cmd.cmd.keywords[coord].values[0] if coord in cmdKeys else 0 for coord in
                     ['X', 'Y', 'Z', 'U', 'V', 'W']]
-        self.actor.controllers['slit'].fsm.getBusy()
-        if not self.actor.controllers['slit'].moveTo(cmd, mode, posCoord):
-            self.actor.controllers['slit'].fsm.cmdFailed()
+        self.controller.fsm.getBusy()
+        if not self.controller.moveTo(cmd, mode, posCoord):
+            self.controller.fsm.cmdFailed()
         else:
-            self.actor.controllers['slit'].fsm.getIdle()
+            self.controller.fsm.getIdle()
             self.status(cmd)
 
     @threaded
     def halt(self, cmd):
         """ Not implemented yet. It should stop movement.
         """
-        if self.actor.controllers['slit'].fsm.current in ["INIT", "IDLE"]:
-            if self.actor.controllers['slit'].shutdown(cmd):
+        if self.controller.fsm.current in ["INIT", "IDLE"]:
+            if self.controller.shutdown(cmd):
                 cmd.finish("text='Go to sleep'")
-                self.actor.controllers['slit'].fsm.shutdown()
+                self.controller.fsm.shutdown()
             else:
-                self.actor.controllers['slit'].fsm.cmdFailed()
+                self.controller.fsm.cmdFailed()
 
         else:
             cmd.fail("text='It's impossible to halt system from current state: %s'" % self.actor.controllers[
                 'slit'].fsm.current)
-            self.actor.controllers['slit'].fsm.cmdFailed()
+            self.controller.fsm.cmdFailed()
 
     @threaded
     def goDither(self, cmd):
         """ Move along dither.
         """
         pix = cmd.cmd.keywords["pix"].values[0]
-        posCoord = self.actor.controllers['slit'].compute("dither", pix)
-        self.actor.controllers['slit'].fsm.getBusy()
-        if not self.actor.controllers['slit'].moveTo(cmd, 'relative', posCoord):
-            self.actor.controllers['slit'].fsm.cmdFailed()
+        posCoord = self.controller.compute("dither", pix)
+        self.controller.fsm.getBusy()
+        if not self.controller.moveTo(cmd, 'relative', posCoord):
+            self.controller.fsm.cmdFailed()
         else:
-            self.actor.controllers['slit'].fsm.getIdle()
+            self.controller.fsm.getIdle()
             self.status(cmd)
 
     @threaded
@@ -172,11 +187,11 @@ class SlitCmd(object):
         """ Move along focus.
         """
         pix = cmd.cmd.keywords["pix"].values[0]
-        posCoord = self.actor.controllers['slit'].compute("focus", pix)
+        posCoord = self.controller.compute("focus", pix)
 
-        self.actor.controllers['slit'].fsm.getBusy()
-        if not self.actor.controllers['slit'].moveTo(cmd, 'relative', posCoord):
-            self.actor.controllers['slit'].fsm.cmdFailed()
+        self.controller.fsm.getBusy()
+        if not self.controller.moveTo(cmd, 'relative', posCoord):
+            self.controller.fsm.cmdFailed()
         else:
-            self.actor.controllers['slit'].fsm.getIdle()
+            self.controller.fsm.getIdle()
             self.status(cmd)
