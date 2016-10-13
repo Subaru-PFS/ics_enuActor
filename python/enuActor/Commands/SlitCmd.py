@@ -2,9 +2,21 @@
 
 import subprocess
 
+import numpy as np
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
 from wrap import threaded
+
+
+def degToRad(deg):
+    return 2 * np.pi * deg / 360
+
+
+def convertToWorld(array):
+    [X, Y, Z, U, V, W] = array
+    x = X * np.cos(degToRad(W)) - Y * np.sin(degToRad(W))
+    y = X * np.sin(degToRad(W)) + Y * np.cos(degToRad(W))
+    return [x, y, float(Z), float(U), float(V), float(W)]
 
 
 class SlitCmd(object):
@@ -24,14 +36,16 @@ class SlitCmd(object):
             ('slit', 'init', self.initialise),
             ('slit', 'halt', self.halt),
             ('slit', 'mode [@(operation|simulation)]', self.changeMode),
-            ('slit', 'get home', self.getHome),
-            ('slit', 'set home <X> <Y> <Z> <U> <V> <W>', self.setHome),
+            ('slit', 'get <system>', self.getSystem),
+            ('slit', 'set <system> <X> <Y> <Z> <U> <V> <W>', self.setSystem),
             ('slit', 'set home', self.setHomeCurrent),
             ('slit', 'move home', self.goHome),
             ('slit', 'move absolute <X> <Y> <Z> <U> <V> <W>', self.moveTo),
             ('slit', 'move relative [<X>] [<Y>] [<Z>] [<U>] [<V>] [<W>]', self.moveTo),
             ('slit', 'focus <pix>', self.goFocus),
             ('slit', 'dither <pix>', self.goDither),
+            ('slit', 'ack', self.ack),
+            ('slit', 'convert <X> <Y> <Z> <U> <V> <W>', self.convert),
 
         ]
 
@@ -44,6 +58,7 @@ class SlitCmd(object):
                                         keys.Key("V", types.Float(), help="V coordinate"),
                                         keys.Key("W", types.Float(), help="W coordinate"),
                                         keys.Key("pix", types.Float(), help="Number of pixel"),
+                                        keys.Key("system", types.String(), help="coordinate system"),
                                         )
 
     @property
@@ -67,17 +82,8 @@ class SlitCmd(object):
         ok, pos = self.controller.getPosition(cmd)
         if not ok:
             self.controller.fsm.cmdFailed()
-
-        ender('slit=%s,%s,%s' % (self.controller.fsm.current,
-                                 self.controller.currMode,
-                                 ','.join(["%.2f" % p for p in pos])))
-        # cmd.inform('state=%s' % self.controller.fsm.current)
-        # cmd.inform('mode=%s' % self.controller.currMode)
-        # ok, pos = self.controller.getPosition(cmd)
-        # if ok:
-        #     ender('position=%s' % ','.join(["%.2f" % p for p in pos]))
-        # else:
-        #     self.controller.fsm.cmdFailed()
+        ender('slit=%s,%s,%s' % (
+            self.controller.fsm.current, self.controller.currMode, ','.join(["%.4f" % p for p in pos])))
 
     @threaded
     def initialise(self, cmd):
@@ -99,14 +105,16 @@ class SlitCmd(object):
             self.status(cmd, doFinish)
 
     @threaded
-    def getHome(self, cmd):
+    def getSystem(self, cmd):
         """ Return Home value position
         """
-        if not self.controller.getHome(cmd):
-            self.controller.fsm.cmdFailed()
+        system = cmd.cmd.keywords["system"].values[0]
+        if not self.controller.getSystem(cmd, system):
+            pass
+            # self.controller.fsm.cmdFailed()
 
     @threaded
-    def setHome(self, cmd):
+    def setSystem(self, cmd):
         """ Change Home value position
         """
         X = cmd.cmd.keywords["X"].values[0]
@@ -115,10 +123,46 @@ class SlitCmd(object):
         U = cmd.cmd.keywords["U"].values[0]
         V = cmd.cmd.keywords["V"].values[0]
         W = cmd.cmd.keywords["W"].values[0]
-        if self.controller.setHome(cmd, [X, Y, Z, U, V, W]):
+        system = cmd.cmd.keywords["system"].values[0]
+
+        if self.controller.setSystem(cmd, system, [X, Y, Z, U, V, W]):
             cmd.finish()
         else:
-            self.controller.fsm.cmdFailed()
+            pass
+
+    @threaded
+    def convert(self, cmd):
+        """ Change Home value position
+        """
+        X = cmd.cmd.keywords["X"].values[0]
+        Y = cmd.cmd.keywords["Y"].values[0]
+        Z = cmd.cmd.keywords["Z"].values[0]
+        U = cmd.cmd.keywords["U"].values[0]
+        V = cmd.cmd.keywords["V"].values[0]
+        W = cmd.cmd.keywords["W"].values[0]
+        cmd.finish("system=%s" % str(convertToWorld([X, Y, Z, U, V, W])))
+
+    # @threaded
+    # def getHome(self, cmd):
+    #     """ Return Home value position
+    #     """
+    #     if not self.controller.getHome(cmd):
+    #         self.controller.fsm.cmdFailed()
+    #
+    # @threaded
+    # def setHome(self, cmd):
+    #     """ Change Home value position
+    #     """
+    #     X = cmd.cmd.keywords["X"].values[0]
+    #     Y = cmd.cmd.keywords["Y"].values[0]
+    #     Z = cmd.cmd.keywords["Z"].values[0]
+    #     U = cmd.cmd.keywords["U"].values[0]
+    #     V = cmd.cmd.keywords["V"].values[0]
+    #     W = cmd.cmd.keywords["W"].values[0]
+    #     if self.controller.setHome(cmd, [X, Y, Z, U, V, W]):
+    #         cmd.finish()
+    #     else:
+    #         self.controller.fsm.cmdFailed()
 
     @threaded
     def setHomeCurrent(self, cmd):
@@ -195,3 +239,7 @@ class SlitCmd(object):
         else:
             self.controller.fsm.getIdle()
             self.status(cmd)
+
+    @threaded
+    def ack(self, cmd):
+        self.controller.fsm.ack()

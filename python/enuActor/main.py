@@ -6,7 +6,8 @@ import logging
 from twisted.internet import reactor
 
 import actorcore.ICC
-
+from opscore.utility.qstr import qstr
+import ConfigParser
 
 class OurActor(actorcore.ICC.ICC):
     def __init__(self, name, productName=None, configFile=None, logLevel=logging.INFO):
@@ -24,6 +25,17 @@ class OurActor(actorcore.ICC.ICC):
         self.statusLoopCB = self.statusLoop
         
     def reloadConfiguration(self, cmd):
+        logging.info("reading config file %s", self.configFile)
+
+        try:
+            newConfig = ConfigParser.ConfigParser()
+            newConfig.read(self.configFile)
+        except Exception, e:
+            if cmd:
+                cmd.fail('text=%s' % (qstr("failed to read the configuration file, old config untouched: %s" % (e))))
+            raise
+
+        self.config = newConfig
         cmd.inform('sections=%08x,%r' % (id(self.config),
                                          self.config))
 

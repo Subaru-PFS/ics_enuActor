@@ -13,12 +13,13 @@ class Device(QThread):
         {'name': 'commOk', 'src': 'LOADED', 'dst': 'INIT'},
         {'name': 'commFailed', 'src': 'LOADED', 'dst': 'FAILED'},
         {'name': 'changeMode', 'src': ['LOADED', 'INIT', 'IDLE', 'FAILED', 'OFF', 'none'], 'dst': 'none'},
-        {'name': 'initOk', 'src': 'INIT', 'dst': 'IDLE'},
-        {'name': 'initFailed', 'src': 'INIT', 'dst': 'FAILED'},
+        {'name': 'initOk', 'src': ['INIT', 'IDLE'], 'dst': 'IDLE'},
+        {'name': 'initFailed', 'src': ['INIT', 'IDLE'], 'dst': 'FAILED'},
         {'name': 'cmdFailed', 'src': ['IDLE', 'INIT', 'BUSY'], 'dst': 'FAILED'},
         {'name': 'getBusy', 'src': 'IDLE', 'dst': 'BUSY'},
         {'name': 'getIdle', 'src': 'BUSY', 'dst': 'IDLE'},
         {'name': 'shutdown', 'src': ['IDLE', 'INIT'], 'dst': 'OFF'},
+        {'name': 'ack', 'src': ['FAILED'], 'dst': 'IDLE'},
 
     ]}
 
@@ -33,8 +34,8 @@ class Device(QThread):
 
     def changeMode(self, cmd=None, mode=None):
         """change mode from config file or from argument """
-
         cmd = self.actor.bcast if not cmd else cmd
+
         if self.loadCfg(cmd):
             cmd.inform("text='Loading %s parameters from config file...'"%self.name)
             self.currMode = mode if mode else self.currMode

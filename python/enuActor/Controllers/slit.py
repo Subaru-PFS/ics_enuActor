@@ -1,12 +1,10 @@
 #!/usr/bin/env python
 
-import time
-
 import numpy as np
-
-from Controllers.device import Device
 from Controllers.Simulator.slit_simu import SlitSimulator
+from Controllers.device import Device
 from Controllers.utils import hxp_drivers
+
 
 class slit(Device):
     timeout = 5
@@ -15,7 +13,7 @@ class slit(Device):
         # This sets up the connections to/from the hub, the logger, and the twisted reactor.
         #
         super(slit, self).__init__(actor, name)
-         # Hexapod Attributes
+        # Hexapod Attributes
         self.groupName = 'HEXAPOD'
         self.myxps = None
         self.socketId = None
@@ -23,12 +21,14 @@ class slit(Device):
         self.currPos = [np.nan] * 6
 
     def loadCfg(self, cmd):
+        self.actor.reloadConfiguration(cmd=cmd)
 
         self.currMode = self.actor.config.get('slit', 'mode')
         self.host = self.actor.config.get('slit', 'host')
         self.port = int(self.actor.config.get('slit', 'port'))
 
         self.home = [float(val) for val in self.actor.config.get('slit', 'home').split(',')]
+        print self.home
         self.slit_position = [float(val) for val in self.actor.config.get('slit', 'slit_position').split(',')]
         self.dither_axis = [float(val) for val in self.actor.config.get('slit', 'dither_axis').split(',')]
         self.focus_axis = [float(val) for val in self.actor.config.get('slit', 'focus_axis').split(',')]
@@ -45,7 +45,7 @@ class slit(Device):
         :return: True : if every steps are successfully operated, cmd is not finished
                  False: if the command fail, command is finished with cmd.fail
         """
-        #time.sleep(12)
+        # time.sleep(12)
 
         if self.currMode == 'operation':
             cmd.inform("text='Connecting to HXP...'")
@@ -74,9 +74,8 @@ class slit(Device):
         :return: True : if every steps are successfully operated, cmd not finished,
                  False : if a command fail, command is finished with cmd.fail
         """
-        import time
-        time.sleep(10)
         # Kill existing socket
+        print self.fsm.current
         if self._kill(cmd):
             cmd.inform("text='killing existing socket..._'")
         else:
@@ -91,22 +90,41 @@ class slit(Device):
             cmd.inform("text='seeking home ...'")
         else:
             return False
+        #
+        self.homeHexa = self.home
+        self.home = self.convertToWorld([sum(i) for i in zip(self.homeHexa, self.slit_position)])
 
         # Set Work to slit home coord
         if not self.setHome(cmd, self.home):
             return False
 
+        tool_value = self.slit_position[:3] + self.home[3:]
+        tool_value = self.convertToWorld(tool_value)[:3] + self.slit_position[3:]
         # Tool z = 21 + z_slit with 21 height of upper carriage
-        tool_value = [sum(i) for i in zip(self.slit_position, [0, 0, self.thicknessCarriage, 0, 0, 0])]
+        tool_value = [sum(i) for i in zip(tool_value, [0, 0, self.thicknessCarriage, 0, 0, 0])]
         # Set Tool to slit home coord instead of center of hexa
+
         if not self._hexapodCoordinateSysSet(cmd, 'Tool', *tool_value):
             return False
-
+        # print self.fsm.current
         if self._hexapodMoveAbsolute(cmd, *[0, 0, 0, 0, 0, 0]):
-            cmd.inform("text='going to home ...'")
+           cmd.inform("text='going to home ...'")
         else:
-            return False
+           return False
 
+        return True
+
+    def getSystem(self, cmd, system):
+        ok, ret = self._hexapodCoordinateSysGet(cmd, system)
+        if not ok:
+            return False
+        else:
+            cmd.finish("%s=%s" % (system.lower(), ','.join(["%.3f" % p for p in ret])))
+            return True
+
+    def setSystem(self, cmd, system, posCoord):
+        if not self._hexapodCoordinateSysSet(cmd, system, *posCoord):
+            return False
         return True
 
     def setHome(self, cmd, posCoord=None):
@@ -156,7 +174,7 @@ class slit(Device):
         if not ok:
             return False
         else:
-            ender("home=%s" % ','.join(["%.2f" % p for p in ret]))
+            ender("home=%s" % ','.join(["%.3f" % p for p in ret]))
             return True
 
     # def getHome(self, cmd, doFinish=True):
@@ -172,7 +190,7 @@ class slit(Device):
     #     if not ok:
     #         return False
     #     else:
-    #         ender("home=%s" % ','.join(["%.2f" % p for p in ret]))
+    #         ender("home=%s" % ','.join(["%.3f" % p for p in ret]))
     #         return True
 
     def getPosition(self, cmd):
@@ -246,6 +264,15 @@ class slit(Device):
 
         return list(self.magnification * pix * np.array(getattr(self, "%s_axis" % type)))
 
+    def convertToWorld(self, array):
+        def degToRad(deg):
+            return 2 * np.pi * deg / 360
+
+        [X, Y, Z, U, V, W] = array
+        x = X * np.cos(degToRad(W)) - Y * np.sin(degToRad(W))
+        y = X * np.sin(degToRad(W)) + Y * np.cos(degToRad(W))
+        return [round(x, 5), round(y, 5), float(Z), float(U), float(V), float(W)]
+
     def _getCurrentPosition(self, cmd):
         err, ret = self.errorChecker(self.myxps.GroupPositionCurrentGet, self.socketId, self.groupName, 6)
         if not err:
@@ -294,11 +321,12 @@ class slit(Device):
             return False
         else:
             ok, ret = self._hexapodCoordinateSysGet(cmd, coordSystem)
-            coordSystem = "home" if coordSystem == "Work" else coordSystem
+            # coordSystem = "home" if coordSystem == "Work" else coordSystem
             if ok:
-                cmd.inform("%s=%s'" % (coordSystem.lower(), ','.join(["%.2f" % p for p in ret])))
+                cmd.inform("%s=%s'" % (coordSystem.lower(), ','.join(["%.3f" % p for p in ret])))
                 return True
             else:
+                cmd.fail("text='%s'" % ret)
                 return False
 
     def _hexapodMoveAbsolute(self, cmd, x, y, z, u, v, w):
@@ -357,7 +385,7 @@ class slit(Device):
         # else:
         #     self.link_busy = True
         buf = func(*args)
-        #self.link_busy = False
+        # self.link_busy = False
         if buf[0] != 0:
             if buf[0] not in [-2, -108]:
                 [errorCode, errorString] = self.myxps.ErrorStringGet(self.socketId, buf[0])
