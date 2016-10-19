@@ -21,6 +21,7 @@ class slit(Device):
         self.currPos = [np.nan] * 6
 
     def loadCfg(self, cmd):
+
         self.actor.reloadConfiguration(cmd=cmd)
 
         self.currMode = self.actor.config.get('slit', 'mode')
@@ -28,12 +29,23 @@ class slit(Device):
         self.port = int(self.actor.config.get('slit', 'port'))
 
         self.home = [float(val) for val in self.actor.config.get('slit', 'home').split(',')]
-        print self.home
         self.slit_position = [float(val) for val in self.actor.config.get('slit', 'slit_position').split(',')]
         self.dither_axis = [float(val) for val in self.actor.config.get('slit', 'dither_axis').split(',')]
         self.focus_axis = [float(val) for val in self.actor.config.get('slit', 'focus_axis').split(',')]
         self.thicknessCarriage = float(self.actor.config.get('slit', 'thicknessCarriage'))
         self.magnification = float(self.actor.config.get('slit', 'magnification'))
+        self.lowBounds = [float(val) for val in self.actor.config.get('slit', 'low_bounds').split(',')]
+        self.highBounds = [float(val) for val in self.actor.config.get('slit', 'high_bounds').split(',')]
+
+        self.homeHexa = self.home
+        self.home = self.convertToWorld([sum(i) for i in zip(self.homeHexa, self.slit_position)])
+
+        # Set Tool to slit home coord instead of center of hexa
+
+        tool_value = self.slit_position[:3] + self.home[3:]
+        tool_value = self.convertToWorld(tool_value)[:3] + self.slit_position[3:]
+        # Tool z = 21 + z_slit with 21 height of upper carriage
+        self.tool_value = [sum(i) for i in zip(tool_value, [0, 0, self.thicknessCarriage, 0, 0, 0])]
 
         return True
 
@@ -75,7 +87,6 @@ class slit(Device):
                  False : if a command fail, command is finished with cmd.fail
         """
         # Kill existing socket
-        print self.fsm.current
         if self._kill(cmd):
             cmd.inform("text='killing existing socket..._'")
         else:
@@ -90,27 +101,21 @@ class slit(Device):
             cmd.inform("text='seeking home ...'")
         else:
             return False
-        #
-        self.homeHexa = self.home
-        self.home = self.convertToWorld([sum(i) for i in zip(self.homeHexa, self.slit_position)])
 
         # Set Work to slit home coord
-        if not self.setHome(cmd, self.home):
+        # if not self.setHome(cmd, self.home):
+        #    return False
+
+        if not self._hexapodCoordinateSysSet(cmd, 'Work', *self.home):
             return False
 
-        tool_value = self.slit_position[:3] + self.home[3:]
-        tool_value = self.convertToWorld(tool_value)[:3] + self.slit_position[3:]
-        # Tool z = 21 + z_slit with 21 height of upper carriage
-        tool_value = [sum(i) for i in zip(tool_value, [0, 0, self.thicknessCarriage, 0, 0, 0])]
-        # Set Tool to slit home coord instead of center of hexa
-
-        if not self._hexapodCoordinateSysSet(cmd, 'Tool', *tool_value):
+        if not self._hexapodCoordinateSysSet(cmd, 'Tool', *self.tool_value):
             return False
         # print self.fsm.current
         if self._hexapodMoveAbsolute(cmd, *[0, 0, 0, 0, 0, 0]):
-           cmd.inform("text='going to home ...'")
+            cmd.inform("text='going to home ...'")
         else:
-           return False
+            return False
 
         return True
 
@@ -127,39 +132,39 @@ class slit(Device):
             return False
         return True
 
-    def setHome(self, cmd, posCoord=None):
-        """setHome.
-        setHome to posCoord or to current if posCoord is None
-
-        .. warning:: posCoord requires the position of slit in world\
-        and not position of upper carriage of hexapod.
-
-        :param cmd
-        :param  posCoord: [x, y, z, u, v, w] or nothing if current
-        :return: True : if every steps are successfully operated, cmd not finished,
-                 False : if a command fail, command is finished with cmd.fail
-        """
-        if posCoord is None:
-            # position related to work
-            ok, posCoord = self._getCurrentPosition(cmd)
-            if not ok:
-                return False
-            # work related to WORLD
-            ok, curHome = self._hexapodCoordinateSysGet(cmd, 'Work')
-            if not ok:
-                return False
-            # position related to WORLD
-            posCoord = [sum(x) for x in zip(posCoord, curHome)]
-
-        # update Home slit related to WORLD
-        if not self._hexapodCoordinateSysSet(cmd, 'Work', *posCoord):
-            return False
-        else:
-            # update Home hexapod
-            self.homeHexa = [xi - xj for xi, xj in
-                             zip(posCoord, self.slit_position)]
-            self.home = posCoord
-            return True
+    # def setHome(self, cmd, posCoord=None):
+    #     """setHome.
+    #     setHome to posCoord or to current if posCoord is None
+    #
+    #     .. warning:: posCoord requires the position of slit in world\
+    #     and not position of upper carriage of hexapod.
+    #
+    #     :param cmd
+    #     :param  posCoord: [x, y, z, u, v, w] or nothing if current
+    #     :return: True : if every steps are successfully operated, cmd not finished,
+    #              False : if a command fail, command is finished with cmd.fail
+    #     """
+    #     if posCoord is None:
+    #         # position related to work
+    #         ok, posCoord = self._getCurrentPosition(cmd)
+    #         if not ok:
+    #             return False
+    #         # work related to WORLD
+    #         ok, curHome = self._hexapodCoordinateSysGet(cmd, 'Work')
+    #         if not ok:
+    #             return False
+    #         # position related to WORLD
+    #         posCoord = [sum(x) for x in zip(posCoord, curHome)]
+    #
+    #     # update Home slit related to WORLD
+    #     if not self._hexapodCoordinateSysSet(cmd, 'Work', *posCoord):
+    #         return False
+    #     else:
+    #         # update Home hexapod
+    #         self.homeHexa = [xi - xj for xi, xj in
+    #                          zip(posCoord, self.slit_position)]
+    #         self.home = posCoord
+    #         return True
 
     def getHome(self, cmd, doFinish=True):
         """getHome.
@@ -334,6 +339,12 @@ class slit(Device):
         ..note: coordSystem not specified because has to be 'Work'
 
         """
+
+        for lim_inf, lim_sup, coord in zip(self.lowBounds, self.highBounds, [x, y, z, u, v, w]):
+            if not lim_inf <= coord <= lim_sup:
+                cmd.fail("text='error %.4f not in boundaries'" % coord)
+                return False
+
         err, ret = self.errorChecker(self.myxps.HexapodMoveAbsolute, self.socketId, self.groupName, 'Work', x, y, z, u,
                                      v, w)
         if not err:
@@ -347,6 +358,11 @@ class slit(Device):
         ..todo: Add algorithm for simulation mode
 
         """
+        if not self.currPos == [np.nan] * 6:
+            for lim_inf, lim_sup, coord, pos in zip(self.lowBounds, self.highBounds, [x, y, z, u, v, w], self.currPos):
+                if not lim_inf <= pos + coord <= lim_sup:
+                    cmd.fail("text='error %.4f not in boundaries'" % pos + coord)
+
         err, ret = self.errorChecker(self.myxps.HexapodMoveIncremental, self.socketId, self.groupName, coordSystem, x,
                                      y, z, u, v, w)
         if not err:
