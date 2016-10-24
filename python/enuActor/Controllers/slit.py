@@ -342,7 +342,7 @@ class slit(Device):
 
         for lim_inf, lim_sup, coord in zip(self.lowBounds, self.highBounds, [x, y, z, u, v, w]):
             if not lim_inf <= coord <= lim_sup:
-                cmd.fail("text='error %.4f not in boundaries'" % coord)
+                cmd.fail("text='error %.5f not in boundaries'" % coord)
                 return False
 
         err, ret = self.errorChecker(self.myxps.HexapodMoveAbsolute, self.socketId, self.groupName, 'Work', x, y, z, u,
@@ -361,7 +361,7 @@ class slit(Device):
         if not self.currPos == [np.nan] * 6:
             for lim_inf, lim_sup, coord, pos in zip(self.lowBounds, self.highBounds, [x, y, z, u, v, w], self.currPos):
                 if not lim_inf <= pos + coord <= lim_sup:
-                    cmd.fail("text='error %.4f not in boundaries'" % pos + coord)
+                    cmd.fail("text='error %.5f not in boundaries'" % pos + coord)
 
         err, ret = self.errorChecker(self.myxps.HexapodMoveIncremental, self.socketId, self.groupName, coordSystem, x,
                                      y, z, u, v, w)

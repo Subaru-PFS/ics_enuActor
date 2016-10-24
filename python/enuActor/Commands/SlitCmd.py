@@ -83,7 +83,7 @@ class SlitCmd(object):
         if not ok:
             self.controller.fsm.cmdFailed()
         ender('slit=%s,%s,%s' % (
-            self.controller.fsm.current, self.controller.currMode, ','.join(["%.4f" % p for p in pos])))
+            self.controller.fsm.current, self.controller.currMode, ','.join(["%.5f" % p for p in pos])))
 
     @threaded
     def initialise(self, cmd):
@@ -243,3 +243,4 @@ class SlitCmd(object):
     @threaded
     def ack(self, cmd):
         self.controller.fsm.ack()
+        cmd.finish("text='ack ok'")
