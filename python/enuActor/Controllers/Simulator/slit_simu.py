@@ -50,22 +50,17 @@ class SlitSimulator(object):
         time.sleep(1)
         return [0]
 
-
     def HexapodMoveIncremental(self, socketId, GroupName, CoordinateSystem, dX, dY, dZ, dU, dV, dW):
         self.pos = [sum(i) for i in zip(self.pos, [dX, dY, dZ, dU, dV, dW])]
         time.sleep(1)
         return [0]
 
-
-
     def ErrorStringGet(self, socketId, err):
         return [[0, "Search your feelings"], [-42, "mah ! Mistakes happen"]][randint(0, 1)]
 
+    def GroupStatusGet(self, socketId, GroupName):
+        return [0, 12]
 
-
-        # def GroupStatusGet(self, socketId, GroupName):
-
-
-        # def GroupStatusStringGet(self, socketId, GroupStatusCode):
-
-
+    def GroupStatusStringGet(self, socketId, GroupStatusCode):
+        enum = {12: "Ready state from motion", 11: "Ready state from homing"}
+        return [0, enum[GroupStatusCode]]

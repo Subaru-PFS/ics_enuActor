@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 
-import subprocess
-
 import numpy as np
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
+import subprocess
 from wrap import threaded
 
 
@@ -35,10 +34,10 @@ class SlitCmd(object):
             ('slit', 'status', self.status),
             ('slit', 'init', self.initialise),
             ('slit', 'halt', self.halt),
+            ('slit', 'shutdown', self.shutdown),
             ('slit', 'mode [@(operation|simulation)]', self.changeMode),
-            ('slit', 'get <system>', self.getSystem),
-            ('slit', 'set <system> <X> <Y> <Z> <U> <V> <W>', self.setSystem),
-            ('slit', 'set home', self.setHomeCurrent),
+            ('slit', 'get [@(home|tool)]', self.getSystem),
+            ('slit', 'set [@(home|tool)] [<X>] [<Y>] [<Z>] [<U>] [<V>] [<W>]', self.setSystem),
             ('slit', 'move home', self.goHome),
             ('slit', 'move absolute <X> <Y> <Z> <U> <V> <W>', self.moveTo),
             ('slit', 'move relative [<X>] [<Y>] [<Z>] [<U>] [<V>] [<W>]', self.moveTo),
@@ -58,7 +57,6 @@ class SlitCmd(object):
                                         keys.Key("V", types.Float(), help="V coordinate"),
                                         keys.Key("W", types.Float(), help="W coordinate"),
                                         keys.Key("pix", types.Float(), help="Number of pixel"),
-                                        keys.Key("system", types.String(), help="coordinate system"),
                                         )
 
     @property
@@ -75,111 +73,65 @@ class SlitCmd(object):
         cmd.finish("text='Present and (probably) well'")
 
     @threaded
-    def status(self, cmd, doFinish=True):
+    def status(self, cmd):
         """Report state, mode, position"""
 
-        ender = cmd.finish if doFinish else cmd.inform
-        ok, pos = self.controller.getPosition(cmd)
-        if not ok:
-            self.controller.fsm.cmdFailed()
-        ender('slit=%s,%s,%s' % (
-            self.controller.fsm.current, self.controller.currMode, ','.join(["%.5f" % p for p in pos])))
+        [ok, ret] = self.controller.getInfo()
+        print ret, type(ret)
+        talk = cmd.inform if ok == 0 else cmd.warn
+        talk("slitInfo='%s'" % ret)
+
+        ok, ret = self.controller.getStatus()
+        ender = cmd.finish if ok else cmd.fail
+        ender('slit=%s' % ret)
 
     @threaded
     def initialise(self, cmd):
         """Initialise Device LOADED -> INIT
         """
-        if self.controller.initialise(cmd):
-            self.controller.fsm.initOk()
-            self.status(cmd)
-        else:
-            self.controller.fsm.initFailed()
+
+        self.controller.fsm.startInit(cmd=cmd)
+        self.status(cmd)
 
     @threaded
     def changeMode(self, cmd, doFinish=True):
         """Change device mode operation|simulation"""
         cmdKeys = cmd.cmd.keywords
         mode = "simulation" if "simulation" in cmdKeys else "operation"
-        self.controller.fsm.changeMode()
-        if self.controller.changeMode(cmd, mode):
-            self.status(cmd, doFinish)
+
+        self.controller.fsm.changeMode(cmd=cmd, mode=mode)
+        self.status(cmd)
 
     @threaded
-    def getSystem(self, cmd):
+    def getSystem(self, cmd, doFinish=True):
         """ Return Home value position
         """
-        system = cmd.cmd.keywords["system"].values[0]
-        if not self.controller.getSystem(cmd, system):
-            pass
-            # self.controller.fsm.cmdFailed()
+        cmdKeys = cmd.cmd.keywords
+        system, keyword = ("Work", "slitHome") if "home" in cmdKeys else ("Tool", "slitTool")
+
+        ender = cmd.finish if doFinish else cmd.inform
+        nender = cmd.fail if doFinish else cmd.warn
+        ok, ret = self.controller.getSystem(system)
+        ender = ender if ok else nender
+        ender("%s=%s" % (keyword, ','.join(["%.5f" % p for p in ret])))
 
     @threaded
     def setSystem(self, cmd):
         """ Change Home value position
         """
-        X = cmd.cmd.keywords["X"].values[0]
-        Y = cmd.cmd.keywords["Y"].values[0]
-        Z = cmd.cmd.keywords["Z"].values[0]
-        U = cmd.cmd.keywords["U"].values[0]
-        V = cmd.cmd.keywords["V"].values[0]
-        W = cmd.cmd.keywords["W"].values[0]
-        system = cmd.cmd.keywords["system"].values[0]
 
-        if self.controller.setSystem(cmd, system, [X, Y, Z, U, V, W]):
-            cmd.finish()
+        cmdKeys = cmd.cmd.keywords
+        system, vec = ("Work", self.controller.home) if "home" in cmdKeys else ("Tool", self.controller.tool_value)
+
+        posCoord = [cmdKeys[coord].values[0] if coord in cmdKeys else vec[i] for i, coord in
+                    enumerate(['X', 'Y', 'Z', 'U', 'V', 'W'])]
+
+        ok, ret = self.controller.setSystem(system, posCoord)
+        if ok:
+            self.getSystem(cmd, doFinish=False)
         else:
-            pass
-
-    @threaded
-    def convert(self, cmd):
-        """ Change Home value position
-        """
-        X = cmd.cmd.keywords["X"].values[0]
-        Y = cmd.cmd.keywords["Y"].values[0]
-        Z = cmd.cmd.keywords["Z"].values[0]
-        U = cmd.cmd.keywords["U"].values[0]
-        V = cmd.cmd.keywords["V"].values[0]
-        W = cmd.cmd.keywords["W"].values[0]
-        cmd.finish("system=%s" % str(convertToWorld([X, Y, Z, U, V, W])))
-
-    # @threaded
-    # def getHome(self, cmd):
-    #     """ Return Home value position
-    #     """
-    #     if not self.controller.getHome(cmd):
-    #         self.controller.fsm.cmdFailed()
-    #
-    # @threaded
-    # def setHome(self, cmd):
-    #     """ Change Home value position
-    #     """
-    #     X = cmd.cmd.keywords["X"].values[0]
-    #     Y = cmd.cmd.keywords["Y"].values[0]
-    #     Z = cmd.cmd.keywords["Z"].values[0]
-    #     U = cmd.cmd.keywords["U"].values[0]
-    #     V = cmd.cmd.keywords["V"].values[0]
-    #     W = cmd.cmd.keywords["W"].values[0]
-    #     if self.controller.setHome(cmd, [X, Y, Z, U, V, W]):
-    #         cmd.finish()
-    #     else:
-    #         self.controller.fsm.cmdFailed()
-
-    @threaded
-    def setHomeCurrent(self, cmd):
-        """ Change Home value position according to current
-        """
-        if self.controller.setHome(cmd):
-            cmd.finish()
-        else:
-            self.controller.fsm.cmdFailed()
-
-    def goHome(self, cmd):
-        self.controller.fsm.getBusy()
-        if not self.controller.moveTo(cmd, 'absolute'):
-            self.controller.fsm.cmdFailed()
-        else:
-            self.controller.fsm.getIdle()
-            self.status(cmd)
+            cmd.warn("text='set new system failed : %s" % ret)
+        self.status(cmd)
 
     @threaded
     def moveTo(self, cmd):
@@ -188,14 +140,42 @@ class SlitCmd(object):
         """
         cmdKeys = cmd.cmd.keywords
         mode = "absolute" if "absolute" in cmdKeys else "relative"
-        posCoord = [cmd.cmd.keywords[coord].values[0] if coord in cmdKeys else 0 for coord in
+        posCoord = [cmdKeys[coord].values[0] if coord in cmdKeys else 0.0 for coord in
                     ['X', 'Y', 'Z', 'U', 'V', 'W']]
-        self.controller.fsm.getBusy()
-        if not self.controller.moveTo(cmd, mode, posCoord):
-            self.controller.fsm.cmdFailed()
+        print posCoord
+        ok, ret = self.controller.moveTo(mode, posCoord)
+        if ok:
+            cmd.inform("text='move ok'")
         else:
-            self.controller.fsm.getIdle()
-            self.status(cmd)
+            cmd.warn("text='%s" % ret)
+
+        self.status(cmd)
+
+    @threaded
+    def goHome(self, cmd):
+        """    # Go to home related to work : [0,0,0,0,0,0]
+        """
+
+        ok, ret = self.controller.moveTo("absolute", [0.0] * 6)
+        if ok:
+            cmd.inform("text='move ok'")
+        else:
+            cmd.warn("text='%s" % ret)
+
+        self.status(cmd)
+
+
+    @threaded
+    def shutdown(self, cmd):
+        """ Not implemented yet. It should stop movement.
+        """
+        ok, ret = self.controller.shutdown(cmd)
+        if ok:
+            cmd.inform("text='slit controller is now offline'")
+        else:
+            cmd.warn("text='%s" % ret)
+        self.status(cmd)
+         #pdu should do something at this point
 
     @threaded
     def halt(self, cmd):
@@ -220,7 +200,7 @@ class SlitCmd(object):
         pix = cmd.cmd.keywords["pix"].values[0]
         posCoord = self.controller.compute("dither", pix)
         self.controller.fsm.getBusy()
-        if not self.controller.moveTo(cmd, 'relative', posCoord):
+        if not self.controller.moveTo('relative', posCoord):
             self.controller.fsm.cmdFailed()
         else:
             self.controller.fsm.getIdle()
@@ -234,7 +214,7 @@ class SlitCmd(object):
         posCoord = self.controller.compute("focus", pix)
 
         self.controller.fsm.getBusy()
-        if not self.controller.moveTo(cmd, 'relative', posCoord):
+        if not self.controller.moveTo('relative', posCoord):
             self.controller.fsm.cmdFailed()
         else:
             self.controller.fsm.getIdle()
@@ -244,3 +224,11 @@ class SlitCmd(object):
     def ack(self, cmd):
         self.controller.fsm.ack()
         cmd.finish("text='ack ok'")
+
+    def convert(self, cmd):
+        """ Change Home value position
+        """
+        cmdKeys = cmd.cmd.keywords
+        posCoord = [cmdKeys[coord].values[0] for coord in ['X', 'Y', 'Z', 'U', 'V', 'W']]
+
+        cmd.finish("system=%s" % str(convertToWorld(posCoord)))

@@ -46,8 +46,8 @@ class OurActor(actorcore.ICC.ICC):
             self.attachAllControllers()
             self.everConnected = True
             for c in self.controllers:
-                if not self.controllers[c].changeMode():
-                    return
+                self.controllers[c].fsm.startLoading()
+
             logging.info("All Controllers started")
 
 

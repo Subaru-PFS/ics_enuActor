@@ -32,7 +32,6 @@ EthernetClient g_client;
 
 // BIA Controller MODES
 int bia_mode;
-int safe_on;
 
 int cmdnok;
 
@@ -56,9 +55,9 @@ void setup()
 {    
   Serial.begin(9600);
   // this check is only needed on the Leonardo:
-   while (!Serial) {
-    ; // wait for serial port to connect. Needed for Leonardo only
-  }
+  // while (!Serial) {
+  //  ; // wait for serial port to connect. Needed for Leonardo only
+  //}
   Serial.println("Search your Feelings");
   
   if (Ethernet.begin(mac) == 0) {
@@ -72,7 +71,6 @@ void setup()
 
    // Set BIA :ode to IDLE
   bia_mode = 0;
-  safe_on = 0;
   
   //////////////////////////////////// PARAM BIA /////////////////////////////////////////
   g_aduty = 0; // 0% duty 
@@ -151,44 +149,34 @@ void Command(EthernetClient g_client, String mycommand){
   switch (bia_mode) {
     case 0:
     // We are in Idle state
-      if (mycommand=="bia_on\r\n"){
-          if (check_interlock(mycommand)==1){
+      if (mycommand.substring(0,6)=="bia_on"){
             bia_mode = 2;
             cmdnok = 0;}
-          else {
-            g_client.write("intlk");
-            cmdnok = 1;} 
-      }
-      
-      if (mycommand=="shut_open\r\n"){
-        if (check_interlock(mycommand)==1){
+
+      if (mycommand.substring(0,9)=="shut_open"){
             bia_mode = 1;
             cmdnok = 0;}
-          else {
-          g_client.write("intlk");
-          cmdnok = 1;}
-      }  
-
+            
       break;
 
     case 1:
     // We are in Shutter state
-      if (mycommand=="shut_close\r\n"){
+      if (mycommand.substring(0,10)=="shut_close"){
         bia_mode = 0;
         cmdnok = 0;}
     
-      if (mycommand=="bia_on\r\n"){
+      if (mycommand.substring(0,6)=="bia_on"){
         g_client.write("intlk"); 
         cmdnok  = 1;}
       break;
 
     case 2:
     // We are in BIA state
-      if (mycommand=="bia_off\r\n"){
+      if (mycommand.substring(0,7)=="bia_off"){
         bia_mode= 0;
         cmdnok = 0;}
     
-      if (mycommand=="shut_open\r\n"){ 
+      if (mycommand.substring(0,9)=="shut_open"){ 
         g_client.write("intlk");
         cmdnok = 1;}
       break;
@@ -197,16 +185,16 @@ void Command(EthernetClient g_client, String mycommand){
     // Controller status command parsing
   
   
-  if (mycommand=="init\r\n"){
+  if (mycommand.substring(0,4)=="init"){
     bia_mode = 0;
     cmdnok = 0;}
         
-  if (mycommand=="statword\r\n"){
+  if (mycommand.substring(0,8)=="statword"){
     g_client.write(statword); 
     g_client.write("\0");
     cmdnok = 1;}
     
-  if (mycommand=="status\r\n"){ 
+  if (mycommand.substring(0,6)=="status"){ 
     g_client.print(bia_mode);
     cmdnok = 1;}
     
@@ -227,24 +215,17 @@ void Command(EthernetClient g_client, String mycommand){
     Serial.println(g_aduty);
     cmdnok = 0;} 
 
-  if (mycommand=="get_period\r\n"){
+  if (mycommand.substring(0,10)=="get_period"){
     g_client.print(g_aperiod);
     cmdnok = 1;} 
     
-  if (mycommand=="get_duty\r\n"){
+  if (mycommand.substring(0,8)=="get_duty"){
     g_client.print(g_aduty);
     cmdnok = 1;} 
     
-  if (mycommand=="safe_on\r\n"){
-    safe_on = 1;
-    cmdnok = 1;}
-    
-  if (mycommand=="safe_off\r\n"){
-    safe_on = 0;
-    cmdnok = 1;}
     
    ////////////////////////////////////////////////////////////////////////////////////////////////ARRET SERVEUR /////////////////////////////////////////////////////////////////////////
-  if (mycommand=="stop\r\n"){
+  if (mycommand.substring(0,4)=="stop"){
     bia_mode = 0;
     g_client.write("ok\r\n");
     g_client.stop();
@@ -286,12 +267,6 @@ void Command(EthernetClient g_client, String mycommand){
 
 }
 
-int check_interlock(String mycommand){
-  if (safe_on==1){
-    if (mycommand =="bia_on\r\n" && statword !="01001000") {return 0;}
-    //if (mycommand =="shut_close\r\n" && statword !="01001000") {return 0;}     GET STATUS FROM PHOTODIODE
-    }
-  return 1;}
     
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////BOUCLE PRINCIPALE///////////////////////////////////////////////////////////////////////////////////////

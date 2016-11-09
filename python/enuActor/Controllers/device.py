@@ -1,70 +1,62 @@
 __author__ = 'alefur'
 import copy
-
-from fysom import Fysom
-
 from actorcore.QThread import QThread
+from fysom import Fysom
+from wrap import safeCheck
 
 
 class Device(QThread):
-    map = {'events': [
-        {'name': 'loadOk', 'src': 'none', 'dst': 'LOADED'},
-        {'name': 'loadFailed', 'src': 'none', 'dst': 'FAILED'},
-        {'name': 'commOk', 'src': 'LOADED', 'dst': 'INIT'},
-        {'name': 'commFailed', 'src': 'LOADED', 'dst': 'FAILED'},
-        {'name': 'changeMode', 'src': ['LOADED', 'INIT', 'IDLE', 'FAILED', 'OFF', 'none'], 'dst': 'none'},
-        {'name': 'initOk', 'src': ['INIT', 'IDLE'], 'dst': 'IDLE'},
-        {'name': 'initFailed', 'src': ['INIT', 'IDLE'], 'dst': 'FAILED'},
-        {'name': 'cmdFailed', 'src': ['IDLE', 'INIT', 'BUSY'], 'dst': 'FAILED'},
-        {'name': 'getBusy', 'src': 'IDLE', 'dst': 'BUSY'},
-        {'name': 'getIdle', 'src': 'BUSY', 'dst': 'IDLE'},
-        {'name': 'shutdown', 'src': ['IDLE', 'INIT'], 'dst': 'OFF'},
-        {'name': 'ack', 'src': ['FAILED'], 'dst': 'IDLE'},
-
-    ]}
-
     def __init__(self, actor, name):
         # This sets up the connections to/from the hub, the logger, and the twisted reactor.
         #
         super(Device, self).__init__(actor, name, timeout=2)
 
         self.currMode = "undef"
-        self.fsm = Fysom(copy.deepcopy(Device.map))
-        self.fsm.onchangestate = self.printstatechange
+        self.fsm = Fysom({'initial': 'OFF',
+                          'events': [
+                              {'name': 'startLoading', 'src': 'OFF', 'dst': 'LOADING'},
+                              {'name': 'loadCfgOk', 'src': 'LOADING', 'dst': 'LOADED'},
+                              {'name': 'loadCfgFailed', 'src': 'LOADING', 'dst': 'FAILED'},
+                              {'name': 'startCommunicationOk', 'src': 'LOADED', 'dst': 'CONNECTED'},
+                              {'name': 'startCommunicationFailed', 'src': 'LOADED', 'dst': 'FAILED'},
+                              {'name': 'startInit', 'src': 'CONNECTED', 'dst': 'INITIALISING'},
+                              {'name': 'initialiseOk', 'src': 'INITIALISING', 'dst': 'IDLE'},
+                              {'name': 'initialiseFailed', 'src': 'INITIALISING', 'dst': 'FAILED'},
+                              {'name': 'changeMode', 'src': ['CONNECTED', 'IDLE'], 'dst': 'LOADING'},
+                              {'name': 'goBusy', 'src': 'IDLE', 'dst': 'BUSY'},
+                              {'name': 'goIdle', 'src': 'BUSY', 'dst': 'IDLE'},
+                              {'name': 'shutdown', 'src': ['CONNECTED', 'IDLE'], 'dst': 'OFF'},
+                          ],
+                          'callbacks': {
+                              'onLOADING': self.loadCfg,
+                              'onLOADED': self.startCommunication,
+                              'onINITIALISING': self.initialise,
+                          }})
 
-    def changeMode(self, cmd=None, mode=None):
-        """change mode from config file or from argument """
-        cmd = self.actor.bcast if not cmd else cmd
+        # self.fsm.onchangestate = self.printstatechange
 
-        if self.loadCfg(cmd):
-            cmd.inform("text='Loading %s parameters from config file...'"%self.name)
-            self.currMode = mode if mode else self.currMode
-            self.fsm.loadOk()
-            if self.startCommunication(cmd):
-                self.fsm.commOk()
-                return True
-            else:
-                self.fsm.commFailed()
-                return False
-        else:
-            self.fsm.loadFailed()
-            return False
-
-    def loadCfg(self, cmd):
+    @safeCheck
+    def loadCfg(self, e):
         """prototype """
+
         self.currMode = self.actor.config.get(self.name, 'mode')
-        return True
+        return True, "load Configuration file Ok"
 
-    def startCommunication(self, cmd):
+    @safeCheck
+    def startCommunication(self, e):
         """prototype """
-        return True
+        return True, "startCommunication Ok"
 
-    def initialise(self, cmd):
+    @safeCheck
+    def initialise(self, e):
         """prototype """
-        return True
+        return True, "Initialisation Ok"
+
+    def getStatus(self):
+        return True, "status"
 
     def printstatechange(self, e):
-        self.actor.bcast.inform('state=%s' % self.fsm.current)
+        print ('%s state=%s' % (self.name, self.fsm.current))
 
     def stop(self):
         self.exit()
