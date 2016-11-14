@@ -1,13 +1,16 @@
 #!/usr/bin/env python
 
 import time
+import socket
 
 
-class BshSimulator(object):
+class BshSimulator(socket.socket):
     statword = {0: "01001000", 1: "10010000", 2: "01001000"}
 
     def __init__(self):
-        super(BshSimulator, self).__init__()
+        socket.socket.__init__(self, socket.AF_INET, socket.SOCK_STREAM)
+        self.send = self.fakeSend
+        self.recv = self.fakeRecv
         self.g_aduty = 0
         self.g_aperiod = 100
         self.bia_mode = 0
@@ -16,10 +19,6 @@ class BshSimulator(object):
 
         self.buf = []
 
-    def settimeout(self, timeout):
-        if type(timeout) not in [int, float]:
-            raise TypeError
-
     def connect(self, (ip, port)):
         time.sleep(0.5)
         if type(ip) is not str:
@@ -27,26 +26,18 @@ class BshSimulator(object):
         if type(port) is not int:
             raise TypeError
 
-    def send(self, mycommand):
+    def fakeSend(self, mycommand):
         time.sleep(0.1)
         self.cmdnok = 2
         self.statword = BshSimulator.statword[self.bia_mode]
         if self.bia_mode == 0:  # IDLE STATE
             if mycommand == "bia_on\r\n":
-                if self.check_interlock(mycommand) == 1:
-                    self.bia_mode = 2
-                    self.cmdnok = 0
-                else:
-                    self.buf.append("intlk")
-                    self.cmdnok = 1
-
+                self.bia_mode = 2
+                self.cmdnok = 0
             elif mycommand == "shut_open\r\n":
-                if self.check_interlock(mycommand) == 1:
-                    self.bia_mode = 1
-                    self.cmdnok = 0
-                else:
-                    self.buf.append("intlk")
-                    cmdnok = 1
+                self.bia_mode = 1
+                self.cmdnok = 0
+
         elif self.bia_mode == 1:  # SHUTTER STATE
             if mycommand == "shut_close\r\n":
                 self.bia_mode = 0
@@ -105,14 +96,10 @@ class BshSimulator(object):
         else:
             self.buf.append("nok\r\n")
 
-    def check_interlock(self, mycommand):
-        if self.safe_on == 1:
-            if mycommand == "bia_on\r\n" and self.statword != "01001000":
-                return 0
-                # if (mycommand =="shut_close\r\n" && statword !="01001000") {return 0;}     GET STATUS FROM PHOTODIODE
-        return 1
+    def sendall(self, fullCmd):
+        self.fakeSend(fullCmd)
 
-    def recv(self, buffer_size):
+    def fakeRecv(self, buffer_size):
         ret = self.buf[0]
         self.buf = self.buf[1:]
         return str(ret)

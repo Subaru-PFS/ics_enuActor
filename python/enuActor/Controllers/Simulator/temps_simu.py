@@ -2,32 +2,36 @@
 
 from random import randrange
 import time
-
+import socket
 import numpy as np
 
 
-class TempsSimulator(object):
+class TempsSimulator(socket.socket):
     def __init__(self):
-        super(TempsSimulator, self).__init__()
+        socket.socket.__init__(self, socket.AF_INET, socket.SOCK_STREAM)
+        self.send = self.fakeSend
+        self.recv = self.fakeRecv
         self.buf = []
 
-    def settimeout(self, timeout):
-        if type(timeout) not in [int, float]:
-            raise TypeError
-
     def connect(self, (ip, port)):
-        time.sleep(0.5)
+        time.sleep(0.25)
         if type(ip) is not str:
             raise TypeError
         if type(port) is not int:
             raise TypeError
 
-    def send(self, message):
+    def fakeSend(self, message):
         temps = 20 * np.ones(8)
-        self.buf.append(','.join(['%.2f' % (t + 0.1 * randrange(-2, 2)) for t in temps]))
+        self.buf.append(','.join(['%.2f' % (t + 0.1 * randrange(-2, 2)) for t in temps])+'\r\n')
 
-    def recv(self, buffer_size):
-        time.sleep(0.5)
+    def fakeRecv(self, buffer_size):
+        time.sleep(0.25)
         ret = self.buf[0]
         self.buf = self.buf[1:]
         return ret
+
+    def sendall(self, fullCmd):
+        self.fakeSend(fullCmd)
+
+    def close(self):
+        pass

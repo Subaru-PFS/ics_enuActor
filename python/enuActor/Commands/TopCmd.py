@@ -84,8 +84,8 @@ class TopCmd(object):
             cmd.fail('text="failed to connect controller %s: %s"' % (instanceName,
                                                                      e))
             return
-        if self.actor.controllers[controller].changeMode(cmd):
-            cmd.finish(self.controllerKey())
+
+        cmd.finish(self.controllerKey())
 
     def disconnect(self, cmd, doFinish=True):
         """ Disconnect the given, or all, controller objects. """

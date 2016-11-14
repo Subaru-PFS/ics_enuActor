@@ -2,8 +2,8 @@
 
 
 import opscore.protocols.keys as keys
-from wrap import threaded
-
+from enuActor.Controllers.wrap import threaded
+import subprocess
 
 class TempsCmd(object):
     def __init__(self, actor):
@@ -27,34 +27,47 @@ class TempsCmd(object):
         self.keys = keys.KeysDictionary("enu_temps", (1, 1),
                                         )
 
-    @threaded
-    def status(self, cmd, doFinish=True):
-        """Report temps"""
-        cmd.inform('state=%s' % self.actor.controllers['temps'].fsm.current)
-        cmd.inform('mode=%s' % self.actor.controllers['temps'].currMode)
-        ender = cmd.finish if doFinish else cmd.inform
-        ok, temps = self.actor.controllers['temps'].fetchTemps(cmd)
-        if ok:
-            ender('temps=%s' % temps)
 
+    @property
+    def controller(self):
+        try:
+            return self.actor.controllers[self.name]
+        except KeyError:
+            raise RuntimeError('%s controller is not connected.' % (self.name))
 
     @threaded
-    def changeMode(self, cmd, doFinish=True):
-        """Change device mode operation|simulation"""
-        cmdKeys = cmd.cmd.keywords
-        mode = "simulation" if "simulation" in cmdKeys else "operation"
-        self.actor.controllers['temps'].fsm.changeMode()
+    def ping(self, cmd):
+        """Query the actor for liveness/happiness."""
 
-        if self.actor.controllers['temps'].changeMode(cmd, mode):
-            self.status(cmd, doFinish)
+        cmd.inform('version=%s' % subprocess.check_output(["git", "describe"]))
+        cmd.finish("text='Present and (probably) well'")
 
+    @threaded
+    def status(self, cmd):
+        """Report state, mode, position"""
+        ok, ret = self.controller.getStatus(cmd)
+        ender = cmd.finish if ok else cmd.fail
+        ender('temps=%s' % ret)
 
     @threaded
     def initialise(self, cmd):
         """Initialise Device LOADED -> INIT
         """
-        if self.actor.controllers['temps'].initialise(cmd):
-            self.actor.controllers['temps'].fsm.initOk()
-            self.status(cmd)
-        else:
-            self.actor.controllers['temps'].fsm.initFailed()
+        try:
+            self.controller.fsm.startInit(cmd=cmd)
+        except Exception as e:
+            cmd.warn('text="failed to initialise for %s: %s"' % (self.name, e))
+
+        self.status(cmd)
+
+    @threaded
+    def changeMode(self, cmd):
+        """Change device mode operation|simulation"""
+        cmdKeys = cmd.cmd.keywords
+        mode = "simulation" if "simulation" in cmdKeys else "operation"
+        try:
+            self.controller.fsm.changeMode(cmd=cmd, mode=mode)
+        except Exception as e:
+            cmd.warn('text="failed to change mode for %s: %s"' % (self.name, e))
+
+        self.status(cmd)

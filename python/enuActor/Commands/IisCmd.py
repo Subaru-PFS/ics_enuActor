@@ -2,7 +2,7 @@
 
 
 import opscore.protocols.keys as keys
-from wrap import threaded
+from enuActor.Controllers.wrap import threaded
 
 
 class IisCmd(object):

@@ -2,28 +2,28 @@
 
 import argparse
 import logging
+import ConfigParser
 
 from twisted.internet import reactor
-
 import actorcore.ICC
 from opscore.utility.qstr import qstr
-import ConfigParser
+
 
 class OurActor(actorcore.ICC.ICC):
     def __init__(self, name, productName=None, configFile=None, logLevel=logging.INFO):
         # This sets up the connections to/from the hub, the logger, and the twisted reactor.
         #
-        actorcore.ICC.ICC.__init__(self, name, 
-                                   productName=productName, 
+        actorcore.ICC.ICC.__init__(self, name,
+                                   productName=productName,
                                    configFile=configFile)
         self.logger.setLevel(logLevel)
-        
+
         self.everConnected = False
 
         self.monitors = dict()
-        
+
         self.statusLoopCB = self.statusLoop
-        
+
     def reloadConfiguration(self, cmd):
         logging.info("reading config file %s", self.configFile)
 
@@ -45,25 +45,23 @@ class OurActor(actorcore.ICC.ICC):
             self.allControllers = [s.strip() for s in self.config.get(self.name, 'startingControllers').split(',')]
             self.attachAllControllers()
             self.everConnected = True
-            for c in self.controllers:
-                self.controllers[c].fsm.startLoading()
-
             logging.info("All Controllers started")
 
-
-            # reactor.callLater(10, self.status_check)
+    def attachController(self, controller, instanceName=None):
+        actorcore.ICC.ICC.attachController(self, controller, instanceName)
+        self.controllers[controller].fsm.startLoading()
 
     def statusLoop(self, controller):
         try:
             self.callCommand("%s status" % (controller))
         except:
             pass
-        
+
         if self.monitors[controller] > 0:
             reactor.callLater(self.monitors[controller],
                               self.statusLoopCB,
                               controller)
-            
+
     def monitor(self, controller, period, cmd=None):
         if controller not in self.monitors:
             self.monitors[controller] = 0
@@ -77,7 +75,8 @@ class OurActor(actorcore.ICC.ICC):
             self.statusLoopCB(controller)
         else:
             cmd.warn('text="adjusted %s loop to %gs"' % (controller, self.monitors[controller]))
-            
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', default=None, type=str, nargs='?',
@@ -87,12 +86,13 @@ def main():
     parser.add_argument('--name', default='enu', type=str, nargs='?',
                         help='identity')
     args = parser.parse_args()
-    
+
     theActor = OurActor('enu',
                         productName='enuActor',
                         configFile=args.config,
                         logLevel=args.logLevel)
     theActor.run()
+
 
 if __name__ == '__main__':
     main()

@@ -1,8 +1,11 @@
 #!/usr/bin/env python
 
 
+import subprocess
+
 import opscore.protocols.keys as keys
-from wrap import threaded
+
+from enuActor.Controllers.wrap import threaded
 
 
 class RexmCmd(object):
@@ -20,6 +23,7 @@ class RexmCmd(object):
             ('rexm', 'status', self.status),
             ('rexm', 'mode [@(operation|simulation)]', self.changeMode),
             ('rexm', 'init', self.initialise),
+            ('rexm', 'move [@(low|mid)]', self.moveTo),
 
         ]
 
@@ -27,33 +31,61 @@ class RexmCmd(object):
         self.keys = keys.KeysDictionary("enu_rexm", (1, 1),
                                         )
 
-    @threaded
-    def status(self, cmd, doFinish=True):
-        """Report rexm"""
-        cmd.inform('state=%s' % self.actor.controllers['rexm'].fsm.current)
-        cmd.inform('mode=%s' % self.actor.controllers['rexm'].currMode)
-        ender = cmd.finish if doFinish else cmd.inform
-        if self.actor.controllers['rexm'].getPosition(cmd):
-            ender('position=%s' % self.actor.controllers['rexm'].currPos)
-        else:
-            self.actor.controllers['rexm'].fsm.cmdFailed()
+    @property
+    def controller(self):
+        try:
+            return self.actor.controllers[self.name]
+        except KeyError:
+            raise RuntimeError('%s controller is not connected.' % (self.name))
 
     @threaded
-    def changeMode(self, cmd, doFinish=True):
-        """Change device mode operation|simulation"""
-        cmdKeys = cmd.cmd.keywords
-        mode = "simulation" if "simulation" in cmdKeys else "operation"
-        self.actor.controllers['rexm'].fsm.changeMode()
+    def ping(self, cmd):
+        """Query the actor for liveness/happiness."""
+        cmd.inform('version=%s' % subprocess.check_output(["git", "describe"]))
+        cmd.finish("text='Present and (probably) well'")
 
-        if self.actor.controllers['rexm'].changeMode(cmd, mode):
-            self.status(cmd, doFinish)
+    @threaded
+    def status(self, cmd):
+        """Report state, mode, position"""
+
+        ok, ret = self.controller.getStatus(cmd)
+        ender = cmd.finish if ok else cmd.fail
+        ender('rexm=%s' % ret)
 
     @threaded
     def initialise(self, cmd):
         """Initialise Device LOADED -> INIT
         """
-        if self.actor.controllers['rexm'].initialise(cmd):
-            self.actor.controllers['rexm'].fsm.initOk()
-            self.status(cmd)
+        try:
+            self.controller.fsm.startInit(cmd=cmd)
+        except Exception as e:
+            cmd.warn('text="failed to initialise for %s: %s"' % (self.name, e))
+
+        self.status(cmd)
+
+    @threaded
+    def changeMode(self, cmd):
+        """Change device mode operation|simulation"""
+        cmdKeys = cmd.cmd.keywords
+        mode = "simulation" if "simulation" in cmdKeys else "operation"
+        try:
+            self.controller.fsm.changeMode(cmd=cmd, mode=mode)
+        except Exception as e:
+            cmd.warn('text="failed to change mode for %s: %s"' % (self.name, e))
+
+        self.status(cmd)
+
+    @threaded
+    def moveTo(self, cmd):
+        """ Move to low|mid resolution position
+        """
+        cmdKeys = cmd.cmd.keywords
+        position = "low" if "low" in cmdKeys else "mid"
+
+        ok, ret = self.controller.moveTo(cmd, position)
+        if ok:
+            cmd.inform("text='move ok'")
         else:
-            self.actor.controllers['rexm'].fsm.initFailed()
+            cmd.warn("text='%s" % ret)
+
+        self.status(cmd)

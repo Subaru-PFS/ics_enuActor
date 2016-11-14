@@ -2,8 +2,7 @@
 
 
 import opscore.protocols.keys as keys
-from wrap import threaded
-
+from enuActor.Controllers.wrap import threaded
 
 class PduCmd(object):
     def __init__(self, actor):

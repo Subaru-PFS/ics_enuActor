@@ -1,30 +1,31 @@
 #!/usr/bin/env python
 import time
-
+from serial import Serial
 
 class RexmSimulator(object):
     def __init__(self):
         super(RexmSimulator, self).__init__()
 
         self.buf = []
+        self.portOpen = False
 
-    def settimeout(self, timeout):
-        if type(timeout) not in [int, float]:
-            raise TypeError
+    def readable(self):
+        return True
 
-    def connect(self, (ip, port)):
-        time.sleep(0.5)
-        if type(ip) is not str:
-            raise TypeError
-        if type(port) is not int:
-            raise TypeError
+    def writable(self):
+        return True
 
-    def send(self, message):
+    def isOpen(self):
+        return self.portOpen
 
-        self.buf.append("medium")
+    def open(self):
+        self.portOpen = True
 
-    def recv(self, buffer_size):
-        time.sleep(0.5)
+    def write(self, data):
+        if data == "move":
+            self.buf.append("ok")
+
+    def readline(self, *args, **kwargs):
         ret = self.buf[0]
         self.buf = self.buf[1:]
         return ret
