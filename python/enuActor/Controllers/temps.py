@@ -87,7 +87,7 @@ class temps(Device):
         except Exception as e:
             return False, "failed to initialise for %s: %s" % (self.name, e)
 
-    def getStatus(self, cmd=None):
+    def getStatus(self, cmd=None, doFinish=True):
         """getStatus
         temperature is nan if the controller is unreachable
         :param cmd,
@@ -100,7 +100,11 @@ class temps(Device):
         else:
             ok, temps = True, ','.join(["%.2f" % t for t in [np.nan] * 8])
 
-        return ok, "%s,%s,%s" % (self.fsm.current, self.currMode, temps)
+        ender = cmd.finish if doFinish else cmd.inform
+        fender = cmd.fail if doFinish else cmd.warn
+
+        ender = ender if ok else fender
+        ender("temps=%s,%s,%s" % (self.fsm.current, self.currMode, temps))
 
     def fetchTemps(self, cmd):
         """fetchTemps

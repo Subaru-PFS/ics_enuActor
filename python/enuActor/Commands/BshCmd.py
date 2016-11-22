@@ -23,10 +23,10 @@ class BshCmd(object):
             ('bsh', 'ping', self.ping),
             ('bsh', 'status', self.status),
             ('bsh', 'init', self.initialise),
-            ('bsh', 'mode [@(operation|simulation)]', self.changeMode),
+            ('bsh', '@(operation|simulation)', self.changeMode),
             ('bsh', 'config [<duty>] [<period>]', self.sendConfig),
-            ('bia', '[@(on|off)]', self.biaSwitch),
-            ('shutters', '[@(open|close)]', self.shutterSwitch),
+            ('bia', '@(on|off) [@(force)]', self.biaSwitch),
+            ('shutters', '@(open|close) [@(force)]', self.shutterSwitch),
 
         ]
 
@@ -53,20 +53,15 @@ class BshCmd(object):
     @threaded
     def status(self, cmd):
         """Report state, mode, position"""
-        ok, ret = self.controller.getStatus(cmd)
-        ender = cmd.inform if ok else cmd.warn
-        for keyword, status in ret:
-            ender("%s=%s" % (keyword, status))
-        cmd.finish()
+
+        self.controller.getStatus(cmd)
 
     @threaded
     def initialise(self, cmd):
         """Initialise Device LOADED -> INIT
         """
-        try:
-            self.controller.fsm.startInit(cmd=cmd)
-        except Exception as e:
-            cmd.warn('text="failed to initialise for %s: %s"' % (self.name, e))
+
+        self.controller.fsm.startInit(cmd=cmd)
 
         self.status(cmd)
 
@@ -75,10 +70,8 @@ class BshCmd(object):
         """Change device mode operation|simulation"""
         cmdKeys = cmd.cmd.keywords
         mode = "simulation" if "simulation" in cmdKeys else "operation"
-        try:
-            self.controller.fsm.changeMode(cmd=cmd, mode=mode)
-        except Exception as e:
-            cmd.warn('text="failed to change mode for %s: %s"' % (self.name, e))
+
+        self.controller.fsm.changeMode(cmd=cmd, mode=mode)
 
         self.status(cmd)
 
@@ -100,7 +93,11 @@ class BshCmd(object):
             else:
                 duty = cmdKeys["duty"].values[0]
 
-        self.controller.biaConfig(cmd, period, duty, doClose=True)
+        try:
+            self.controller.biaConfig(cmd, period, duty, doClose=True)
+            cmd.finish()
+        except Exception as e:
+             cmd.fail("text='%s biaConfig failed : %s'" % (self.name, e))
 
     @threaded
     def biaSwitch(self, cmd):
@@ -108,9 +105,8 @@ class BshCmd(object):
         cmdKeys = cmd.cmd.keywords
         cmdStr = "bia_on" if "on" in cmdKeys else "bia_off"
 
-        ok, ret = self.controller.switch(cmd, cmdStr)
-        if not ok:
-            cmd.warn("text='%s'" % ret)
+        self.controller.switch(cmd, cmdStr)
+
         self.status(cmd)
 
     @threaded
@@ -119,7 +115,6 @@ class BshCmd(object):
         cmdKeys = cmd.cmd.keywords
         cmdStr = "shut_open" if "open" in cmdKeys else "shut_close"
 
-        ok, ret = self.controller.switch(cmd, cmdStr)
-        if not ok:
-            cmd.warn("text='%s'" % ret)
+        self.controller.switch(cmd, cmdStr)
+
         self.status(cmd)

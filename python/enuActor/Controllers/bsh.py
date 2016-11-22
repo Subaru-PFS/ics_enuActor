@@ -1,34 +1,21 @@
 #!/usr/bin/env python
 
 import socket
+from datetime import datetime as dt
+import sys
 
 from enuActor.Controllers.device import Device
 import enuActor.Controllers.bufferedSocket as bufferedSocket
-from enuActor.Controllers.wrap import safeCheck
+from enuActor.Controllers.wrap import safeCheck, busy
 from enuActor.Controllers.Simulator.bsh_simu import BshSimulator
 
 reload(bufferedSocket)
 
 
 class bsh(Device):
-    SOCK_TIMEOUT = 5
-    BUFFER_SIZE = 1024
     ilock_s_machine = {0: ("close", "off"), 1: ("open", "off"), 2: ("close", "on")}
     shut_stat = [{0: "close", 1: "open"}, {0: "open", 1: "close"}, {0: "ok", 1: "error"}]
     in_position = {0: '01001000', 1: '10010000', 2: '01001000'}
-    transition = {
-        (("close", "off"), "shut_open"): (True, ""),
-        (("close", "off"), "bia_off"): (True, "bia already off"),
-        (("close", "off"), "bia_on"): (True, ""),
-        (("close", "off"), "shut_close"): (True, "shutters already closed"),
-        (("close", "on"), "shut_close"): (True, "shutters already closed"),
-        (("close", "on"), "shut_open"): (False, "Interlock !"),
-        (("close", "on"), "bia_off"): (True, ""),
-        (("close", "on"), "bia_on"): (True, "bia already on"),
-        (("open", "off"), "shut_close"): (True, ""),
-        (("open", "off"), "shut_open"): (True, "shutters already open"),
-        (("open", "off"), "bia_off"): (True, "bia already off"),
-        (("open", "off"), "bia_on"): (False, "Interlock !")}
 
     def __init__(self, actor, name):
         # This sets up the connections to/from the hub, the logger, and the twisted reactor.
@@ -61,10 +48,9 @@ class bsh(Device):
             self.biaDuty = float(self.actor.config.get('bsh', 'bia_duty'))
 
         except Exception as e:
-            return False, 'Config file badly formatted, Exception : %s ' % str(e)
+            raise type(e), type(e)("%s Config file badly formatted :  %s" % (self.name, e)), sys.exc_info()[2]
 
-        cmd.inform("text='config File successfully loaded")
-        return True, ''
+        cmd.inform("text='%s config File successfully loaded" % self.name)
 
     def startCommunication(self, cmd):
         """startCommunication
@@ -73,14 +59,15 @@ class bsh(Device):
         :return: True, ret: if the communication is established with the board, fsm (LOADING => LOADED)
                  False, ret: if the communication failed with the board, ret is the error, fsm (LOADING => FAILED)
         """
+        cmd.inform("text='Connecting to %s in ...%s'" % (self.name, self.currMode))
 
         self.bshSimu = BshSimulator() if self.currMode == "simulation" else None  # Create new simulator
-        cmd.inform("text='Connecting to intlck in ...%s'" % self.currMode)
         try:
-            s = self.connectSock(cmd)
-            return True, "Connected to interlock board"
+            s = self.connectSock()
         except Exception as e:
-            return False, e
+            raise type(e), type(e)("Connection to %s has failed, Exception :  %s" % (self.name, e)), sys.exc_info()[2]
+
+        cmd.inform("text='Connected to %s'" % self.name)
 
     @safeCheck
     def initialise(self, e):
@@ -100,12 +87,16 @@ class bsh(Device):
             self.biaConfig(cmd)
             reply = self.sendOneCommand("init", doClose=False, cmd=cmd)
             if reply == "":
-                return True, 'Bsh Successfully initialised'
-
+                cmd.inform("text='%s Successfully initialised'" % self.name)
+                return True
+            cmd.warn("text='%s has replied nok : %s'") % (self.name, e)
+            return False
         except Exception as e:
-            return False, "failed to initialise for %s: %s" % (self.name, e)
+            cmd.warn("text='%s init failed : %s'") % (self.name, e)
+            return False
 
-    def switch(self, cmd, cmdStr):
+    @busy
+    def switch(self, cmd, cmdStr, doForce=False):
         """switch
         Command bia or shutters
         check that cmdStr is not breaking interlock
@@ -114,18 +105,24 @@ class bsh(Device):
         :return: True, ''
                  False, ret : if a an error ret occured
         """
-        ok, ret = bsh.transition[(self.shState, self.biaState), cmdStr]
+        try:
+            self.checkInterlock(self.shState, self.biaState, cmdStr, doForce=doForce)
+        except Exception as e:
+            cmd.warn("text='%s switch failed : %s'" % (self.name, e))
+            return True
 
-        if ok:
-            try:
-                reply = self.sendOneCommand(cmdStr, doClose=False, cmd=cmd)
-                ok, ret = (True, "") if reply == "" else (False, "warning %s return %s" % (cmdStr, reply))
-            except Exception as e:
-                ok, ret = False, "failed to send %s to bsh :%s" % (cmdStr, e)
+        try:
+            reply = self.sendOneCommand(cmdStr, doClose=False, cmd=cmd)
+            if reply == "":
+                return True
+            else:
+                raise Exception("warning %s return %s" % (cmdStr, reply))
 
-        return ok, ret
+        except Exception as e:
+            cmd.warn("text='%s switch failed : %s'" % (self.name, e))
+            return False
 
-    def getStatus(self, cmd):
+    def getStatus(self, cmd, doFinish=True):
         """getStatus
         Get status from bsh board if it has been initialised
 
@@ -133,14 +130,22 @@ class bsh(Device):
         :return: True, [(shutters=state, mode, position),(bia=state, mode, position)]
                  False, [(shutters=state, mode, undef),(bia=state, mode, undef)]
         """
-        if self.fsm.current in ['IDLE', 'BUSY']:
-            ok, ret = self._getCurrentStatus(cmd)
-            (self.shState, self.biaState) = ret if ok else ("undef", "undef")
-        else:
-            ok, self.shState, self.biaState = True, "undef", "undef"
+        ender = cmd.finish if doFinish else cmd.inform
+        fender = cmd.fail if doFinish else cmd.warn
+        (self.shState, self.biaState) = ("undef", "undef")
 
-        return ok, [("shutters", "%s,%s,%s" % (self.fsm.current, self.currMode, self.shState)),
-                    ("bia", "%s,%s,%s" % (self.fsm.current, self.currMode, self.biaState))]
+        if self.fsm.current in ['LOADED', 'IDLE', 'BUSY']:
+            try:
+                (self.shState, self.biaState) = self._getCurrentStatus(cmd)
+
+            except Exception as e:
+                cmd.warn("text='%s getStatus failed : %s'" % (self.name, e))
+                ender = fender
+
+        talk = cmd.inform if ender != fender else cmd.warn
+
+        talk("shutters=%s,%s,%s,%s" % (self.fsm.current, self.currMode, self.shState, dt.utcnow().isoformat()))
+        ender("bia=%s,%s,%s" % (self.fsm.current, self.currMode, self.biaState))
 
     def _getCurrentStatus(self, cmd):
         """getStatus
@@ -150,22 +155,18 @@ class bsh(Device):
         :return: True, current position from interlock state machine
                  False, (undef, undef) if an error has occured
         """
-        try:
-            reply = self.sendOneCommand("status", doClose=False, cmd=cmd)
-            self.ilockState = int(reply)
 
-            statword = self.sendOneCommand("statword", doClose=True, cmd=cmd)
-            if bsh.in_position[self.ilockState] != statword:
-                cmd.warn("text='shutters not in position'")
-                for i, shutter in enumerate(["shb", "shr"]):
-                    cmd.warn("%s=%s" % (
-                        shutter, ','.join([bsh.shut_stat[j % 3][int(statword[j])] for j in range(i * 3, (i + 1) * 3)])))
+        reply = self.sendOneCommand("status", doClose=False, cmd=cmd)
+        self.ilockState = int(reply)
 
-            return True, bsh.ilock_s_machine[self.ilockState]
+        statword = self.sendOneCommand("statword", doClose=True, cmd=cmd)
+        if bsh.in_position[self.ilockState] != statword:
+            cmd.warn("text='shutters not in position'")
+            for i, shutter in enumerate(["shb", "shr"]):
+                cmd.warn("%s=%s" % (
+                    shutter, ','.join([bsh.shut_stat[j % 3][int(statword[j])] for j in range(i * 3, (i + 1) * 3)])))
 
-        except Exception as e:
-            cmd.warn('text="failed to get status for %s: %s"' % (self.name, e))
-            return False, ''
+        return bsh.ilock_s_machine[self.ilockState]
 
     def biaConfig(self, cmd, biaPeriod=None, biaDuty=None, doClose=False):
         """ Send and Display bia config
@@ -178,17 +179,37 @@ class bsh(Device):
         """
         biaPeriod = self.biaPeriod if biaPeriod is None else biaPeriod
         biaDuty = self.biaDuty if biaDuty is None else biaDuty
-        try:
-            reply = self.sendOneCommand("set_period%i" % biaPeriod, doClose=False, cmd=cmd)
-            reply = self.sendOneCommand("set_duty%i" % biaDuty, doClose=False, cmd=cmd)
-            period = self.sendOneCommand("get_period", doClose=False, cmd=cmd)
-            duty = self.sendOneCommand("get_duty", doClose=doClose, cmd=cmd)
-            cmd.inform("biaConfig=%s,%s" % (period, duty))
-            self.biaPeriod, self.biaDuty = biaPeriod, biaDuty
-        except Exception as e:
-            cmd.warn('text="failed to get bia config for %s: %s"' % (self.name, e))
 
-    def connectSock(self, cmd):
+        reply = self.sendOneCommand("set_period%i" % biaPeriod, doClose=False, cmd=cmd)
+        reply = self.sendOneCommand("set_duty%i" % biaDuty, doClose=False, cmd=cmd)
+
+        period = self.sendOneCommand("get_period", doClose=False, cmd=cmd)
+        duty = self.sendOneCommand("get_duty", doClose=doClose, cmd=cmd)
+
+        self.biaPeriod, self.biaDuty = period, duty
+        cmd.inform("biaConfig=%s,%s" % (period, duty))
+
+    def checkInterlock(self, shState, biaState, cmdStr, doForce=False):
+
+        transition = {
+            (("close", "off"), "shut_open"): (True, ""),
+            (("close", "off"), "bia_off"): (doForce, "bia already off"),
+            (("close", "off"), "bia_on"): (True, ""),
+            (("close", "off"), "shut_close"): (doForce, "shutters already closed"),
+            (("close", "on"), "shut_close"): (doForce, "shutters already closed"),
+            (("close", "on"), "shut_open"): (False, "Interlock !"),
+            (("close", "on"), "bia_off"): (True, ""),
+            (("close", "on"), "bia_on"): (doForce, "bia already on"),
+            (("open", "off"), "shut_close"): (True, ""),
+            (("open", "off"), "shut_open"): (doForce, "shutters already open"),
+            (("open", "off"), "bia_off"): (doForce, "bia already off"),
+            (("open", "off"), "bia_on"): (False, "Interlock !")}
+
+        (ok, ret) = transition[(shState, biaState), cmdStr]
+        if not ok:
+            raise Exception("Transition not allowed %s" % ret)
+
+    def connectSock(self):
         """ Connect socket if self.sock is None
 
         :param cmd : current command,
@@ -200,19 +221,18 @@ class bsh(Device):
                 s = socket.socket(socket.AF_INET,
                                   socket.SOCK_STREAM) if self.currMode == "operation" else self.bshSimu
                 s.settimeout(1.0)
-            except socket.error as e:
-                cmd.warn('text="failed to create socket for %s: %s"' % (self.name, e))
-                raise
+            except Exception as e:
+                raise type(e), type(e)("failed to create socket for %s: %s" % (self.name, e)), sys.exc_info()[2]
             try:
                 s.connect((self.host, self.port))
-            except socket.error as e:
-                cmd.warn('text="failed to connect to %s: %s"' % (self.name, e))
-                raise
+            except Exception as e:
+                raise type(e), type(e)("failed to connect to %s: %s" % (self.name, e))
+
             self.sock = s
 
         return self.sock
 
-    def closeSock(self, cmd):
+    def closeSock(self):
         """ close socket
 
         :param cmd : current command,
@@ -222,8 +242,8 @@ class bsh(Device):
         if self.sock is not None:
             try:
                 self.sock.close()
-            except socket.error as e:
-                cmd.warn('text="failed to close socket for %s: %s"' % (self.name, e))
+            except Exception as e:
+                raise type(e), type(e)("failed to close socket for %s: %s" % (self.name, e)), sys.exc_info()[2]
 
         self.sock = None
 
@@ -251,30 +271,26 @@ class bsh(Device):
 
         fullCmd = "%s%s" % (cmdStr, self.EOL)
         self.logger.debug('sending %r', fullCmd)
-        cmd.diag('text="sending %r"' % fullCmd)
 
-        s = self.connectSock(cmd)
+        s = self.connectSock()
         try:
             s.sendall(fullCmd)
-        except socket.error as e:
-            cmd.warn('text="failed to send to interlock: %s"' % (e))
-            raise
+        except Exception as e:
+            raise type(e), type(e)("failed to send %s to %s: %s" % (fullCmd, self.name, e)), sys.exc_info()[2]
 
         reply = self.getOneResponse(sock=s, cmd=cmd)
         if doClose:
-            self.closeSock(cmd)
+            self.closeSock()
 
         return reply
 
     def getOneResponse(self, sock=None, cmd=None):
         if sock is None:
-            sock = self.connectSock(cmd)
+            sock = self.connectSock()
 
         ret = self.ioBuffer.getOneResponse(sock=sock, cmd=cmd)
         reply = ret.strip()
 
         self.logger.debug('received %r', reply)
-        if cmd is not None:
-            cmd.diag('text="received %r"' % reply)
 
         return reply

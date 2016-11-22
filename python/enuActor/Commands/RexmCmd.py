@@ -21,9 +21,10 @@ class RexmCmd(object):
         #
         self.vocab = [
             ('rexm', 'status', self.status),
-            ('rexm', 'mode [@(operation|simulation)]', self.changeMode),
+            ('rexm', '@(operation|simulation)', self.changeMode),
             ('rexm', 'init', self.initialise),
-            ('rexm', 'move [@(low|mid)]', self.moveTo),
+            ('rexm', '@(move) @(low|mid)', self.moveTo),
+            ('rexm', 'abort', self.abort),
 
         ]
 
@@ -48,18 +49,14 @@ class RexmCmd(object):
     def status(self, cmd):
         """Report state, mode, position"""
 
-        ok, ret = self.controller.getStatus(cmd)
-        ender = cmd.finish if ok else cmd.fail
-        ender('rexm=%s' % ret)
+        self.controller.getStatus(cmd)
 
     @threaded
     def initialise(self, cmd):
         """Initialise Device LOADED -> INIT
         """
-        try:
-            self.controller.fsm.startInit(cmd=cmd)
-        except Exception as e:
-            cmd.warn('text="failed to initialise for %s: %s"' % (self.name, e))
+
+        self.controller.fsm.startInit(cmd=cmd)
 
         self.status(cmd)
 
@@ -68,10 +65,8 @@ class RexmCmd(object):
         """Change device mode operation|simulation"""
         cmdKeys = cmd.cmd.keywords
         mode = "simulation" if "simulation" in cmdKeys else "operation"
-        try:
-            self.controller.fsm.changeMode(cmd=cmd, mode=mode)
-        except Exception as e:
-            cmd.warn('text="failed to change mode for %s: %s"' % (self.name, e))
+
+        self.controller.fsm.changeMode(cmd=cmd, mode=mode)
 
         self.status(cmd)
 
@@ -82,10 +77,17 @@ class RexmCmd(object):
         cmdKeys = cmd.cmd.keywords
         position = "low" if "low" in cmdKeys else "mid"
 
-        ok, ret = self.controller.moveTo(cmd, position)
-        if ok:
-            cmd.inform("text='move ok'")
-        else:
-            cmd.warn("text='%s" % ret)
+        self.controller.moveTo(cmd, position)
 
         self.status(cmd)
+
+
+    def abort(self, cmd):
+        """ Move to low|mid resolution position
+        """
+
+        try:
+            self.controller.abort(cmd)
+            self.status(cmd)
+        except Exception as e:
+            cmd.fail()

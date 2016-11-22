@@ -1,5 +1,6 @@
 __author__ = 'alefur'
 import logging
+import sys
 
 from actorcore.QThread import QThread
 
@@ -27,6 +28,7 @@ class Device(QThread):
                               {'name': 'changeMode', 'src': ['LOADED', 'IDLE'], 'dst': 'LOADING'},
                               {'name': 'goBusy', 'src': 'IDLE', 'dst': 'BUSY'},
                               {'name': 'goIdle', 'src': 'BUSY', 'dst': 'IDLE'},
+                              {'name': 'goFailed', 'src': 'BUSY', 'dst': 'FAILED'},
                               {'name': 'shutdown', 'src': ['LOADED', 'IDLE'], 'dst': 'OFF'},
                           ],
                           'callbacks': {
@@ -47,11 +49,15 @@ class Device(QThread):
         """
         cmd = e.cmd if hasattr(e, "cmd") else self.actor.bcast
         mode = e.mode if hasattr(e, "mode") else None
-        ok, ret = self.loadCfg(cmd, mode)
-        if ok:
-            return self.startCommunication(cmd)
-        else:
-            return ok, ret
+        try:
+            self.loadCfg(cmd, mode)
+            self.startCommunication(cmd)
+
+        except Exception as e:
+            cmd.warn("text='%s load device failed : %s'" % (self.name, e))
+            return False
+
+        return True
 
     def loadCfg(self, cmd, mode=None):
         """loadCfg
@@ -63,10 +69,9 @@ class Device(QThread):
         """
         try:
             self.currMode = self.actor.config.get(self.name, 'mode') if mode is None else mode
-            cmd.inform("text='Config File successfully loaded'")
-            return True, ""
         except Exception as e:
-            return False, 'Config file badly formatted, Exception : %s ' % str(e)
+            raise type(e), type(e)("%s Config file badly formatted, Exception :  %s" % (self.name, e)), sys.exc_info()[
+                2]
 
     def startCommunication(self, cmd):
         """startCommunication
@@ -76,7 +81,6 @@ class Device(QThread):
                  False, ret: if the communication failed with the board, ret is the error, fsm (LOADING => FAILED)
         """
         cmd.inform("text='startCommunication Ok'")
-        return True, "Device successfully loaded"
 
     @safeCheck
     def initialise(self, e):
@@ -88,7 +92,7 @@ class Device(QThread):
         :return: True, ret : if every steps are successfully operated, fsm (LOADED => IDLE)
                  False, ret : if a command fail, user if warned with error ret, fsm (LOADED => FAILED)
         """
-        return True, "Initialisation Ok"
+        return True
 
     def getStatus(self, cmd=None):
         """getStatus

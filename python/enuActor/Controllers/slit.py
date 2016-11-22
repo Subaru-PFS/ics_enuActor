@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+import sys
+
 import numpy as np
 
 from enuActor.Controllers.Simulator.slit_simu import SlitSimulator
@@ -9,7 +11,7 @@ from enuActor.Controllers.wrap import safeCheck, busy
 
 
 class slit(Device):
-    timeout = 5
+    timeout = 2
 
     @staticmethod
     def convertToWorld(array):
@@ -56,7 +58,7 @@ class slit(Device):
             self.highBounds = [float(val) for val in self.actor.config.get('slit', 'high_bounds').split(',')]
 
         except Exception as e:
-            return False, 'Config file badly formatted, Exception : %s ' % str(e)
+            raise type(e), type(e)("%s Config file badly formatted :  %s" % (self.name, e)), sys.exc_info()[2]
 
         self.homeHexa = self.home
         self.home = slit.convertToWorld(
@@ -69,8 +71,7 @@ class slit(Device):
         # Tool z = 21 + z_slit with 21 height of upper carriage
         self.tool_value = [sum(i) for i in zip(tool_value, [0, 0, self.thicknessCarriage, 0, 0, 0])]
 
-        cmd.inform("text='config File successfully loaded")
-        return True, ''
+        cmd.inform("text='%s config File successfully loaded" % self.name)
 
     def startCommunication(self, cmd):
 
@@ -80,22 +81,19 @@ class slit(Device):
         :return: True, ret: if the communication is established with the controller, fsm goes to LOADED
                  False, ret: if the communication failed with the controller, ret is the error, fsm goes to FAILED
         """
+        cmd.inform("text='Connecting to %s in ...%s'" % (self.name, self.currMode))
 
         if self.currMode == 'operation':
-            cmd.inform("text='Connecting to HXP...'")
             self.myxps = hxp_drivers.XPS()
             self.socketId = self.myxps.TCP_ConnectToServer(self.host, self.port, slit.timeout)
-
         else:
-            cmd.inform("text='Connecting to Slit Simulator'")
             self.myxps = SlitSimulator(self.home)
-            print type(self.myxps)
             self.socketId = 1
 
         if self.socketId == -1:
-            return False, 'Connection to Hexapod failed check IP & Port'
+            raise Exception('Connection to Hexapod failed check IP & Port')
 
-        return True, 'Connected to Hexapod'
+        cmd.inform("text='Connected to %s'" % self.name)
 
     @safeCheck
     def initialise(self, e):
@@ -114,42 +112,32 @@ class slit(Device):
         """
 
         cmd = e.cmd if hasattr(e, "cmd") else self.actor.bcast
+        try:
+            cmd.inform("text='killing existing socket..._'")
+            self._kill()
 
-        cmd.inform("text='killing existing socket..._'")
-        ok, ret = self._kill()
-        if not ok:
-            return False, ret
+            cmd.inform("text='initialising hxp..._'")
+            self._initialize()
 
-        cmd.inform("text='initialising hxp..._'")
-        ok, ret = self._initialize()
-        if not ok:
-            return False, ret
+            cmd.inform("text='seeking home ...'")
+            self._homeSearch()
 
-        cmd.inform("text='seeking home ...'")
-        ok, ret = self._homeSearch()
-        if not ok:
-            return False, ret
-
-        ok, ret = self._hexapodCoordinateSysSet('Work', *self.home)
-        if ok:
+            self._hexapodCoordinateSysSet('Work', *self.home)
             cmd.inform("slitHome=%s" % ','.join(["%.5f" % p for p in self.home]))
-        else:
-            return False, ret
 
-        ok, ret = self._hexapodCoordinateSysSet('Tool', *self.tool_value)
-        if ok:
+            self._hexapodCoordinateSysSet('Tool', *self.tool_value)
             cmd.inform("slitTool=%s" % ','.join(["%.5f" % p for p in self.tool_value]))
-        else:
-            return False, ret
 
-        cmd.inform("text='going to home ...'")
-        ok, ret = self._hexapodMoveAbsolute(*[0, 0, 0, 0, 0, 0])
-        if ok:
-            return True, 'Slit Successfully initialised'
-        else:
-            return False, ret
+            cmd.inform("text='going to home ...'")
+            self._hexapodMoveAbsolute(*[0, 0, 0, 0, 0, 0])
 
-    def getStatus(self, cmd=None):
+            cmd.inform("text='%s Successfully initialised'" % self.name)
+            return True
+        except Exception as e:
+            cmd.warn("text='%s init failed : %s'") % (self.name, e)
+            return False
+
+    def getStatus(self, cmd=None, doFinish=True):
         """getStatus
         position is nan if the controller is unreachable
         :param cmd,
@@ -157,33 +145,20 @@ class slit(Device):
                  False, state, mode, nan, nan, nan, nan, nan, nan if not initialised or an error had occured
         """
 
-        if self.fsm.current in ['IDLE', 'BUSY']:
-            ok, ret = self._getCurrentPosition()
+        ender = cmd.finish if doFinish else cmd.inform
+        fender = cmd.fail if doFinish else cmd.warn
+        self.currPos = 6 * [np.nan]
 
-            self.currPos = ret if ok else [np.nan] * 6
-        else:
-            ok, self.currPos = True, [np.nan] * 6
-
-        return ok, "%s,%s,%s" % (self.fsm.current, self.currMode, ','.join(["%.5f" % p for p in self.currPos]))
-
-    def getInfo(self):
-        """getInfo
-        text information from the controller
-
-        :return: error_code, status
-
-        """
         if self.fsm.current in ['LOADED', 'IDLE', 'BUSY']:
-            [error, code] = self._getHxpStatus()
-            if error == 0:
-                return self._getHxpStatusString(code)
-            elif error == -2:
-                return [error, 'getHxpStatusString TCP timeout']
-            elif error == -108:
-                return [error, 'getHxpStatusString TCP/IP connection was closed by an admin']
-            else:
-                return [error, 'unknown error : %i' % error]
-        return [-1, "Connection to Hexapod failed"]
+            try:
+                ret = self._getHxpStatusString(self._getHxpStatus()[0])[0]
+                cmd.inform("slitInfo='%s'" % ret)
+                self.currPos = self._getCurrentPosition()
+            except Exception as e:
+                cmd.warn("text='%s getStatus failed : %s'" % (self.name, e))
+                ender = fender
+
+        ender("slit=%s,%s,%s" % (self.fsm.current, self.currMode, ','.join(["%.5f" % p for p in self.currPos])))
 
     @busy
     def moveTo(self, cmd, reference, posCoord):
@@ -196,12 +171,21 @@ class slit(Device):
         :param posCoord: [x, y, z, u, v, w]
         :return: True, ret : if the command raise no error
                  False, ret: if the command fail
-        """
-        if reference == 'absolute':
-            return self._hexapodMoveAbsolute(*posCoord)
 
-        elif reference == 'relative':
-            return self._hexapodMoveIncremental('Work', *posCoord)
+        """
+        try:
+            if reference == 'absolute':
+                ret = self._hexapodMoveAbsolute(*posCoord)
+
+            elif reference == 'relative':
+                ret = self._hexapodMoveIncremental('Work', *posCoord)
+
+        except Exception as e:
+            cmd.warn("text='move to %s failed : %s" % (reference, e))
+            if not "Warning: [X, Y, Z, U, V, W] exceed" in str(e):
+                return False
+
+        return True
 
     def getSystem(self, system):
         """getSystem
@@ -212,16 +196,15 @@ class slit(Device):
         :return: True, system
                  False, ret : if a an error ret occured
         """
+        ret = self._hexapodCoordinateSysGet(system)
+        if system == "Work":
+            self.home = ret
+        elif system == "Tool":
+            self.tool_value = ret
+        else:
+            raise Exception("system : %s does not exist" % system)
 
-        ok, ret = self._hexapodCoordinateSysGet(system)
-        if ok:
-            if system == "Work":
-                self.home = ret
-            elif system == "Tool":
-                self.tool_value = ret
-            else:
-                return False, "system : %s does not exist" % system
-        return ok, ret
+        return ret
 
     def setSystem(self, system, posCoord):
         """setSystem
@@ -243,19 +226,16 @@ class slit(Device):
         :return: True : if every steps are successfully operated, cmd is not finished
                  False: if the command fail, command is finished with cmd.fail
         """
-
         if self.fsm.current == "IDLE":
             cmd.inform("text='going to home ...'")
-            ok, ret = self.moveTo("absolute", [0, 0, 0, 0, 0, 0])
-            if not ok:
-                cmd.warn("text='error : %s'" % ret)
+            self._hexapodMoveAbsolute(*[0, 0, 0, 0, 0, 0])
 
         cmd.inform("text='killing existing socket..._'")
-        ok, ret = self._kill()
-        if ok:
-            self.fsm.shutdown()
+        self._kill()
 
-        return ok, ret
+        cmd.inform("text='shutting down ..._'")
+        self.fsm.shutdown()
+
 
     def compute(self, type, pix):
         """compute.
@@ -279,14 +259,14 @@ class slit(Device):
         """_getHxpStatus.
          :return: [error, code]
         """
-        return self.myxps.GroupStatusGet(self.socketId, self.groupName)
+        return self.errorChecker(self.myxps.GroupStatusGet, self.socketId, self.groupName)
 
     def _getHxpStatusString(self, code):
         """_getHxpStatusString.
          :param code, error code
          :return: [error, status string]
         """
-        return self.myxps.GroupStatusStringGet(self.socketId, code)
+        return self.errorChecker(self.myxps.GroupStatusStringGet, self.socketId, code)
 
     def _kill(self):
         """_kill.
@@ -346,7 +326,7 @@ class slit(Device):
         """
         for lim_inf, lim_sup, coord in zip(self.lowBounds, self.highBounds, [x, y, z, u, v, w]):
             if not lim_inf <= coord <= lim_sup:
-                return False, "error %.5f not in boundaries" % coord
+                raise Exception("Warning: [X, Y, Z, U, V, W] exceed : %.5f not permitted" % coord)
 
         return self.errorChecker(self.myxps.HexapodMoveAbsolute, self.socketId, self.groupName, 'Work', x, y, z, u, v,
                                  w)
@@ -363,11 +343,10 @@ class slit(Device):
          :return: True, ''
                   False, ret : if a an error ret occured
         """
-        if not self.currPos == [np.nan] * 6:
-            for lim_inf, lim_sup, coord, pos in zip(self.lowBounds, self.highBounds, [x, y, z, u, v, w],
-                                                    self.currPos):
-                if not lim_inf <= pos + coord <= lim_sup:
-                    return False, "error %.5f not in boundaries" % (pos + coord)
+
+        for lim_inf, lim_sup, coord, pos in zip(self.lowBounds, self.highBounds, [x, y, z, u, v, w], self.currPos):
+            if not lim_inf <= pos + coord <= lim_sup:
+                raise Exception("Warning: [X, Y, Z, U, V, W] exceed : %.5f not permitted" % (pos + coord))
 
         return self.errorChecker(self.myxps.HexapodMoveIncremental, self.socketId, self.groupName, coordSystem, x,
                                  y, z, u, v, w)
@@ -379,19 +358,18 @@ class slit(Device):
         """
 
         buf = func(*args)
-
         if buf[0] != 0:
             if buf[0] == -2:
-                return False, func.func_name + 'TCP timeout'
+                raise Exception(func.func_name + 'TCP timeout')
             elif buf[0] == -108:
-                return False, func.func_name + 'TCP/IP connection was closed by an admin'
+                raise Exception(func.func_name + 'TCP/IP connection was closed by an admin')
             else:
                 [errorCode, errorString] = self.myxps.ErrorStringGet(self.socketId, buf[0])
                 if buf[0] == -17:
-                    return False, "Warning: [X, Y, Z, U, V, W] exceed : %s" % errorString
+                    raise Exception("Warning: [X, Y, Z, U, V, W] exceed : %s" % errorString)
                 elif errorCode != 0:
-                    return False, func.func_name + ' : ERROR ' + str(errorCode)
+                    raise Exception(func.func_name + ' : ERROR ' + str(errorCode))
                 else:
-                    return False, func.func_name + ' : ' + errorString
-        else:
-            return True, buf[1:]
+                    raise Exception(func.func_name + ' : ' + errorString)
+
+        return buf[1:]

@@ -2,7 +2,6 @@
 
 import subprocess
 
-
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
 
@@ -26,9 +25,9 @@ class SlitCmd(object):
             ('slit', 'init', self.initialise),
             ('slit', 'halt', self.halt),
             ('slit', 'shutdown', self.shutdown),
-            ('slit', 'mode [@(operation|simulation)]', self.changeMode),
-            ('slit', 'get [@(home|tool)]', self.getSystem),
-            ('slit', 'set [@(home|tool)] [<X>] [<Y>] [<Z>] [<U>] [<V>] [<W>]', self.setSystem),
+            ('slit', '@(operation|simulation)', self.changeMode),
+            ('slit', '@(get) @(home|tool)', self.getSystem),
+            ('slit', '@(set) @(home|tool) [<X>] [<Y>] [<Z>] [<U>] [<V>] [<W>]', self.setSystem),
             ('slit', 'move home', self.goHome),
             ('slit', 'move absolute <X> <Y> <Z> <U> <V> <W>', self.moveTo),
             ('slit', 'move relative [<X>] [<Y>] [<Z>] [<U>] [<V>] [<W>]', self.moveTo),
@@ -66,22 +65,14 @@ class SlitCmd(object):
     def status(self, cmd):
         """Report state, mode, position"""
 
-        [ok, ret] = self.controller.getInfo()
-        talk = cmd.inform if ok == 0 else cmd.warn
-        talk("slitInfo='%s'" % ret)
-
-        ok, ret = self.controller.getStatus(cmd)
-        ender = cmd.finish if ok else cmd.fail
-        ender('slit=%s' % ret)
+        self.controller.getStatus(cmd)
 
     @threaded
     def initialise(self, cmd):
         """Initialise Device LOADED -> INIT
         """
-        try:
-            self.controller.fsm.startInit(cmd=cmd)
-        except Exception as e:
-            cmd.warn('text="failed to initialise for %s: %s"' % (self.name, e))
+
+        self.controller.fsm.startInit(cmd=cmd)
 
         self.status(cmd)
 
@@ -90,10 +81,8 @@ class SlitCmd(object):
         """Change device mode operation|simulation"""
         cmdKeys = cmd.cmd.keywords
         mode = "simulation" if "simulation" in cmdKeys else "operation"
-        try:
-            self.controller.fsm.changeMode(cmd=cmd, mode=mode)
-        except Exception as e:
-            cmd.warn('text="failed to change mode for %s: %s"' % (self.name, e))
+
+        self.controller.fsm.changeMode(cmd=cmd, mode=mode)
 
         self.status(cmd)
 
@@ -106,12 +95,8 @@ class SlitCmd(object):
         mode = "absolute" if "absolute" in cmdKeys else "relative"
         posCoord = [cmdKeys[coord].values[0] if coord in cmdKeys else 0.0 for coord in
                     ['X', 'Y', 'Z', 'U', 'V', 'W']]
-        print posCoord
-        ok, ret = self.controller.moveTo(cmd, mode, posCoord)
-        if ok:
-            cmd.inform("text='move ok'")
-        else:
-            cmd.warn("text='%s" % ret)
+
+        self.controller.moveTo(cmd, mode, posCoord)
 
         self.status(cmd)
 
@@ -119,12 +104,7 @@ class SlitCmd(object):
     def goHome(self, cmd):
         """    # Go to home related to work : [0,0,0,0,0,0]
         """
-
-        ok, ret = self.controller.moveTo(cmd, "absolute", [0.0] * 6)
-        if ok:
-            cmd.inform("text='move ok'")
-        else:
-            cmd.warn("text='%s" % ret)
+        self.controller.moveTo(cmd, "absolute", [0.0] * 6)
 
         self.status(cmd)
 
@@ -137,11 +117,11 @@ class SlitCmd(object):
 
         ender = cmd.finish if doFinish else cmd.inform
         nender = cmd.fail if doFinish else cmd.warn
-        ok, ret = self.controller.getSystem(system)
-        if ok:
+        try:
+            ret = self.controller.getSystem(system)
             ender("%s=%s" % (keyword, ','.join(["%.5f" % p for p in ret])))
-        else:
-            nender("text='get %s failed : %s" % (system, ret))
+        except Exception as e:
+            nender("text='get %s failed : %s" % (system, e))
 
     @threaded
     def setSystem(self, cmd):
@@ -154,42 +134,30 @@ class SlitCmd(object):
         posCoord = [cmdKeys[coord].values[0] if coord in cmdKeys else vec[i] for i, coord in
                     enumerate(['X', 'Y', 'Z', 'U', 'V', 'W'])]
 
-        ok, ret = self.controller.setSystem(system, posCoord)
-        if ok:
+        try:
+            self.controller.setSystem(system, posCoord)
             self.getSystem(cmd, doFinish=False)
-        else:
-            cmd.warn("text='set new system failed : %s" % ret)
-        self.status(cmd)
+        except Exception as e:
+            cmd.warn("text='set new %s failed : %s" % (system, e))
 
+        self.status(cmd)
 
     @threaded
     def shutdown(self, cmd):
         """ Not implemented yet. It should stop movement.
         """
-        ok, ret = self.controller.shutdown(cmd)
-        if ok:
-            cmd.inform("text='slit controller is now offline'")
-        else:
-            cmd.warn("text='%s" % ret)
+        try:
+            self.controller.shutdown(cmd)
+        except Exception as e:
+            cmd.warn("text='shut down failed : %s" % e)
         self.status(cmd)
+
         # pdu should do something at this point
 
-    @threaded
     def halt(self, cmd):
         """ Not implemented yet. It should stop movement.
         """
         cmd.finish()
-        # if self.controller.fsm.current in ["INIT", "IDLE"]:
-        #     if self.controller.shutdown(cmd):
-        #         cmd.finish("text='Go to sleep'")
-        #         self.controller.fsm.shutdown()
-        #     else:
-        #         self.controller.fsm.cmdFailed()
-        #
-        # else:
-        #     cmd.fail("text='It's impossible to halt system from current state: %s'" % self.actor.controllers[
-        #         'slit'].fsm.current)
-        #     self.controller.fsm.cmdFailed()
 
     @threaded
     def goDither(self, cmd):
@@ -199,11 +167,8 @@ class SlitCmd(object):
         pix = cmd.cmd.keywords["pix"].values[0]
         posCoord = self.controller.compute("dither", pix)
 
-        ok, ret = self.controller.moveTo(cmd, 'relative', posCoord)
-        if ok:
-            cmd.inform("text='move ok'")
-        else:
-            cmd.warn("text='%s" % ret)
+        self.controller.moveTo(cmd, 'relative', posCoord)
+
         self.status(cmd)
 
     @threaded
@@ -214,14 +179,9 @@ class SlitCmd(object):
         pix = cmd.cmd.keywords["pix"].values[0]
         posCoord = self.controller.compute("focus", pix)
 
-        ok, ret = self.controller.moveTo(cmd, 'relative', posCoord)
-        if ok:
-            cmd.inform("text='move ok'")
-        else:
-            cmd.warn("text='%s" % ret)
+        self.controller.moveTo(cmd, 'relative', posCoord)
+
         self.status(cmd)
-
-
 
     def convert(self, cmd):
         """ Convert measure in the slit coordinate system to the world coordinate

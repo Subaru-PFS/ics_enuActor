@@ -45,9 +45,10 @@ class TempsCmd(object):
     @threaded
     def status(self, cmd):
         """Report state, mode, position"""
-        ok, ret = self.controller.getStatus(cmd)
-        ender = cmd.finish if ok else cmd.fail
-        ender('temps=%s' % ret)
+        # ok, ret = self.controller.getStatus(cmd)
+        # ender = cmd.finish if ok else cmd.fail
+        # ender('temps=%s' % ret)
+        self.controller.getStatus(cmd)
 
     @threaded
     def initialise(self, cmd):
