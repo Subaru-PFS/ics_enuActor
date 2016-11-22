@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
 import logging
-import time
 import sys
+import time
 from datetime import datetime as dt
 
-from Controllers.device import Device
 from Controllers.Simulator.rexm_simu import RexmSimulator
+from Controllers.device import Device
 from enuActor.Controllers.utils import rexm_drivers
 from enuActor.Controllers.wrap import safeCheck, busy
 
@@ -29,7 +29,10 @@ class rexm(Device):
         self.positionA = 0
         self.positionB = 0
         self.speed = 0
-        self.isMoving = 0
+
+    @property
+    def isMoving(self):
+        return 1 if abs(self.speed) > 0 else 0
 
     def loadCfg(self, cmd, mode=None):
         """loadCfg
@@ -172,11 +175,11 @@ class rexm(Device):
 
         self.positionA = self.myTMCM.gap(11)
         self.positionB = self.myTMCM.gap(10)
-        self.speed = self.myTMCM.gap(3)
-        self.currPos = self.myTMCM.gap(1, doClose=doClose)
-        self.isMoving = 1 if self.speed != 0 else 0
+        self.speed = self.myTMCM.gap(3, fmtRet='>BBBBiB')
+        self.currPos = self.myTMCM.gap(1, doClose=doClose, fmtRet='>BBBBiB')
+
         if doShow:
-            cmd.inform("rexmInfo=%i,%i,%.2f,%i" % (self.positionA, self.positionB, self.speed, self.currPos))
+            cmd.inform("rexmInfo=%i,%i,%i,%i" % (self.positionA, self.positionB, self.speed, self.currPos))
 
     @busy
     def moveTo(self, cmd, position):
@@ -216,7 +219,6 @@ class rexm(Device):
                  False, ret : if a command fail, user if warned with error ret, fsm (LOADED => FAILED)
         """
         self.checkStatus(cmd)
-
         if not self.switchOn(direction):
             self.stopAndMove(cmd, direction, self.myTMCM.DISTANCE_MAX, self.myTMCM.g_speed)
 
@@ -236,6 +238,8 @@ class rexm(Device):
 
     def stopAndMove(self, cmd, direction, distance, speed, bool=False):
 
+        self.hasStarted = False
+        cond = direction if not bool else not direction
         time.sleep(0.1)
         self.abort(cmd)
 
@@ -245,10 +249,10 @@ class rexm(Device):
 
         t = dt.now()
         ts = dt.now()
-        while self.switchOn(direction) == bool:
-            if (dt.now() - t).total_seconds() > 5 and not self.isMoving:
-                raise Exception("timeout isMoving")
-            if (dt.now() - t).total_seconds() > 240:
+
+        while self.switchOn(cond) == bool:
+            self.checkStart(t)
+            if (dt.now() - t).total_seconds() > 200:
                 raise Exception("timeout commanding MOVE")
 
             if (dt.now() - ts).total_seconds() > 2:
@@ -263,3 +267,10 @@ class rexm(Device):
 
     def switchOn(self, direction):
         return self.positionA if direction == 0 else self.positionB
+
+    def checkStart(self, t0):
+
+        if (dt.now() - t0).total_seconds() > 3 and not self.hasStarted:
+            if not self.isMoving:
+                raise Exception("timeout isMoving")
+            self.hasStarted = True

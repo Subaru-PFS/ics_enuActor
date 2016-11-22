@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-from threading import Thread
 import time
+from threading import Thread
 
 import numpy as np
 
@@ -23,7 +23,7 @@ class RexmSimulator(object):
     # unit : mm/s
     SPEED_MAX = 1000
 
-    g_speed = 6.2;  # mm/s
+    g_speed = 3.2;  # mm/s
     g_pauseDelay = 60.0  # secondes
 
     # 410mm + 10mm de marge
@@ -122,7 +122,7 @@ class RexmSimulator(object):
             self.currPos = data
         return 0
 
-    def gap(self, paramId, doClose=False):
+    def gap(self, paramId, doClose=False, fmtRet='>BBBBIB'):
         """fonction get axis parameter du manuel du controleur
         """
         if paramId == 1:

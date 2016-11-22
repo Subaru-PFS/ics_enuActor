@@ -18,8 +18,8 @@ import sys
 import time
 from struct import pack, unpack
 
-import serial
 import numpy as np
+import serial
 
 
 class sendPacket(object):
@@ -37,14 +37,15 @@ class sendPacket(object):
     def checksum(self):
         data = pack('>BBBBI', self.moduleAddress, self.cmd, self.ctype, self.motorAddress, self.data)
         self.checksum = sum(map(ord, data))
+        self.checksum = self.checksum % 256
 
     def getCmd(self):
         return self.cmdStr
 
 
 class recvPacket():
-    def __init__(self, bytes):
-        self.getRet(*(unpack('>BBBBIB', bytes)))
+    def __init__(self, bytes, fmtRet):
+        self.getRet(*(unpack(fmtRet, bytes)))
 
     def getRet(self, replyAddress, moduleAddress, status, cmd, data, checksum):
         self.replyAddress = replyAddress
@@ -107,7 +108,7 @@ class TMCM():
     MVP_REL = 1
     MVP_COORD = 2
 
-    def __init__(self, port="/dev/ttyACM0"):
+    def __init__(self, port):
         self.ser = None
         self.port = port
         self.name = "rexm"
@@ -156,7 +157,7 @@ class TMCM():
 
         self.ser = None
 
-    def sendOneCommand(self, cmdStr, doClose=False):
+    def sendOneCommand(self, cmdStr, doClose=False, fmtRet='>BBBBIB'):
         """ Send one command and return one response.
 
         Args
@@ -183,19 +184,19 @@ class TMCM():
         except Exception as e:
             raise type(e), type(e)("failed to send cmd to %s: %s" % (self.name, e)), sys.exc_info()[2]
 
-        reply = self.getOneResponse(ser=s)
+        reply = self.getOneResponse(ser=s, fmtRet=fmtRet)
         if doClose:
             self.closeSerial()
 
         return reply
 
-    def getOneResponse(self, ser=None):
+    def getOneResponse(self, ser=None, fmtRet='>BBBBIB'):
         time.sleep(0.05)
         try:
             if ser is None:
                 ser = self.openSerial()
 
-            ret = recvPacket(ser.read(9))
+            ret = recvPacket(ser.read(9), fmtRet=fmtRet)
             if ret.status != 100:
                 raise Exception(TMCM.controllerStatus[ret.status])
         except Exception as e:
@@ -243,7 +244,7 @@ class TMCM():
         freq = self.mm2counts(speed) * ((2 ** pulseDivisor) * 2048 * 32) / 16.0e6
         self.sap(4, freq)
 
-        cMax = np.int32(1 << 31)
+        cMax = np.int32(1 << 23)
         distance = self.minmax(distance, 0, TMCM.DISTANCE_MAX)
 
         counts = np.int32(self.mm2counts(distance))
@@ -268,7 +269,7 @@ class TMCM():
 
         return self.sendOneCommand(packet.getCmd(), doClose=doClose)
 
-    def gap(self, paramId, doClose=False):
+    def gap(self, paramId, doClose=False, fmtRet='>BBBBIB'):
         """fonction get axis parameter du manuel du controleur
         """
         packet = sendPacket(moduleAddress=TMCM.MODULE_ADDRESS,
@@ -276,7 +277,7 @@ class TMCM():
                             ctype=paramId,
                             motorAddress=TMCM.MOTOR_ADDRESS)
 
-        return self.sendOneCommand(packet.getCmd(), doClose=doClose)
+        return self.sendOneCommand(packet.getCmd(), doClose=doClose, fmtRet=fmtRet)
 
     def sgp(self, paramId, data, doClose=False):
         """fonction set global parameter du manuel du controleur
