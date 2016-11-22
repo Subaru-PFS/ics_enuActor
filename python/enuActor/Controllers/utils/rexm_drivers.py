@@ -197,7 +197,7 @@ class TMCM():
 
             ret = recvPacket(ser.read(9))
             if ret.status != 100:
-                raise Exception(TMCM.status[ret.status])
+                raise Exception(TMCM.controllerStatus[ret.status])
         except Exception as e:
             raise type(e), type(e)("failed to get answer from rexm : %s" % e), sys.exc_info()[2]
 

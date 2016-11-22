@@ -141,7 +141,7 @@ class rexm(Device):
             self.myTMCM.stop()
             cmd.inform("text='stopping rexm movement'")
             while self.isMoving:
-                if (dt.now() - t).total_seconds() < 5:
+                if (dt.now() - t).total_seconds() > 5:
                     raise Exception("timeout aborting")
                 if (dt.now() - ts).total_seconds() > 2:
                     self.checkStatus(cmd)
