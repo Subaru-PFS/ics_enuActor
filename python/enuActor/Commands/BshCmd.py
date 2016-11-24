@@ -81,31 +81,34 @@ class BshCmd(object):
         cmdKeys = cmd.cmd.keywords
         period, duty = None, None
 
-        if "period" in cmdKeys:
-            if not 1e-1 <= cmdKeys["period"].values[0] < 1e6:
-                cmd.warn("text='period not in range : %.1f => %.1f'" % (1e-1, 1e6))
-            else:
-                period = cmdKeys["period"].values[0]
-
-        if "duty" in cmdKeys:
-            if not 0 <= cmdKeys["duty"].values[0] < 512:
-                cmd.warn("text='duty not in range : %.1f => %.1f'" % (0, 512))
-            else:
-                duty = cmdKeys["duty"].values[0]
-
         try:
-            self.controller.biaConfig(cmd, period, duty, doClose=True)
+            if "period" in cmdKeys:
+                if 0 < cmdKeys["period"].values[0] < 65536:
+                    period = int(cmdKeys["period"].values[0])
+                else:
+                    raise Exception("period not in range : %i=> %i" % (0, 65535))
+
+            if "duty" in cmdKeys:
+                if 0 < cmdKeys["duty"].values[0] < 256:
+                    duty = int(cmdKeys["duty"].values[0])
+                else:
+                    raise Exception("duty not in range : %i => %i" % (0, 255))
+
+            self.controller.sendBiaConfig(cmd, period, duty, doClose=True)
             cmd.finish()
+
         except Exception as e:
-             cmd.fail("text='%s biaConfig failed : %s'" % (self.name, e))
+            cmd.fail("text='%s sendBiaConfig has failed : %s'" % (self.name, e))
 
     @threaded
     def biaSwitch(self, cmd):
         """Switch bia on/off"""
         cmdKeys = cmd.cmd.keywords
-        cmdStr = "bia_on" if "on" in cmdKeys else "bia_off"
 
-        self.controller.switch(cmd, cmdStr)
+        cmdStr = "bia_on" if "on" in cmdKeys else "bia_off"
+        doForce = True if "force" in cmdKeys else False
+
+        self.controller.switch(cmd, cmdStr, doForce=doForce)
 
         self.status(cmd)
 
@@ -113,8 +116,10 @@ class BshCmd(object):
     def shutterSwitch(self, cmd):
         """Open/close shutters"""
         cmdKeys = cmd.cmd.keywords
-        cmdStr = "shut_open" if "open" in cmdKeys else "shut_close"
 
-        self.controller.switch(cmd, cmdStr)
+        cmdStr = "shut_open" if "open" in cmdKeys else "shut_close"
+        doForce = True if "force" in cmdKeys else False
+
+        self.controller.switch(cmd, cmdStr, doForce)
 
         self.status(cmd)

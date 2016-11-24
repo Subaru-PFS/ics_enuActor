@@ -1,13 +1,11 @@
 #!/usr/bin/env python
 
-import sys
-
 import numpy as np
 
 from enuActor.Controllers.Simulator.slit_simu import SlitSimulator
 from enuActor.Controllers.device import Device
 from enuActor.Controllers.utils import hxp_drivers
-from enuActor.Controllers.wrap import safeCheck, busy
+from enuActor.Controllers.wrap import busy
 
 
 class slit(Device):
@@ -44,21 +42,18 @@ class slit(Device):
         """
         self.actor.reloadConfiguration(cmd=cmd)
 
-        try:
-            self.currMode = self.actor.config.get('slit', 'mode') if mode is None else mode
-            self.host = self.actor.config.get('slit', 'host')
-            self.port = int(self.actor.config.get('slit', 'port'))
-            self.home = [float(val) for val in self.actor.config.get('slit', 'home').split(',')]
-            self.slit_position = [float(val) for val in self.actor.config.get('slit', 'slit_position').split(',')]
-            self.dither_axis = [float(val) for val in self.actor.config.get('slit', 'dither_axis').split(',')]
-            self.focus_axis = [float(val) for val in self.actor.config.get('slit', 'focus_axis').split(',')]
-            self.thicknessCarriage = float(self.actor.config.get('slit', 'thicknessCarriage'))
-            self.magnification = float(self.actor.config.get('slit', 'magnification'))
-            self.lowBounds = [float(val) for val in self.actor.config.get('slit', 'low_bounds').split(',')]
-            self.highBounds = [float(val) for val in self.actor.config.get('slit', 'high_bounds').split(',')]
 
-        except Exception as e:
-            raise type(e), type(e)("%s Config file badly formatted :  %s" % (self.name, e)), sys.exc_info()[2]
+        self.currMode = self.actor.config.get('slit', 'mode') if mode is None else mode
+        self.host = self.actor.config.get('slit', 'host')
+        self.port = int(self.actor.config.get('slit', 'port'))
+        self.home = [float(val) for val in self.actor.config.get('slit', 'home').split(',')]
+        self.slit_position = [float(val) for val in self.actor.config.get('slit', 'slit_position').split(',')]
+        self.dither_axis = [float(val) for val in self.actor.config.get('slit', 'dither_axis').split(',')]
+        self.focus_axis = [float(val) for val in self.actor.config.get('slit', 'focus_axis').split(',')]
+        self.thicknessCarriage = float(self.actor.config.get('slit', 'thicknessCarriage'))
+        self.magnification = float(self.actor.config.get('slit', 'magnification'))
+        self.lowBounds = [float(val) for val in self.actor.config.get('slit', 'low_bounds').split(',')]
+        self.highBounds = [float(val) for val in self.actor.config.get('slit', 'high_bounds').split(',')]
 
         self.homeHexa = self.home
         self.home = slit.convertToWorld(
@@ -71,7 +66,6 @@ class slit(Device):
         # Tool z = 21 + z_slit with 21 height of upper carriage
         self.tool_value = [sum(i) for i in zip(tool_value, [0, 0, self.thicknessCarriage, 0, 0, 0])]
 
-        cmd.inform("text='%s config File successfully loaded" % self.name)
 
     def startCommunication(self, cmd):
 
@@ -81,7 +75,7 @@ class slit(Device):
         :return: True, ret: if the communication is established with the controller, fsm goes to LOADED
                  False, ret: if the communication failed with the controller, ret is the error, fsm goes to FAILED
         """
-        cmd.inform("text='Connecting to %s in ...%s'" % (self.name, self.currMode))
+
 
         if self.currMode == 'operation':
             self.myxps = hxp_drivers.XPS()
@@ -93,10 +87,8 @@ class slit(Device):
         if self.socketId == -1:
             raise Exception('Connection to Hexapod failed check IP & Port')
 
-        cmd.inform("text='Connected to %s'" % self.name)
 
-    @safeCheck
-    def initialise(self, e):
+    def initialise(self, cmd):
         """ Initialise slit
 
         - kill socket
@@ -111,31 +103,25 @@ class slit(Device):
                  False, ret : if a command fail, user if warned with error ret, fsm (LOADED => FAILED)
         """
 
-        cmd = e.cmd if hasattr(e, "cmd") else self.actor.bcast
-        try:
-            cmd.inform("text='killing existing socket..._'")
-            self._kill()
+        cmd.inform("text='killing existing socket..._'")
+        self._kill()
 
-            cmd.inform("text='initialising hxp..._'")
-            self._initialize()
+        cmd.inform("text='initialising hxp..._'")
+        self._initialize()
 
-            cmd.inform("text='seeking home ...'")
-            self._homeSearch()
+        cmd.inform("text='seeking home ...'")
+        self._homeSearch()
 
-            self._hexapodCoordinateSysSet('Work', *self.home)
-            cmd.inform("slitHome=%s" % ','.join(["%.5f" % p for p in self.home]))
+        self._hexapodCoordinateSysSet('Work', *self.home)
+        cmd.inform("slitHome=%s" % ','.join(["%.5f" % p for p in self.home]))
 
-            self._hexapodCoordinateSysSet('Tool', *self.tool_value)
-            cmd.inform("slitTool=%s" % ','.join(["%.5f" % p for p in self.tool_value]))
+        self._hexapodCoordinateSysSet('Tool', *self.tool_value)
+        cmd.inform("slitTool=%s" % ','.join(["%.5f" % p for p in self.tool_value]))
 
-            cmd.inform("text='going to home ...'")
-            self._hexapodMoveAbsolute(*[0, 0, 0, 0, 0, 0])
+        cmd.inform("text='going to home ...'")
+        self._hexapodMoveAbsolute(*[0, 0, 0, 0, 0, 0])
 
-            cmd.inform("text='%s Successfully initialised'" % self.name)
-            return True
-        except Exception as e:
-            cmd.warn("text='%s init failed : %s'") % (self.name, e)
-            return False
+
 
     def getStatus(self, cmd=None, doFinish=True):
         """getStatus

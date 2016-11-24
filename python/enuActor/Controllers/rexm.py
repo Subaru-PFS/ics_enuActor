@@ -1,14 +1,13 @@
 #!/usr/bin/env python
 
 import logging
-import sys
 import time
 from datetime import datetime as dt
 
 from Controllers.Simulator.rexm_simu import RexmSimulator
 from Controllers.device import Device
 from enuActor.Controllers.utils import rexm_drivers
-from enuActor.Controllers.wrap import safeCheck, busy
+from enuActor.Controllers.wrap import busy
 
 
 class rexm(Device):
@@ -44,14 +43,8 @@ class rexm(Device):
         """
         self.actor.reloadConfiguration(cmd=cmd)
 
-        try:
-            self.currMode = self.actor.config.get('rexm', 'mode') if mode is None else mode
-            self.port = self.actor.config.get('rexm', 'port')
-
-        except Exception as e:
-            raise type(e), type(e)("%s Config file badly formatted : %s" % (self.name, e)), sys.exc_info()[2]
-
-        cmd.inform("text='%s config File successfully loaded" % self.name)
+        self.currMode = self.actor.config.get('rexm', 'mode') if mode is None else mode
+        self.port = self.actor.config.get('rexm', 'port')
 
     def startCommunication(self, cmd=None):
 
@@ -61,18 +54,11 @@ class rexm(Device):
         :return: True, ret: if the communication is established with the controller, fsm goes to LOADED
                  False, ret: if the communication failed with the controller, ret is the error, fsm goes to FAILED
         """
-        cmd.inform("text='Connecting to %s in ...%s'" % (self.name, self.currMode))
-
         self.myTMCM = rexm_drivers.TMCM(self.port) if self.currMode == 'operation' else RexmSimulator()
-        try:
-            ret = self.myTMCM.gap(11)
-        except Exception as e:
-            raise type(e), type(e)("Connection to %s failed :  %s" % (self.name, e)), sys.exc_info()[2]
 
-        cmd.inform("text='Connected to %s'" % self.name)
+        ret = self.myTMCM.gap(11)
 
-    @safeCheck
-    def initialise(self, e):
+    def initialise(self, cmd):
         """ Initialise slit
 
         - kill socket
@@ -87,19 +73,10 @@ class rexm(Device):
                  False, ret : if a command fail, user if warned with error ret, fsm (LOADED => FAILED)
         """
 
-        cmd = e.cmd if hasattr(e, "cmd") else self.actor.bcast
-        cmd.inform("text='initialising rexm..._'")
-        try:
-            cmd.inform("text='seeking home ...'")
-            self.moveAccurate(cmd, rexm.toDir['low'])
+        cmd.inform("text='seeking home ...'")
+        self.moveAccurate(cmd, rexm.toDir['low'])
 
-            ret = self.myTMCM.sap(1, 0)  # set 0 as home
-            cmd.inform("text='%s Successfully initialised'" % self.name)
-            return True
-
-        except Exception as e:
-            cmd.warn("text='%s init failed : %s'" % (self.name, e))
-            return False
+        ret = self.myTMCM.sap(1, 0)  # set 0 as home
 
     def getStatus(self, cmd=None, doFinish=True):
         """getStatus

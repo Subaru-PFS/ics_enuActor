@@ -8,7 +8,7 @@ def threaded(func):
     return wrapper
 
 
-def safeCheck(func):
+def loading(func):
     def wrapper(self, *args, **kwargs):
         cmd = args[0].cmd if hasattr(args[0], "cmd") else self.actor.bcast
         self.getStatus(cmd, doFinish=False)
@@ -19,14 +19,40 @@ def safeCheck(func):
     return wrapper
 
 
+def loading(func):
+    def wrapper(self, *args, **kwargs):
+        cmd = args[0].cmd if hasattr(args[0], "cmd") else self.actor.bcast
+        self.getStatus(cmd, doFinish=False)
+
+        if func(self, *args, **kwargs):
+            self.fsm.loadDeviceOk()
+        else:
+            self.fsm.loadDeviceFailed()
+
+    return wrapper
+
+
+def initialising(func):
+    def wrapper(self, *args, **kwargs):
+        cmd = args[0].cmd if hasattr(args[0], "cmd") else self.actor.bcast
+        self.getStatus(cmd, doFinish=False)
+
+        if func(self, *args, **kwargs):
+            self.fsm.initialiseOk()
+        else:
+            self.fsm.initialiseFailed()
+
+    return wrapper
+
+
 def busy(func):
     def wrapper(self, *args, **kwargs):
         cmd = args[0]
         self.fsm.goBusy()
         self.getStatus(cmd, doFinish=False)
+
         ok = func(self, *args, **kwargs)
         self.fsm.goIdle() if ok else self.fsm.goFailed()
         return ok
 
     return wrapper
-

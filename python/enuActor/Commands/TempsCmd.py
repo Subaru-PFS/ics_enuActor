@@ -1,9 +1,12 @@
 #!/usr/bin/env python
 
 
-import opscore.protocols.keys as keys
-from enuActor.Controllers.wrap import threaded
 import subprocess
+
+import opscore.protocols.keys as keys
+
+from enuActor.Controllers.wrap import threaded
+
 
 class TempsCmd(object):
     def __init__(self, actor):
@@ -18,7 +21,7 @@ class TempsCmd(object):
         #
         self.vocab = [
             ('temps', 'status', self.status),
-            ('temps', 'mode [@(operation|simulation)]', self.changeMode),
+            ('temps', '@(operation|simulation)', self.changeMode),
             ('temps', 'init', self.initialise),
 
         ]
@@ -26,7 +29,6 @@ class TempsCmd(object):
         # Define typed command arguments for the above commands.
         self.keys = keys.KeysDictionary("enu_temps", (1, 1),
                                         )
-
 
     @property
     def controller(self):
@@ -45,19 +47,14 @@ class TempsCmd(object):
     @threaded
     def status(self, cmd):
         """Report state, mode, position"""
-        # ok, ret = self.controller.getStatus(cmd)
-        # ender = cmd.finish if ok else cmd.fail
-        # ender('temps=%s' % ret)
+
         self.controller.getStatus(cmd)
 
     @threaded
     def initialise(self, cmd):
         """Initialise Device LOADED -> INIT
         """
-        try:
-            self.controller.fsm.startInit(cmd=cmd)
-        except Exception as e:
-            cmd.warn('text="failed to initialise for %s: %s"' % (self.name, e))
+        self.controller.fsm.startInit(cmd=cmd)
 
         self.status(cmd)
 
@@ -66,9 +63,7 @@ class TempsCmd(object):
         """Change device mode operation|simulation"""
         cmdKeys = cmd.cmd.keywords
         mode = "simulation" if "simulation" in cmdKeys else "operation"
-        try:
-            self.controller.fsm.changeMode(cmd=cmd, mode=mode)
-        except Exception as e:
-            cmd.warn('text="failed to change mode for %s: %s"' % (self.name, e))
+
+        self.controller.fsm.changeMode(cmd=cmd, mode=mode)
 
         self.status(cmd)

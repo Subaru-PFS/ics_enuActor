@@ -1,11 +1,12 @@
 __author__ = 'alefur'
 import logging
 import sys
+import socket
 
 from actorcore.QThread import QThread
 
 from enuActor.fysom import Fysom
-from enuActor.Controllers.wrap import safeCheck
+from enuActor.Controllers.wrap import loading, initialising
 
 
 class Device(QThread):
@@ -33,10 +34,10 @@ class Device(QThread):
                           ],
                           'callbacks': {
                               'onLOADING': self.loadDevice,
-                              'onINITIALISING': self.initialise,
+                              'onINITIALISING': self.init,
                           }})
 
-    @safeCheck
+    @loading
     def loadDevice(self, e):
         """load device
 
@@ -49,12 +50,45 @@ class Device(QThread):
         """
         cmd = e.cmd if hasattr(e, "cmd") else self.actor.bcast
         mode = e.mode if hasattr(e, "mode") else None
+
         try:
-            self.loadCfg(cmd, mode)
-            self.startCommunication(cmd)
+            try:
+                self.loadCfg(cmd, mode)
+                cmd.inform("text='%s config File successfully loaded" % self.name)
+            except Exception as e:
+                raise type(e), type(e)("%s Config file badly formatted :  %s" % (self.name, e)), sys.exc_info()[2]
+
+            try:
+                cmd.inform("text='Connecting to %s in ...%s'" % (self.name, self.currMode))
+                self.startCommunication(cmd)
+                cmd.inform("text='Connected to %s'" % self.name)
+            except Exception as e:
+                raise type(e), type(e)("Connection to %s has failed,  :  %s" % (self.name, e)), sys.exc_info()[2]
 
         except Exception as e:
             cmd.warn("text='%s load device failed : %s'" % (self.name, e))
+            return False
+
+        return True
+
+    @initialising
+    def init(self, e):
+        """load device
+
+        load Configuration file and startcommunication
+        wrapper @safeCheck handles the state machine
+
+        :param e,fsm event
+        :return: True, ret : Config File successfully loaded'
+                 False, ret : Config file badly formatted, Exception
+        """
+        cmd = e.cmd if hasattr(e, "cmd") else self.actor.bcast
+        try:
+            self.initialise(cmd)
+            cmd.inform("text='%s successfully initialised" % self.name)
+
+        except Exception as e:
+            cmd.warn("text='%s init failed : %s'" % (self.name, e))
             return False
 
         return True
@@ -67,11 +101,8 @@ class Device(QThread):
         :return: True, ret : Config File successfully loaded'
                  False, ret : Config file badly formatted, Exception ret
         """
-        try:
-            self.currMode = self.actor.config.get(self.name, 'mode') if mode is None else mode
-        except Exception as e:
-            raise type(e), type(e)("%s Config file badly formatted, Exception :  %s" % (self.name, e)), sys.exc_info()[
-                2]
+
+        self.currMode = self.actor.config.get(self.name, 'mode') if mode is None else mode
 
     def startCommunication(self, cmd):
         """startCommunication
@@ -80,10 +111,9 @@ class Device(QThread):
         :return: True, ret: if the communication is established with the board, fsm (LOADING => LOADED)
                  False, ret: if the communication failed with the board, ret is the error, fsm (LOADING => FAILED)
         """
-        cmd.inform("text='startCommunication Ok'")
+        pass
 
-    @safeCheck
-    def initialise(self, e):
+    def initialise(self, cmd):
         """ Initialise device
 
 
@@ -92,16 +122,17 @@ class Device(QThread):
         :return: True, ret : if every steps are successfully operated, fsm (LOADED => IDLE)
                  False, ret : if a command fail, user if warned with error ret, fsm (LOADED => FAILED)
         """
-        return True
+        pass
 
-    def getStatus(self, cmd=None):
+    def getStatus(self, cmd, doFinish=True):
         """getStatus
         position is nan if the controller is unreachable
         :param cmd,
         :return True, status
 
         """
-        return True, "status"
+        ender = cmd.finish if doFinish else cmd.inform
+        ender("%s=%s,%s" % (self.name, self.fsm.current, self.currMode))
 
     def printstatechange(self, e):
         print ('%s state=%s' % (self.name, self.fsm.current))
@@ -111,3 +142,89 @@ class Device(QThread):
 
     def handleTimeout(self):
         pass
+
+    def connectSock(self):
+        """ Connect socket if self.sock is None
+
+        :param cmd : current command,
+        :return: sock in operation
+                 bsh simulator in simulation
+        """
+        if self.sock is None:
+            try:
+                s = socket.socket(socket.AF_INET,
+                                  socket.SOCK_STREAM) if self.currMode == "operation" else self.simulator
+                s.settimeout(1.0)
+            except Exception as e:
+                raise type(e), type(e)("failed to create socket for %s: %s" % (self.name, e)), sys.exc_info()[2]
+            try:
+                s.connect((self.host, self.port))
+            except Exception as e:
+                raise type(e), type(e)("failed to connect to %s: %s" % (self.name, e))
+
+            self.sock = s
+
+        return self.sock
+
+    def closeSock(self):
+        """ close socket
+
+        :param cmd : current command,
+        :return: sock in operation
+                 bsh simulator in simulation
+        """
+        if self.sock is not None:
+            try:
+                self.sock.close()
+            except Exception as e:
+                raise type(e), type(e)("failed to close socket for %s: %s" % (self.name, e)), sys.exc_info()[2]
+
+        self.sock = None
+
+    def sendOneCommand(self, cmdStr, doClose=True, cmd=None):
+        """ Send one command and return one response.
+
+        Args
+        ----
+        cmdStr : str
+           The command to send.
+        doClose : bool
+           If True (the default), the device socket is closed before returning.
+
+        Returns
+        -------
+        str : the single response string, with EOLs stripped.
+
+        Raises
+        ------
+        IOError : from any communication errors.
+        """
+
+        if cmd is None:
+            cmd = self.actor.bcast
+
+        fullCmd = "%s%s" % (cmdStr, self.EOL)
+        self.logger.debug('sending %r', fullCmd)
+
+        s = self.connectSock()
+        try:
+            s.sendall(fullCmd)
+        except Exception as e:
+            raise type(e), type(e)("failed to send %s to %s: %s" % (fullCmd, self.name, e)), sys.exc_info()[2]
+
+        reply = self.getOneResponse(sock=s, cmd=cmd)
+        if doClose:
+            self.closeSock()
+
+        return reply
+
+    def getOneResponse(self, sock=None, cmd=None):
+        if sock is None:
+            sock = self.connectSock()
+
+        ret = self.ioBuffer.getOneResponse(sock=sock, cmd=cmd)
+        reply = ret.strip()
+
+        self.logger.debug('received %r', reply)
+
+        return reply
