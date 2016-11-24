@@ -14,7 +14,6 @@
 # for TMCM-1180 firmware v4.45.
 
 #
-import sys
 import time
 from struct import pack, unpack
 
@@ -113,7 +112,7 @@ class TMCM():
         self.port = port
         self.name = "rexm"
 
-    def openSerial(self):
+    def openSerial(self, cmd):
         """ Connect serial if self.ser is None
 
         :param cmd : current command,
@@ -128,8 +127,9 @@ class TMCM():
                                   parity=serial.PARITY_NONE,
                                   stopbits=serial.STOPBITS_ONE,
                                   timeout=2.)
-            except Exception as e:
-                raise type(e), type(e)("failed to create serial for %s: %s" % (self.name, e)), sys.exc_info()[2]
+            except:
+                cmd.warn("text='failed to create serial for %s'" % self.name)
+                raise
             try:
                 if not s.isOpen():
                     s.open()
@@ -137,12 +137,13 @@ class TMCM():
                     self.ser = s
                 else:
                     raise Exception('serial port is not readable')
-            except Exception as e:
-                raise type(e), type(e)("failed to connect to %s: %s" % (self.name, e)), sys.exc_info()[2]
+            except:
+                cmd.warn("text='failed to connect to %s'" % self.name)
+                raise
 
         return self.ser
 
-    def closeSerial(self):
+    def closeSerial(self, cmd):
         """ close serial
 
         :param cmd : current command,
@@ -152,12 +153,12 @@ class TMCM():
         if self.ser is not None:
             try:
                 self.ser.close()
-            except Exception as e:
-                raise type(e), type(e)("failed to close serial for %s: %s" % (self.name, e)), sys.exc_info()[2]
-
+            except:
+                cmd.warn("text='failed to close serial for %s'" % self.name)
+                raise
         self.ser = None
 
-    def sendOneCommand(self, cmdStr, doClose=False, fmtRet='>BBBBIB'):
+    def sendOneCommand(self, cmd, cmdStr, doClose=False, fmtRet='>BBBBIB'):
         """ Send one command and return one response.
 
         Args
@@ -176,35 +177,37 @@ class TMCM():
         IOError : from any communication errors.
         """
 
-        s = self.openSerial()
+        s = self.openSerial(cmd)
         try:
             ret = s.write(cmdStr)
             if ret != 9:
                 raise Exception('cmdStr is badly formatted')
-        except Exception as e:
-            raise type(e), type(e)("failed to send cmd to %s: %s" % (self.name, e)), sys.exc_info()[2]
+        except:
+            cmd.warn("text='failed to send cmd to %s'" % self.name)
+            raise
 
-        reply = self.getOneResponse(ser=s, fmtRet=fmtRet)
+        reply = self.getOneResponse(cmd, ser=s, fmtRet=fmtRet)
         if doClose:
-            self.closeSerial()
+            self.closeSerial(cmd)
 
         return reply
 
-    def getOneResponse(self, ser=None, fmtRet='>BBBBIB'):
+    def getOneResponse(self, cmd, ser=None, fmtRet='>BBBBIB'):
         time.sleep(0.05)
         try:
             if ser is None:
-                ser = self.openSerial()
+                ser = self.openSerial(cmd)
 
             ret = recvPacket(ser.read(9), fmtRet=fmtRet)
             if ret.status != 100:
                 raise Exception(TMCM.controllerStatus[ret.status])
-        except Exception as e:
-            raise type(e), type(e)("failed to get answer from rexm : %s" % e), sys.exc_info()[2]
+        except:
+            cmd.warn("text='failed to get answer from %s'" % self.name)
+            raise
 
         return ret.data
 
-    def stop(self):
+    def stop(self, cmd):
         """fonction stop  controleur
         """
         packet = sendPacket(moduleAddress=TMCM.MODULE_ADDRESS,
@@ -212,11 +215,11 @@ class TMCM():
                             ctype=0,
                             motorAddress=TMCM.MOTOR_ADDRESS)
 
-        ret = self.sendOneCommand(packet.getCmd(), doClose=False)
+        ret = self.sendOneCommand(cmd, packet.getCmd(), doClose=False)
 
-    def mm2counts(self, val):
+    def mm2counts(self, cmd, val):
 
-        stepIdx = self.gap(140)
+        stepIdx = self.gap(cmd, 140)
         screwStep = 5.0  # mm
         step = 1 << stepIdx  # nombre de micro pas par pas moteur
         nbStepByRev = 200.0  # nombre de pas moteur dans un tour moteur
@@ -224,30 +227,21 @@ class TMCM():
 
         return np.float64(val / screwStep * reducer * nbStepByRev * step)
 
-    def counts2mm(self, counts):
+    def counts2mm(self, cmd, counts):
 
-        return np.float64(counts / self.mm2counts(1.0))
+        return np.float64(counts / self.mm2counts(cmd, 1.0))
 
-    def setOutput(self, paramId, boolean, doClose=False):
-        packet = sendPacket(moduleAddress=TMCM.MODULE_ADDRESS,
-                            cmd=TMCM.TMCL_SIO,
-                            ctype=self.minmax(paramId, 0, 1),
-                            motorAddress=2,
-                            data=boolean)
-
-        return self.sendOneCommand(packet.getCmd(), doClose=doClose)
-
-    def MVP(self, direction, distance, speed, type="relative", doClose=False):
+    def MVP(self, cmd, direction, distance, speed, type="relative", doClose=False):
         # set moving speed
-        pulseDivisor = np.uint32(self.gap(154))
+        pulseDivisor = np.uint32(self.gap(cmd, 154))
         speed = self.minmax(speed, 0, TMCM.SPEED_MAX)
-        freq = self.mm2counts(speed) * ((2 ** pulseDivisor) * 2048 * 32) / 16.0e6
-        self.sap(4, freq)
+        freq = self.mm2counts(cmd, speed) * ((2 ** pulseDivisor) * 2048 * 32) / 16.0e6
+        self.sap(cmd, 4, freq)
 
         cMax = np.int32(1 << 23)
         distance = self.minmax(distance, 0, TMCM.DISTANCE_MAX)
 
-        counts = np.int32(self.mm2counts(distance))
+        counts = np.int32(self.mm2counts(cmd, distance))
         counts = self.minmax(counts, -cMax, cMax)
 
         packet = sendPacket(moduleAddress=TMCM.MODULE_ADDRESS,
@@ -256,9 +250,9 @@ class TMCM():
                             motorAddress=TMCM.MOTOR_ADDRESS,
                             data=- counts if direction == TMCM.DIRECTION_A else counts)
 
-        ret = self.sendOneCommand(packet.getCmd(), doClose=doClose)
+        ret = self.sendOneCommand(cmd, packet.getCmd(), doClose=doClose)
 
-    def sap(self, paramId, data, doClose=False):
+    def sap(self, cmd, paramId, data, doClose=False):
         """fonction set axis parameter du manuel du controleur
         """
         packet = sendPacket(moduleAddress=TMCM.MODULE_ADDRESS,
@@ -267,9 +261,9 @@ class TMCM():
                             motorAddress=TMCM.MOTOR_ADDRESS,
                             data=data)
 
-        return self.sendOneCommand(packet.getCmd(), doClose=doClose)
+        return self.sendOneCommand(cmd, packet.getCmd(), doClose=doClose)
 
-    def gap(self, paramId, doClose=False, fmtRet='>BBBBIB'):
+    def gap(self, cmd, paramId, doClose=False, fmtRet='>BBBBIB'):
         """fonction get axis parameter du manuel du controleur
         """
         packet = sendPacket(moduleAddress=TMCM.MODULE_ADDRESS,
@@ -277,9 +271,18 @@ class TMCM():
                             ctype=paramId,
                             motorAddress=TMCM.MOTOR_ADDRESS)
 
-        return self.sendOneCommand(packet.getCmd(), doClose=doClose, fmtRet=fmtRet)
+        return self.sendOneCommand(cmd, packet.getCmd(), doClose=doClose, fmtRet=fmtRet)
 
-    def sgp(self, paramId, data, doClose=False):
+    def setOutput(self, cmd, paramId, boolean, doClose=False):
+        packet = sendPacket(moduleAddress=TMCM.MODULE_ADDRESS,
+                            cmd=TMCM.TMCL_SIO,
+                            ctype=self.minmax(paramId, 0, 1),
+                            motorAddress=2,
+                            data=boolean)
+
+        return self.sendOneCommand(cmd, packet.getCmd(), doClose=doClose)
+
+    def sgp(self, cmd, paramId, data, doClose=False):
         """fonction set global parameter du manuel du controleur
         """
         packet = sendPacket(moduleAddress=TMCM.MODULE_ADDRESS,
@@ -288,9 +291,9 @@ class TMCM():
                             motorAddress=TMCM.MOTOR_ADDRESS,
                             data=data)
 
-        return self.sendOneCommand(packet.getCmd(), doClose=doClose)
+        return self.sendOneCommand(cmd, packet.getCmd(), doClose=doClose)
 
-    def ggp(self, paramId, doClose=False):
+    def ggp(self, cmd, paramId, doClose=False):
         """fonction get global parameter du manuel du controleur
         """
         packet = sendPacket(moduleAddress=TMCM.MODULE_ADDRESS,
@@ -298,7 +301,7 @@ class TMCM():
                             ctype=paramId,
                             motorAddress=TMCM.MOTOR_ADDRESS)
 
-        return self.sendOneCommand(packet.getCmd(), doClose=doClose)
+        return self.sendOneCommand(cmd, packet.getCmd(), doClose=doClose)
 
     def minmax(self, x, a, b):
         if x < a:

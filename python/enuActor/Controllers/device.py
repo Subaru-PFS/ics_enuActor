@@ -10,11 +10,11 @@ from enuActor.Controllers.wrap import loading, initialising
 
 
 class Device(QThread):
-    def __init__(self, actor, name,
-                 loglevel=logging.DEBUG):
+    def __init__(self, actor, name, loglevel=logging.DEBUG):
         # This sets up the connections to/from the hub, the logger, and the twisted reactor.
         #
-        super(Device, self).__init__(actor, name, timeout=2)
+        QThread.__init__(self, actor, name, timeout=2)
+
         self.logger = logging.getLogger(self.name)
         self.logger.setLevel(loglevel)
         self.currMode = "undef"
@@ -34,7 +34,7 @@ class Device(QThread):
                           ],
                           'callbacks': {
                               'onLOADING': self.loadDevice,
-                              'onINITIALISING': self.init,
+                              'onINITIALISING': self.initDevice,
                           }})
 
     @loading
@@ -55,24 +55,29 @@ class Device(QThread):
             try:
                 self.loadCfg(cmd, mode)
                 cmd.inform("text='%s config File successfully loaded" % self.name)
-            except Exception as e:
-                raise type(e), type(e)("%s Config file badly formatted :  %s" % (self.name, e)), sys.exc_info()[2]
-
+            except:
+                cmd.warn("text='%s Config file badly formatted'" % self.name)
+                raise
             try:
                 cmd.inform("text='Connecting to %s in ...%s'" % (self.name, self.currMode))
                 self.startCommunication(cmd)
-                cmd.inform("text='Connected to %s'" % self.name)
-            except Exception as e:
-                raise type(e), type(e)("Connection to %s has failed,  :  %s" % (self.name, e)), sys.exc_info()[2]
+                cmd.inform("text=' %s Connected'" % self.name)
+            except:
+                cmd.warn("text='%s Connection has failed'" % self.name)
+                raise
 
         except Exception as e:
-            cmd.warn("text='%s load device failed : %s'" % (self.name, e))
+            cmd.warn("text='%s load device failed %s : %s %s'" % (self.name,
+                                                                  str(type(e)).replace("'", ""),
+                                                                  str(e).replace("'", ""),
+                                                                  sys.exc_info()[2]))
+
             return False
 
         return True
 
     @initialising
-    def init(self, e):
+    def initDevice(self, e):
         """load device
 
         load Configuration file and startcommunication
@@ -88,7 +93,10 @@ class Device(QThread):
             cmd.inform("text='%s successfully initialised" % self.name)
 
         except Exception as e:
-            cmd.warn("text='%s init failed : %s'" % (self.name, e))
+            cmd.warn("text='%s init failed %s : %s %s'" % (self.name,
+                                                           str(type(e)).replace("'", ""),
+                                                           str(e).replace("'", ""),
+                                                           sys.exc_info()[2]))
             return False
 
         return True
@@ -143,41 +151,46 @@ class Device(QThread):
     def handleTimeout(self):
         pass
 
-    def connectSock(self):
+    def connectSock(self, cmd):
         """ Connect socket if self.sock is None
 
         :param cmd : current command,
         :return: sock in operation
                  bsh simulator in simulation
         """
+
         if self.sock is None:
             try:
                 s = socket.socket(socket.AF_INET,
                                   socket.SOCK_STREAM) if self.currMode == "operation" else self.simulator
                 s.settimeout(1.0)
-            except Exception as e:
-                raise type(e), type(e)("failed to create socket for %s: %s" % (self.name, e)), sys.exc_info()[2]
+            except Exception:
+                cmd.warn("text='Failed to create socket for %s'" % self.name)
+                raise
             try:
                 s.connect((self.host, self.port))
-            except Exception as e:
-                raise type(e), type(e)("failed to connect to %s: %s" % (self.name, e))
+            except Exception:
+                cmd.warn("text='Failed to connect to %s'" % self.name)
+                raise
 
             self.sock = s
 
         return self.sock
 
-    def closeSock(self):
+    def closeSock(self, cmd):
         """ close socket
 
         :param cmd : current command,
         :return: sock in operation
                  bsh simulator in simulation
         """
+
         if self.sock is not None:
             try:
                 self.sock.close()
-            except Exception as e:
-                raise type(e), type(e)("failed to close socket for %s: %s" % (self.name, e)), sys.exc_info()[2]
+            except Exception:
+                cmd.warn("text='Failed to close socket for %s'" % self.name)
+                raise
 
         self.sock = None
 
@@ -206,21 +219,22 @@ class Device(QThread):
         fullCmd = "%s%s" % (cmdStr, self.EOL)
         self.logger.debug('sending %r', fullCmd)
 
-        s = self.connectSock()
+        s = self.connectSock(cmd)
         try:
             s.sendall(fullCmd)
-        except Exception as e:
-            raise type(e), type(e)("failed to send %s to %s: %s" % (fullCmd, self.name, e)), sys.exc_info()[2]
+        except Exception:
+            cmd.warn("text='Failed to send %s to %s'" % (self.name, fullCmd))
+            raise
 
         reply = self.getOneResponse(sock=s, cmd=cmd)
         if doClose:
-            self.closeSock()
+            self.closeSock(cmd)
 
         return reply
 
     def getOneResponse(self, sock=None, cmd=None):
         if sock is None:
-            sock = self.connectSock()
+            sock = self.connectSock(cmd)
 
         ret = self.ioBuffer.getOneResponse(sock=sock, cmd=cmd)
         reply = ret.strip()

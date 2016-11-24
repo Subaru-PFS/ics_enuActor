@@ -47,9 +47,11 @@ class OurActor(actorcore.ICC.ICC):
             self.everConnected = True
             logging.info("All Controllers started")
 
-    def attachController(self, controller, instanceName=None):
+    def attachController(self, controller, instanceName=None, cmd=None):
+        cmd = cmd if cmd is not None else self.bcast
+
         actorcore.ICC.ICC.attachController(self, controller, instanceName)
-        self.controllers[controller].fsm.startLoading()
+        self.controllers[controller].fsm.startLoading(cmd=cmd)
 
     def statusLoop(self, controller):
         try:

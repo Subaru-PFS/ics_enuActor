@@ -2,6 +2,7 @@
 
 
 import subprocess
+import sys
 
 import opscore.protocols.keys as keys
 
@@ -90,4 +91,7 @@ class RexmCmd(object):
             self.controller.abort(cmd)
             self.status(cmd)
         except Exception as e:
-            cmd.fail()
+            cmd.fail("text='%s failed to stop movement %s : %s %s'" % (self.name,
+                                                                       str(type(e)).replace("'", ""),
+                                                                       str(e).replace("'", ""),
+                                                                       sys.exc_info()[2]))

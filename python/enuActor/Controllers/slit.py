@@ -24,7 +24,8 @@ class slit(Device):
     def __init__(self, actor, name):
         # This sets up the connections to/from the hub, the logger, and the twisted reactor.
         #
-        super(slit, self).__init__(actor, name)
+        Device.__init__(self, actor, name)
+
         # Hexapod Attributes
         self.groupName = 'HEXAPOD'
         self.myxps = None
@@ -40,8 +41,9 @@ class slit(Device):
         :return: True, ret : Config File successfully loaded'
                  False, ret : Config file badly formatted, Exception ret
         """
-        self.actor.reloadConfiguration(cmd=cmd)
 
+
+        self.actor.reloadConfiguration(cmd=cmd)
 
         self.currMode = self.actor.config.get('slit', 'mode') if mode is None else mode
         self.host = self.actor.config.get('slit', 'host')
@@ -52,8 +54,8 @@ class slit(Device):
         self.focus_axis = [float(val) for val in self.actor.config.get('slit', 'focus_axis').split(',')]
         self.thicknessCarriage = float(self.actor.config.get('slit', 'thicknessCarriage'))
         self.magnification = float(self.actor.config.get('slit', 'magnification'))
-        self.lowBounds = [float(val) for val in self.actor.config.get('slit', 'low_bounds').split(',')]
-        self.highBounds = [float(val) for val in self.actor.config.get('slit', 'high_bounds').split(',')]
+        self.lowerBounds = [float(val) for val in self.actor.config.get('slit', 'lowerBounds').split(',')]
+        self.upperBounds = [float(val) for val in self.actor.config.get('slit', 'upperBounds').split(',')]
 
         self.homeHexa = self.home
         self.home = slit.convertToWorld(
@@ -66,7 +68,6 @@ class slit(Device):
         # Tool z = 21 + z_slit with 21 height of upper carriage
         self.tool_value = [sum(i) for i in zip(tool_value, [0, 0, self.thicknessCarriage, 0, 0, 0])]
 
-
     def startCommunication(self, cmd):
 
         """startCommunication
@@ -75,7 +76,6 @@ class slit(Device):
         :return: True, ret: if the communication is established with the controller, fsm goes to LOADED
                  False, ret: if the communication failed with the controller, ret is the error, fsm goes to FAILED
         """
-
 
         if self.currMode == 'operation':
             self.myxps = hxp_drivers.XPS()
@@ -86,7 +86,6 @@ class slit(Device):
 
         if self.socketId == -1:
             raise Exception('Connection to Hexapod failed check IP & Port')
-
 
     def initialise(self, cmd):
         """ Initialise slit
@@ -120,8 +119,6 @@ class slit(Device):
 
         cmd.inform("text='going to home ...'")
         self._hexapodMoveAbsolute(*[0, 0, 0, 0, 0, 0])
-
-
 
     def getStatus(self, cmd=None, doFinish=True):
         """getStatus
@@ -222,7 +219,6 @@ class slit(Device):
         cmd.inform("text='shutting down ..._'")
         self.fsm.shutdown()
 
-
     def compute(self, type, pix):
         """compute.
         compute array for moveTo relative to input parameters
@@ -310,7 +306,7 @@ class slit(Device):
          :return: True, ''
                   False, ret : if a an error ret occured
         """
-        for lim_inf, lim_sup, coord in zip(self.lowBounds, self.highBounds, [x, y, z, u, v, w]):
+        for lim_inf, lim_sup, coord in zip(self.lowerBounds, self.upperBounds, [x, y, z, u, v, w]):
             if not lim_inf <= coord <= lim_sup:
                 raise Exception("Warning: [X, Y, Z, U, V, W] exceed : %.5f not permitted" % coord)
 
@@ -330,7 +326,7 @@ class slit(Device):
                   False, ret : if a an error ret occured
         """
 
-        for lim_inf, lim_sup, coord, pos in zip(self.lowBounds, self.highBounds, [x, y, z, u, v, w], self.currPos):
+        for lim_inf, lim_sup, coord, pos in zip(self.lowerBounds, self.upperBounds, [x, y, z, u, v, w], self.currPos):
             if not lim_inf <= pos + coord <= lim_sup:
                 raise Exception("Warning: [X, Y, Z, U, V, W] exceed : %.5f not permitted" % (pos + coord))
 

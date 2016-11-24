@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import subprocess
-
+import sys
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
 
@@ -98,7 +98,10 @@ class BshCmd(object):
             cmd.finish()
 
         except Exception as e:
-            cmd.fail("text='%s sendBiaConfig has failed : %s'" % (self.name, e))
+            cmd.fail("text='%s sendBiaConfig has failed %s : %s %s'" % (self.name,
+                                                                        str(type(e)).replace("'", ""),
+                                                                        str(e).replace("'", ""),
+                                                                        sys.exc_info()[2]))
 
     @threaded
     def biaSwitch(self, cmd):

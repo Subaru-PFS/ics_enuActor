@@ -2,6 +2,7 @@
 
 
 from datetime import datetime as dt
+import sys
 
 from enuActor.Controllers.device import Device
 import enuActor.Controllers.bufferedSocket as bufferedSocket
@@ -20,13 +21,15 @@ class bsh(Device):
         # This sets up the connections to/from the hub, the logger, and the twisted reactor.
         #
 
+        Device.__init__(self, actor, name)
+
         self.shState = "undef"
         self.biaState = "undef"
         self.ilockState = 0
         self.sock = None
         self.simulator = None
         self.EOL = '\r\n'
-        super(bsh, self).__init__(actor, name)
+
         self.ioBuffer = bufferedSocket.BufferedSocket(self.name + "IO", EOL='ok\r\n')
 
     def loadCfg(self, cmd, mode=None):
@@ -54,7 +57,7 @@ class bsh(Device):
         """
         self.simulator = BshSimulator() if self.currMode == "simulation" else None  # Create new simulator
 
-        s = self.connectSock()
+        s = self.connectSock(cmd)
 
     def initialise(self, cmd):
         """ Initialise the bsh board
@@ -96,7 +99,11 @@ class bsh(Device):
                 raise Exception("warning %s return %s" % (cmdStr, reply))
 
         except Exception as e:
-            cmd.warn("text='%s switch failed : %s'" % (self.name, e))
+            cmd.warn("text='%s switch failed %s : %s %s'" % (self.name,
+                                                             str(type(e)).replace("'", ""),
+                                                             str(e).replace("'", ""),
+                                                             sys.exc_info()[2]))
+
             return False
 
     def getStatus(self, cmd, doFinish=True):
@@ -116,7 +123,10 @@ class bsh(Device):
                 (self.shState, self.biaState) = self._getCurrentStatus(cmd)
 
             except Exception as e:
-                cmd.warn("text='%s getStatus failed : %s'" % (self.name, e))
+                cmd.warn("text='%s getStatus failed %s : %s %s'" % (self.name,
+                                                                    str(type(e)).replace("'", ""),
+                                                                    str(e).replace("'", ""),
+                                                                    sys.exc_info()[2]))
                 ender = fender
 
         talk = cmd.inform if ender != fender else cmd.warn

@@ -14,7 +14,7 @@ class temps(Device):
     timeout = 5
 
     def __init__(self, actor, name, loglevel=logging.DEBUG):
-        super(temps, self).__init__(actor, name)
+        Device.__init__(self, actor, name)
 
         self.logger = logging.getLogger('temps')
         self.logger.setLevel(loglevel)

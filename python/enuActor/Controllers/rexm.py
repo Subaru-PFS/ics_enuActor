@@ -3,6 +3,7 @@
 import logging
 import time
 from datetime import datetime as dt
+import sys
 
 from Controllers.Simulator.rexm_simu import RexmSimulator
 from Controllers.device import Device
@@ -17,7 +18,7 @@ class rexm(Device):
     toDir = {'low': 0, 'mid': 1}
 
     def __init__(self, actor, name, loglevel=logging.DEBUG):
-        super(rexm, self).__init__(actor, name)
+        Device.__init__(self, actor, name)
 
         self.logger = logging.getLogger('rexm')
         self.logger.setLevel(loglevel)
@@ -56,7 +57,7 @@ class rexm(Device):
         """
         self.myTMCM = rexm_drivers.TMCM(self.port) if self.currMode == 'operation' else RexmSimulator()
 
-        ret = self.myTMCM.gap(11)
+        ret = self.myTMCM.gap(cmd, 11)
 
     def initialise(self, cmd):
         """ Initialise slit
@@ -76,7 +77,7 @@ class rexm(Device):
         cmd.inform("text='seeking home ...'")
         self.moveAccurate(cmd, rexm.toDir['low'])
 
-        ret = self.myTMCM.sap(1, 0)  # set 0 as home
+        ret = self.myTMCM.sap(cmd, 1, 0)  # set 0 as home
 
     def getStatus(self, cmd=None, doFinish=True):
         """getStatus
@@ -96,7 +97,10 @@ class rexm(Device):
                 self.currPos = rexm.switch[(self.positionA, self.positionB)] if (self.positionA,
                                                                                  self.positionB) in rexm.switch else "undef"
             except Exception as e:
-                cmd.warn("text='error during status : %s" % e)
+                cmd.warn("text='%s error during status %s : %s %s'" % (self.name,
+                                                                       str(type(e)).replace("'", ""),
+                                                                       str(e).replace("'", ""),
+                                                                       sys.exc_info()[2]))
                 ender = fender
 
         ender("rexm=%s,%s,%s" % (self.fsm.current, self.currMode, self.currPos))
@@ -118,20 +122,20 @@ class rexm(Device):
         t = dt.now()
         ts = dt.now()
         try:
-            self.myTMCM.stop()
+            self.myTMCM.stop(cmd)
             cmd.inform("text='stopping rexm movement'")
             while self.isMoving:
                 if (dt.now() - t).total_seconds() > 5:
                     raise Exception("timeout aborting")
                 if (dt.now() - ts).total_seconds() > 2:
                     self.checkStatus(cmd)
-                    self.myTMCM.stop()
+                    self.myTMCM.stop(cmd)
                     ts = dt.now()
                 else:
                     self.checkStatus(cmd, doShow=False)
             self.checkStatus(cmd)
-        except Exception as e:
-            cmd.warn("text='failed to stop rexm movement %s'" % e)
+        except:
+            cmd.warn("text='%s failed to stop movement '" % self.name)
             raise
 
     def checkStatus(self, cmd, doClose=False, doShow=True):
@@ -150,10 +154,10 @@ class rexm(Device):
         """
         time.sleep(0.01)
 
-        self.positionA = self.myTMCM.gap(11)
-        self.positionB = self.myTMCM.gap(10)
-        self.speed = self.myTMCM.gap(3, fmtRet='>BBBBiB')
-        self.currPos = self.myTMCM.gap(1, doClose=doClose, fmtRet='>BBBBiB')
+        self.positionA = self.myTMCM.gap(cmd, 11)
+        self.positionB = self.myTMCM.gap(cmd, 10)
+        self.speed = self.myTMCM.gap(cmd, 3, fmtRet='>BBBBiB')
+        self.currPos = self.myTMCM.gap(cmd, 1, doClose=doClose, fmtRet='>BBBBiB')
 
         if doShow:
             cmd.inform("rexmInfo=%i,%i,%i,%i" % (self.positionA, self.positionB, self.speed, self.currPos))
@@ -178,7 +182,11 @@ class rexm(Device):
             self.moveAccurate(cmd, rexm.toDir[position])
             return True
         except Exception as e:
-            cmd.warn("text='failed to command rexm movement %s'" % e)
+            cmd.warn("text='%s failed to command movement %s : %s %s'" % (self.name,
+                                                                          str(type(e)).replace("'", ""),
+                                                                          str(e).replace("'", ""),
+                                                                          sys.exc_info()[2]))
+
             return False
 
     def moveAccurate(self, cmd, direction):
@@ -222,7 +230,7 @@ class rexm(Device):
 
         cmd.inform("text='moving to %s, %i, %.2f" % (rexm.toPos[direction], distance, speed))
         time.sleep(0.1)
-        ok = self.myTMCM.MVP(direction, distance, speed)
+        ok = self.myTMCM.MVP(cmd, direction, distance, speed)
 
         t = dt.now()
         ts = dt.now()

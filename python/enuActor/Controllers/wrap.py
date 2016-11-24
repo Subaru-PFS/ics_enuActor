@@ -48,7 +48,11 @@ def initialising(func):
 def busy(func):
     def wrapper(self, *args, **kwargs):
         cmd = args[0]
-        self.fsm.goBusy()
+        try:
+            self.fsm.goBusy()
+        except Exception as e:
+            cmd.warn("text='%s'" % e)
+            return
         self.getStatus(cmd, doFinish=False)
 
         ok = func(self, *args, **kwargs)
