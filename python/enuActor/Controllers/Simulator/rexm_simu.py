@@ -65,13 +65,13 @@ class RexmSimulator(object):
         self.currPos = 210.
         self.safeStop = False
 
-    def stop(self, cmd):
+    def stop(self):
         """fonction stop  controleur
         """
         time.sleep(0.2)
         self.safeStop = True
 
-    def mm2counts(self, cmd, val):
+    def mm2counts(self, val):
 
         stepIdx = 1
         screwStep = 5.0  # mm
@@ -81,9 +81,9 @@ class RexmSimulator(object):
 
         return np.float64(val / screwStep * reducer * nbStepByRev * step)
 
-    def counts2mm(self, cmd, counts):
+    def counts2mm(self, counts):
 
-        return np.float64(counts / self.mm2counts(cmd, 1.0))
+        return np.float64(counts / self.mm2counts(1.0))
 
     def fakeMove(self, direction, distance, speed):
 
@@ -107,14 +107,14 @@ class RexmSimulator(object):
 
         self.currSpeed = 0
 
-    def MVP(self, cmd, direction, distance, speed, type="relative", doClose=False):
+    def MVP(self, direction, distance, speed, type="relative", doClose=False):
         # set moving speed
         f1 = Thread(target=self.fakeMove, args=(direction, distance, speed))
         f1.start()
 
         return 0
 
-    def sap(self, cmd, paramId, data, doClose=False):
+    def sap(self, paramId, data, doClose=False):
         """fonction set axis parameter du manuel du controleur
 
         """
@@ -122,13 +122,13 @@ class RexmSimulator(object):
             self.currPos = data
         return 0
 
-    def gap(self, cmd, paramId, doClose=False, fmtRet='>BBBBIB'):
+    def gap(self, paramId, doClose=False, fmtRet='>BBBBIB'):
         """fonction get axis parameter du manuel du controleur
         """
         if paramId == 1:
-            return self.mm2counts(cmd, self.currPos)
+            return self.mm2counts(self.currPos)
         elif paramId == 3:
-            return self.mm2counts(cmd, self.currSpeed)
+            return self.mm2counts(self.currSpeed)
         elif paramId == 11:
             ret = 1 if self.currPos <= 0 else 0
         elif paramId == 10:

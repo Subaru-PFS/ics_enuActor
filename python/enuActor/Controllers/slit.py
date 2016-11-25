@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 
+import sys
+
 import numpy as np
 
 from enuActor.Controllers.Simulator.slit_simu import SlitSimulator
 from enuActor.Controllers.device import Device
-from enuActor.Controllers.utils import hxp_drivers
-from enuActor.Controllers.wrap import busy
+from enuActor.Controllers.drivers import hxp_drivers
+from enuActor.utils.wrap import busy
 
 
 class slit(Device):
@@ -42,7 +44,6 @@ class slit(Device):
                  False, ret : Config file badly formatted, Exception ret
         """
 
-
         self.actor.reloadConfiguration(cmd=cmd)
 
         self.currMode = self.actor.config.get('slit', 'mode') if mode is None else mode
@@ -58,8 +59,8 @@ class slit(Device):
         self.upperBounds = [float(val) for val in self.actor.config.get('slit', 'upperBounds').split(',')]
 
         self.homeHexa = self.home
-        self.home = slit.convertToWorld(
-            [sum(i) for i in zip(self.homeHexa[:3], self.slit_position[:3])] + self.homeHexa[3:])
+        self.home = slit.convertToWorld([sum(i) for i in zip(self.homeHexa[:3],
+                                                             self.slit_position[:3])] + self.homeHexa[3:])
 
         # Set Tool to slit home coord instead of center of hexa
 
@@ -102,6 +103,7 @@ class slit(Device):
                  False, ret : if a command fail, user if warned with error ret, fsm (LOADED => FAILED)
         """
 
+
         cmd.inform("text='killing existing socket..._'")
         self._kill()
 
@@ -138,7 +140,7 @@ class slit(Device):
                 cmd.inform("slitInfo='%s'" % ret)
                 self.currPos = self._getCurrentPosition()
             except Exception as e:
-                cmd.warn("text='%s getStatus failed : %s'" % (self.name, e))
+                cmd.warn("text='%s getStatus failed %s'" % (self.name.upper(), self.formatException(e, sys.exc_info()[2])))
                 ender = fender
 
         ender("slit=%s,%s,%s" % (self.fsm.current, self.currMode, ','.join(["%.5f" % p for p in self.currPos])))
@@ -164,7 +166,8 @@ class slit(Device):
                 ret = self._hexapodMoveIncremental('Work', *posCoord)
 
         except Exception as e:
-            cmd.warn("text='move to %s failed : %s" % (reference, e))
+            cmd.warn("text='%s move to %s failed failed %s'" % (self.name.upper(), reference,
+                                                                self.formatException(e, sys.exc_info()[2])))
             if not "Warning: [X, Y, Z, U, V, W] exceed" in str(e):
                 return False
 

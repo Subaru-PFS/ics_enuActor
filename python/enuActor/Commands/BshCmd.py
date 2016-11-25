@@ -2,11 +2,12 @@
 
 import subprocess
 import sys
+
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
 
-from enuActor.Controllers.wrap import threaded
-
+from enuActor.utils.wrap import threaded
+from enuActor.fysom import FysomError
 
 class BshCmd(object):
     def __init__(self, actor):
@@ -61,7 +62,11 @@ class BshCmd(object):
         """Initialise Device LOADED -> INIT
         """
 
-        self.controller.fsm.startInit(cmd=cmd)
+        try:
+            self.controller.fsm.startInit(cmd=cmd)
+        except FysomError as e:
+            cmd.warn("text='%s  %s'" % (self.name.upper(),
+                                        self.controller.formatException(e, sys.exc_info()[2])))
 
         self.status(cmd)
 
@@ -71,7 +76,12 @@ class BshCmd(object):
         cmdKeys = cmd.cmd.keywords
         mode = "simulation" if "simulation" in cmdKeys else "operation"
 
-        self.controller.fsm.changeMode(cmd=cmd, mode=mode)
+        try:
+            self.controller.fsm.changeMode(cmd=cmd, mode=mode)
+
+        except FysomError as e:
+            cmd.warn("text='%s  %s'" % (self.name.upper(),
+                                        self.controller.formatException(e, sys.exc_info()[2])))
 
         self.status(cmd)
 
@@ -98,10 +108,8 @@ class BshCmd(object):
             cmd.finish()
 
         except Exception as e:
-            cmd.fail("text='%s sendBiaConfig has failed %s : %s %s'" % (self.name,
-                                                                        str(type(e)).replace("'", ""),
-                                                                        str(e).replace("'", ""),
-                                                                        sys.exc_info()[2]))
+            cmd.fail("text='%s failed to send Bia Config %s'" % (self.name.upper(),
+                                                                 self.controller.formatException(e, sys.exc_info()[2])))
 
     @threaded
     def biaSwitch(self, cmd):

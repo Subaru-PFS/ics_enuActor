@@ -4,9 +4,9 @@ import subprocess
 
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
-
-from enuActor.Controllers.wrap import threaded
-
+import sys
+from enuActor.utils.wrap import threaded
+from enuActor.fysom import FysomError
 
 class SlitCmd(object):
     def __init__(self, actor):
@@ -53,7 +53,7 @@ class SlitCmd(object):
         try:
             return self.actor.controllers[self.name]
         except KeyError:
-            raise RuntimeError('%s controller is not connected.' % (self.name))
+            raise RuntimeError('%s controller is not connected.' % (self.name.upper()))
 
     @threaded
     def ping(self, cmd):
@@ -72,7 +72,12 @@ class SlitCmd(object):
         """Initialise Device LOADED -> INIT
         """
 
-        self.controller.fsm.startInit(cmd=cmd)
+        try:
+            self.controller.fsm.startInit(cmd=cmd)
+
+        except FysomError as e:
+            cmd.warn("text='%s  %s'" % (self.name.upper(),
+                                        self.controller.formatException(e, sys.exc_info()[2])))
 
         self.status(cmd)
 
@@ -82,7 +87,12 @@ class SlitCmd(object):
         cmdKeys = cmd.cmd.keywords
         mode = "simulation" if "simulation" in cmdKeys else "operation"
 
-        self.controller.fsm.changeMode(cmd=cmd, mode=mode)
+        try:
+            self.controller.fsm.changeMode(cmd=cmd, mode=mode)
+
+        except FysomError as e:
+            cmd.warn("text='%s  %s'" % (self.name.upper(),
+                                        self.controller.formatException(e, sys.exc_info()[2])))
 
         self.status(cmd)
 
@@ -121,7 +131,9 @@ class SlitCmd(object):
             ret = self.controller.getSystem(system)
             ender("%s=%s" % (keyword, ','.join(["%.5f" % p for p in ret])))
         except Exception as e:
-            nender("text='get %s failed : %s" % (system, e))
+            nender("text='%s get %s failed %s'" % (self.name.upper(), system,
+                                                   self.controller.formatException(e, sys.exc_info()[2])))
+
 
     @threaded
     def setSystem(self, cmd):
@@ -138,7 +150,8 @@ class SlitCmd(object):
             self.controller.setSystem(system, posCoord)
             self.getSystem(cmd, doFinish=False)
         except Exception as e:
-            cmd.warn("text='set new %s failed : %s" % (system, e))
+            cmd.warn("text='%s set %s failed %s'" % (self.name.upper(), system,
+                                                     self.controller.formatException(e, sys.exc_info()[2])))
 
         self.status(cmd)
 
@@ -149,7 +162,8 @@ class SlitCmd(object):
         try:
             self.controller.shutdown(cmd)
         except Exception as e:
-            cmd.warn("text='shut down failed : %s" % e)
+            cmd.warn("text='%s shutdown failed %s'" % (self.name.upper(),
+                                                       self.controller.formatException(e, sys.exc_info()[2])))
         self.status(cmd)
 
         # pdu should do something at this point

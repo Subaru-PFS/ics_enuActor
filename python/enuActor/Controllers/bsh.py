@@ -6,7 +6,7 @@ import sys
 
 from enuActor.Controllers.device import Device
 import enuActor.Controllers.bufferedSocket as bufferedSocket
-from enuActor.Controllers.wrap import busy
+from enuActor.utils.wrap import busy
 from enuActor.Controllers.Simulator.bsh_simu import BshSimulator
 
 reload(bufferedSocket)
@@ -55,9 +55,10 @@ class bsh(Device):
         :return: True, ret: if the communication is established with the board, fsm (LOADING => LOADED)
                  False, ret: if the communication failed with the board, ret is the error, fsm (LOADING => FAILED)
         """
+
         self.simulator = BshSimulator() if self.currMode == "simulation" else None  # Create new simulator
 
-        s = self.connectSock(cmd)
+        s = self.connectSock()
 
     def initialise(self, cmd):
         """ Initialise the bsh board
@@ -88,7 +89,7 @@ class bsh(Device):
         try:
             self.checkInterlock(self.shState, self.biaState, cmdStr, doForce=doForce)
         except Exception as e:
-            cmd.warn("text='%s switch failed : %s'" % (self.name, e))
+            cmd.warn("text='%s switch failed %s'" % (self.name.upper(), self.formatException(e, sys.exc_info()[2])))
             return True
 
         try:
@@ -99,11 +100,7 @@ class bsh(Device):
                 raise Exception("warning %s return %s" % (cmdStr, reply))
 
         except Exception as e:
-            cmd.warn("text='%s switch failed %s : %s %s'" % (self.name,
-                                                             str(type(e)).replace("'", ""),
-                                                             str(e).replace("'", ""),
-                                                             sys.exc_info()[2]))
-
+            cmd.warn("text='%s switch failed %s'" % (self.name.upper(), self.formatException(e, sys.exc_info()[2])))
             return False
 
     def getStatus(self, cmd, doFinish=True):
@@ -123,10 +120,8 @@ class bsh(Device):
                 (self.shState, self.biaState) = self._getCurrentStatus(cmd)
 
             except Exception as e:
-                cmd.warn("text='%s getStatus failed %s : %s %s'" % (self.name,
-                                                                    str(type(e)).replace("'", ""),
-                                                                    str(e).replace("'", ""),
-                                                                    sys.exc_info()[2]))
+                cmd.warn("text='%s getStatus failed %s'" % (self.name.upper(),
+                                                            self.formatException(e, sys.exc_info()[2])))
                 ender = fender
 
         talk = cmd.inform if ender != fender else cmd.warn
@@ -194,4 +189,4 @@ class bsh(Device):
 
         (ok, ret) = transition[(shState, biaState), cmdStr]
         if not ok:
-            raise Exception("Transition not allowed %s" % ret)
+            raise Exception("Transition not allowed : %s" % ret)

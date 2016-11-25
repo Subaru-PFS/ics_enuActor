@@ -49,7 +49,6 @@ class OurActor(actorcore.ICC.ICC):
 
     def attachController(self, controller, instanceName=None, cmd=None):
         cmd = cmd if cmd is not None else self.bcast
-
         actorcore.ICC.ICC.attachController(self, controller, instanceName)
         self.controllers[controller].fsm.startLoading(cmd=cmd)
 
