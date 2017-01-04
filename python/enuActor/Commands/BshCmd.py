@@ -5,9 +5,9 @@ import sys
 
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
-
-from enuActor.utils.wrap import threaded
 from enuActor.fysom import FysomError
+from enuActor.utils.wrap import threaded
+
 
 class BshCmd(object):
     def __init__(self, actor):
@@ -26,6 +26,7 @@ class BshCmd(object):
             ('bsh', 'init', self.initialise),
             ('bsh', '@(operation|simulation)', self.changeMode),
             ('bsh', 'config [<duty>] [<period>]', self.sendConfig),
+            ('bsh', '<raw>', self.rawCommand),
             ('bia', '@(on|off) [@(force)]', self.biaSwitch),
             ('shutters', '@(open|close) [@(force)]', self.shutterSwitch),
 
@@ -33,8 +34,9 @@ class BshCmd(object):
 
         # Define typed command arguments for the above commands.
         self.keys = keys.KeysDictionary("enu__bsh", (1, 1),
-                                        keys.Key("duty", types.Float(), help="bia duty cycle (0..1"),
+                                        keys.Key("duty", types.Float(), help="bia duty cycle (0..255)"),
                                         keys.Key("period", types.Float(), help="bia period"),
+                                        keys.Key("raw", types.String(), help="raw command"),
                                         )
 
     @property
@@ -132,5 +134,22 @@ class BshCmd(object):
         doForce = True if "force" in cmdKeys else False
 
         self.controller.switch(cmd, cmdStr, doForce)
+
+        self.status(cmd)
+
+    @threaded
+    def rawCommand(self, cmd):
+        """Switch bia on/off"""
+        cmdKeys = cmd.cmd.keywords
+
+        cmdStr = cmdKeys["raw"].values[0]
+
+        try:
+            reply = self.controller.sendOneCommand(cmdStr, doClose=False, cmd=cmd)
+
+        except Exception as e:
+            cmd.warn("text='%s failed to send raw command %s'" % (self.name.upper(),
+                                                                  self.controller.formatException(e,
+                                                                                                  sys.exc_info()[2])))
 
         self.status(cmd)

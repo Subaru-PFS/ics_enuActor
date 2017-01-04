@@ -23,7 +23,7 @@ class SlitCmd(object):
             ('slit', 'ping', self.ping),
             ('slit', 'status', self.status),
             ('slit', 'init', self.initialise),
-            ('slit', 'halt', self.halt),
+            ('slit', 'abort', self.abort),
             ('slit', 'shutdown', self.shutdown),
             ('slit', '@(operation|simulation)', self.changeMode),
             ('slit', '@(get) @(home|tool)', self.getSystem),
@@ -168,10 +168,16 @@ class SlitCmd(object):
 
         # pdu should do something at this point
 
-    def halt(self, cmd):
+    def abort(self, cmd):
         """ Not implemented yet. It should stop movement.
         """
-        cmd.finish()
+	try:
+	   self.controller.abort(cmd)
+        except Exception as e:
+            cmd.warn("text='%s abort failed %s'" % (self.name.upper(),
+                                                       self.controller.formatException(e, sys.exc_info()[2])))
+
+        self.status(cmd)
 
     @threaded
     def goDither(self, cmd):

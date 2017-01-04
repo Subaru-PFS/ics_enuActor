@@ -70,13 +70,12 @@ class TopCmd(object):
 
     def connect(self, cmd, doFinish=True):
         """ Reload all controller objects. """
-
+   
         controller = cmd.cmd.keywords['controller'].values[0]
         try:
             instanceName = cmd.cmd.keywords['name'].values[0]
         except:
             instanceName = controller
-
         try:
             self.actor.attachController(controller,
                                         instanceName=instanceName,
@@ -85,7 +84,7 @@ class TopCmd(object):
             cmd.fail('text="failed to connect controller %s: %s"' % (instanceName,
                                                                      e))
             return
-
+        
         cmd.finish(self.controllerKey())
 
     def disconnect(self, cmd, doFinish=True):

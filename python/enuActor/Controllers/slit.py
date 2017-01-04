@@ -222,6 +222,10 @@ class slit(Device):
         cmd.inform("text='shutting down ..._'")
         self.fsm.shutdown()
 
+    def abort(self, cmd):
+        cmd.inform("text='aborting move..._'")
+        self._kill()
+
     def compute(self, type, pix):
         """compute.
         compute array for moveTo relative to input parameters

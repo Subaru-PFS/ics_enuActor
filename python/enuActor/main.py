@@ -48,6 +48,7 @@ class OurActor(actorcore.ICC.ICC):
             logging.info("All Controllers started")
 
     def attachController(self, controller, instanceName=None, cmd=None):
+        print "cmd=",cmd
         cmd = cmd if cmd is not None else self.bcast
         actorcore.ICC.ICC.attachController(self, controller, instanceName)
         self.controllers[controller].fsm.startLoading(cmd=cmd)

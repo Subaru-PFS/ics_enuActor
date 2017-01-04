@@ -5,7 +5,7 @@ import subprocess
 
 import opscore.protocols.keys as keys
 
-from enuActor.Controllers.wrap import threaded
+from enuActor.utils.wrap import threaded
 
 
 class TempsCmd(object):
