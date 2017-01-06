@@ -36,7 +36,7 @@ class sendPacket(object):
     def checksum(self):
         data = pack('>BBBBI', self.moduleAddress, self.cmd, self.ctype, self.motorAddress, self.data)
         self.checksum = sum(map(ord, data))
-        self.checksum = self.checksum % 256
+        self.checksum %= 256
 
     def getCmd(self):
         return self.cmdStr
@@ -73,7 +73,7 @@ class TMCM():
     # unit : mm/s
     SPEED_MAX = 1000
 
-    g_speed = 3.2;  # mm/s
+    g_speed = 3.2  # mm/s
     g_pauseDelay = 60.0  # secondes
 
     # 410mm + 10mm de marge
@@ -250,7 +250,7 @@ class TMCM():
                             cmd=TMCM.TMCL_MVP,
                             ctype=TMCM.MVP_ABS if type == "absolute" else TMCM.MVP_REL,
                             motorAddress=TMCM.MOTOR_ADDRESS,
-                            data=- counts if direction == TMCM.DIRECTION_A else counts)
+                            data=-counts if direction == TMCM.DIRECTION_A else counts)
 
         ret = self.sendOneCommand(packet.getCmd(), doClose=doClose)
 

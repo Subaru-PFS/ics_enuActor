@@ -14,7 +14,7 @@ class BshSimulator(socket.socket):
         self.g_aduty = 0
         self.g_aperiod = 100
         self.bia_mode = 0
-        self.safe_on = 0
+        self.pulse_on = 0
         self.statword = BshSimulator.statword[self.bia_mode]
 
         self.buf = []
@@ -82,13 +82,13 @@ class BshSimulator(socket.socket):
             self.buf.append(self.g_aduty)
             self.cmdnok = 1
 
-        if mycommand == "safe_on\r\n":
-            self.safe_on = 1
-            self.cmdnok = 1
+        if mycommand == "pulse_on\r\n":
+            self.pulse_on = 1
+            self.cmdnok = 0
 
-        if mycommand == "safe_off\r\n":
-            self.safe_on = 0
-            self.cmdnok = 1
+        if mycommand == "pulse_off\r\n":
+            self.pulse_on = 0
+            self.cmdnok = 0
 
         if self.cmdnok < 2:
             self.buf.append("ok\r\n")

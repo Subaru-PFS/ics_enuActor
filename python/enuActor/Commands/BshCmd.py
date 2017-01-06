@@ -28,6 +28,7 @@ class BshCmd(object):
             ('bsh', 'config [<duty>] [<period>]', self.sendConfig),
             ('bsh', '<raw>', self.rawCommand),
             ('bia', '@(on|off) [@(force)]', self.biaSwitch),
+            ('bia', '@(strobe) @(on|off)', self.biaStrobe),
             ('shutters', '@(open|close) [@(force)]', self.shutterSwitch),
 
         ]
@@ -114,6 +115,21 @@ class BshCmd(object):
                                                                  self.controller.formatException(e, sys.exc_info()[2])))
 
     @threaded
+    def biaStrobe(self, cmd):
+        """Update bia parameters """
+        cmdKeys = cmd.cmd.keywords
+        state = "off" if "off" in cmdKeys else "on"
+
+        try:
+            self.controller.sendBiaConfig(cmd, biaStrobe=state, doClose=True)
+            cmd.finish()
+
+        except Exception as e:
+            cmd.fail("text='%s failed to change Bia Strobe %s'" % (self.name.upper(),
+                                                                   self.controller.formatException(e,
+                                                                                                   sys.exc_info()[2])))
+
+    @threaded
     def biaSwitch(self, cmd):
         """Switch bia on/off"""
         cmdKeys = cmd.cmd.keywords
@@ -133,7 +149,7 @@ class BshCmd(object):
         cmdStr = "shut_open" if "open" in cmdKeys else "shut_close"
         doForce = True if "force" in cmdKeys else False
 
-        self.controller.switch(cmd, cmdStr, doForce)
+        self.controller.switch(cmd, cmdStr, doForce=doForce)
 
         self.status(cmd)
 

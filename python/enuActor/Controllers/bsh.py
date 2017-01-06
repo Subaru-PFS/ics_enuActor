@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 
 
-from datetime import datetime as dt
 import sys
+import time
+from datetime import datetime as dt
 
-from enuActor.Controllers.device import Device
 import enuActor.Controllers.bufferedSocket as bufferedSocket
-from enuActor.utils.wrap import busy
 from enuActor.Controllers.Simulator.bsh_simu import BshSimulator
+from enuActor.Controllers.device import Device
+from enuActor.utils.wrap import busy
 
 reload(bufferedSocket)
 
@@ -25,6 +26,8 @@ class bsh(Device):
 
         self.shState = "undef"
         self.biaState = "undef"
+        self.onExposure = False
+        self.startExp = None
         self.ilockState = 0
         self.sock = None
         self.simulator = None
@@ -47,6 +50,7 @@ class bsh(Device):
         self.port = int(self.actor.config.get('bsh', 'port'))
         self.biaPeriod = int(self.actor.config.get('bsh', 'bia_period'))
         self.biaDuty = int(self.actor.config.get('bsh', 'bia_duty'))
+        self.biaStrobe = self.actor.config.get('bsh', 'bia_strobe')
 
     def startCommunication(self, cmd):
         """startCommunication
@@ -75,6 +79,7 @@ class bsh(Device):
         reply = self.sendOneCommand("init", doClose=False, cmd=cmd)
         if reply != "":
             raise Exception("%s has replied nok" % self.name)
+        time.sleep(0.5)  # Shutters closing/opening time is 0.35
 
     @busy
     def switch(self, cmd, cmdStr, doForce=False):
@@ -94,14 +99,16 @@ class bsh(Device):
 
         try:
             reply = self.sendOneCommand(cmdStr, doClose=False, cmd=cmd)
-            if reply == "":
-                return True
-            else:
+            if reply != "":
                 raise Exception("warning %s return %s" % (cmdStr, reply))
 
         except Exception as e:
             cmd.warn("text='%s switch failed %s'" % (self.name.upper(), self.formatException(e, sys.exc_info()[2])))
             return False
+
+        time.sleep(0.5)  # Shutters closing/opening time is 0.35
+        self.checkExposure(cmdStr, cmd)
+        return True
 
     def getStatus(self, cmd, doFinish=True):
         """getStatus
@@ -126,7 +133,7 @@ class bsh(Device):
 
         talk = cmd.inform if ender != fender else cmd.warn
 
-        talk("shutters=%s,%s,%s,%s" % (self.fsm.current, self.currMode, self.shState, dt.utcnow().isoformat()))
+        talk("shutters=%s,%s,%s" % (self.fsm.current, self.currMode, self.shState))
         ender("bia=%s,%s,%s" % (self.fsm.current, self.currMode, self.biaState))
 
     def _getCurrentStatus(self, cmd):
@@ -144,13 +151,13 @@ class bsh(Device):
         statword = self.sendOneCommand("statword", doClose=True, cmd=cmd)
         if bsh.in_position[self.ilockState] != statword:
             cmd.warn("text='shutters not in position'")
-            for i, shutter in enumerate(["shb", "shr"]):
+            for i, shutter in enumerate(["shr", "shb"]):
                 cmd.warn("%s=%s" % (
                     shutter, ','.join([bsh.shut_stat[j % 3][int(statword[j])] for j in range(i * 3, (i + 1) * 3)])))
 
         return bsh.ilock_s_machine[self.ilockState]
 
-    def sendBiaConfig(self, cmd, biaPeriod=None, biaDuty=None, doClose=False):
+    def sendBiaConfig(self, cmd, biaPeriod=None, biaDuty=None, biaStrobe=None, doClose=False):
         """ Send and Display bia config
 
         :param cmd : current command,
@@ -161,14 +168,20 @@ class bsh(Device):
         """
         biaPeriod = self.biaPeriod if biaPeriod is None else biaPeriod
         biaDuty = self.biaDuty if biaDuty is None else biaDuty
+        biaStrobe = self.biaStrobe if biaStrobe is None else biaStrobe
 
         reply = self.sendOneCommand("set_period%i" % biaPeriod, doClose=False, cmd=cmd)
         reply = self.sendOneCommand("set_duty%i" % biaDuty, doClose=False, cmd=cmd)
 
         period = self.sendOneCommand("get_period", doClose=False, cmd=cmd)
-        duty = self.sendOneCommand("get_duty", doClose=doClose, cmd=cmd)
+        duty = self.sendOneCommand("get_duty", doClose=False, cmd=cmd)
 
-        self.biaPeriod, self.biaDuty = period, duty
+        reply = self.sendOneCommand("pulse_%s" % biaStrobe, doClose=doClose, cmd=cmd)
+
+        self.biaStrobe = biaStrobe
+        cmd.inform("biaStrobe=%s" % biaStrobe)
+
+        self.biaPeriod, self.biaDuty = int(period), int(duty)
         cmd.inform("biaConfig=%s,%s" % (period, duty))
 
     def checkInterlock(self, shState, biaState, cmdStr, doForce=False):
@@ -190,3 +203,12 @@ class bsh(Device):
         (ok, ret) = transition[(shState, biaState), cmdStr]
         if not ok:
             raise Exception("Transition not allowed : %s" % ret)
+
+    def checkExposure(self, cmdStr, cmd):
+        if cmdStr == "shut_open" and not self.onExposure:
+            self.onExposure = True
+            self.startExp = dt.utcnow()
+        elif cmdStr == "shut_close" and self.onExposure:
+            self.onExposure = False
+            cmd.inform("dateobs=%s" % self.startExp.isoformat())
+            cmd.inform("exptime=%.3f" % ((dt.utcnow() - self.startExp).total_seconds()))
