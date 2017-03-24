@@ -14,11 +14,13 @@
 # for TMCM-1180 firmware v4.45.
 
 #
+import sys
 import time
 from struct import pack, unpack
 
 import numpy as np
 import serial
+from enuActor.utils.wrap import formatException
 
 
 class sendPacket(object):
@@ -58,6 +60,7 @@ class recvPacket():
 class TMCM():
     controllerStatus = {100: "Successfully executed, no error",
                         101: "Command loaded into TMCL program EEPROM",
+                        0: "Unkown Error",
                         1: "Wrong checksum",
                         2: "Invalid command",
                         3: "Wrong type",
@@ -112,10 +115,6 @@ class TMCM():
         self.port = port
         self.name = "rexm"
 
-    def formatException(self, e, traceback=""):
-
-        return "%s %s %s" % (str(type(e)).replace("'", ""), str(type(e)(*e.args)).replace("'", ""), traceback)
-
     def openSerial(self):
         """ Connect serial if self.ser is None
 
@@ -132,7 +131,7 @@ class TMCM():
                                   stopbits=serial.STOPBITS_ONE,
                                   timeout=2.)
             except Exception as e:
-                raise Exception("%s failed to create serial : %s" % (self.name, self.formatException(e)))
+                raise Exception("%s failed to create serial : %s" % (self.name, formatException(e, sys.exc_info()[2])))
 
             try:
                 if not s.isOpen():
@@ -142,7 +141,7 @@ class TMCM():
                 else:
                     raise Exception('serial port is not readable')
             except Exception as e:
-                raise Exception("%s failed to open-rw serial : %s" % (self.name, self.formatException(e)))
+                raise Exception("%s failed to open-rw serial : %s" % (self.name, formatException(e, sys.exc_info()[2])))
 
         return self.ser
 
@@ -157,7 +156,7 @@ class TMCM():
             try:
                 self.ser.close()
             except Exception as e:
-                raise Exception("%s failed to close serial : %s" % (self.name, self.formatException(e)))
+                raise Exception("%s failed to close serial : %s" % (self.name, formatException(e, sys.exc_info()[2])))
 
         self.ser = None
 
@@ -187,7 +186,7 @@ class TMCM():
                 raise Exception('cmdStr is badly formatted')
 
         except Exception as e:
-            raise Exception("%s failed to send %s : %s" % (self.name, cmdStr, self.formatException(e)))
+            raise Exception("%s failed to send %s : %s" % (self.name, cmdStr, formatException(e, sys.exc_info()[2])))
 
         reply = self.getOneResponse(ser=s, fmtRet=fmtRet)
         if doClose:
@@ -205,7 +204,7 @@ class TMCM():
             if ret.status != 100:
                 raise Exception(TMCM.controllerStatus[ret.status])
         except Exception as e:
-            raise Exception("%s failed to get answer : %s" % (self.name, self.formatException(e)))
+            raise Exception("%s failed to get answer : %s" % (self.name, formatException(e, sys.exc_info()[2])))
 
         return ret.data
 

@@ -3,11 +3,10 @@
 import sys
 
 import numpy as np
-
 from enuActor.Controllers.Simulator.slit_simu import SlitSimulator
 from enuActor.Controllers.device import Device
 from enuActor.Controllers.drivers import hxp_drivers
-from enuActor.utils.wrap import busy
+from enuActor.utils.wrap import busy, formatException
 
 
 class slit(Device):
@@ -24,26 +23,30 @@ class slit(Device):
         return [round(x, 5), round(y, 5), float(Z), float(U), float(V), float(W)]
 
     def __init__(self, actor, name):
-        # This sets up the connections to/from the hub, the logger, and the twisted reactor.
-        #
+        """This sets up the connections to/from the hub, the logger, and the twisted reactor.
+
+        :param actor: enuActor
+        :param name: controller name
+        :type name: str
+        """
         Device.__init__(self, actor, name)
 
         # Hexapod Attributes
         self.groupName = 'HEXAPOD'
         self.myxps = None
         self.socketId = None
-        self.link_busy = False
+
         self.currPos = [np.nan] * 6
 
     def loadCfg(self, cmd, mode=None):
-        """loadCfg
-        load Configuration file
-        :param cmd
-        :param mode (operation or simulation, loaded from config file if None
-        :return: True, ret : Config File successfully loaded'
-                 False, ret : Config file badly formatted, Exception ret
-        """
+        """| Load Configuration file. called by device.loadDevice().
+        | Convert to world tool and home.
 
+        :param cmd: on going command
+        :param mode: operation|simulation, loaded from config file if None
+        :type mode: str
+        :raise: Exception Config file badly formatted
+        """
         self.actor.reloadConfiguration(cmd=cmd)
 
         self.currMode = self.actor.config.get('slit', 'mode') if mode is None else mode
@@ -70,12 +73,11 @@ class slit(Device):
         self.tool_value = [sum(i) for i in zip(tool_value, [0, 0, self.thicknessCarriage, 0, 0, 0])]
 
     def startCommunication(self, cmd):
+        """| Start socket with the hexapod controller or simulate it.
+        | Called by device.loadDevice()
 
-        """startCommunication
-        Start socket with the controller or simulate it
-        :param cmd,
-        :return: True, ret: if the communication is established with the controller, fsm goes to LOADED
-                 False, ret: if the communication failed with the controller, ret is the error, fsm goes to FAILED
+        :param cmd: on going command,
+        :raise: Exception if the communication has failed with the controller
         """
 
         if self.currMode == 'operation':
@@ -89,7 +91,7 @@ class slit(Device):
             raise Exception('Connection to Hexapod failed check IP & Port')
 
     def initialise(self, cmd):
-        """ Initialise slit
+        """| Initialise hexapod, called y device.initDevice().
 
         - kill socket
         - init hxp
@@ -97,12 +99,9 @@ class slit(Device):
         - set home and tool system
         - go home
 
-        wrapper @safeCheck handles the state machine
-        :param e, fsm event
-        :return: True, ret : if every steps are successfully operated, fsm (LOADED => IDLE)
-                 False, ret : if a command fail, user if warned with error ret, fsm (LOADED => FAILED)
+        :param cmd: on going command
+        :raise: Exception if a command fail, user if warned with error
         """
-
 
         cmd.inform("text='killing existing socket..._'")
         self._kill()
@@ -113,74 +112,75 @@ class slit(Device):
         cmd.inform("text='seeking home ...'")
         self._homeSearch()
 
-        self._hexapodCoordinateSysSet('Work', *self.home)
+        self._hexapodCoordinateSysSet('Work', self.home)
         cmd.inform("slitHome=%s" % ','.join(["%.5f" % p for p in self.home]))
 
-        self._hexapodCoordinateSysSet('Tool', *self.tool_value)
+        self._hexapodCoordinateSysSet('Tool', self.tool_value)
         cmd.inform("slitTool=%s" % ','.join(["%.5f" % p for p in self.tool_value]))
 
         cmd.inform("text='going to home ...'")
-        self._hexapodMoveAbsolute(*[0, 0, 0, 0, 0, 0])
+        self._hexapodMoveAbsolute([0, 0, 0, 0, 0, 0])
 
     def getStatus(self, cmd=None, doFinish=True):
-        """getStatus
-        position is nan if the controller is unreachable
-        :param cmd,
-        :return True, state, mode, pos_x, pos_y, pos_z, pos_u, pos_v, pos_w
-                 False, state, mode, nan, nan, nan, nan, nan, nan if not initialised or an error had occured
-        """
+        """| Get status from the controller and publish slit keywords.
 
+        - slit = state, mode, pos_x, pos_y, pos_z, pos_u, pos_v, pos_w
+        - slitInfo = str : *an interpreted status returned by the controller*
+
+        :param cmd: on going command
+        :param doFinish: if True finish the command
+        """
         ender = cmd.finish if doFinish else cmd.inform
         fender = cmd.fail if doFinish else cmd.warn
         self.currPos = 6 * [np.nan]
 
         if self.fsm.current in ['LOADED', 'IDLE', 'BUSY']:
             try:
-                ret = self._getHxpStatusString(self._getHxpStatus()[0])[0]
+                ret = self._getHxpStatusString(self._getHxpStatus())
                 cmd.inform("slitInfo='%s'" % ret)
                 self.currPos = self._getCurrentPosition()
             except Exception as e:
-                cmd.warn("text='%s getStatus failed %s'" % (self.name.upper(), self.formatException(e, sys.exc_info()[2])))
+                cmd.warn(
+                    "text='%s getStatus failed %s'" % (self.name.upper(), formatException(e, sys.exc_info()[2])))
                 ender = fender
 
         ender("slit=%s,%s,%s" % (self.fsm.current, self.currMode, ','.join(["%.5f" % p for p in self.currPos])))
 
     @busy
     def moveTo(self, cmd, reference, posCoord):
-        """MoveTo.
-        Move to posCoord
+        """| *wrapper @busy* handles the state machine.
+        | Move to posCoord in the reference,
 
-        wrapper @busy handles the state machine
-        :param cmd
+        :param cmd: on going command
         :param reference: 'absolute' or 'relative'
         :param posCoord: [x, y, z, u, v, w]
-        :return: True, ret : if the command raise no error
-                 False, ret: if the command fail
-
+        :type reference: str
+        :type posCoord: list
+        :return: - True if the command raise no error, fsm (BUSY => IDLE)
+                 - False if the command fail,fsm (BUSY => FAILED)
         """
         try:
             if reference == 'absolute':
-                ret = self._hexapodMoveAbsolute(*posCoord)
+                ret = self._hexapodMoveAbsolute(posCoord)
 
             elif reference == 'relative':
-                ret = self._hexapodMoveIncremental('Work', *posCoord)
+                ret = self._hexapodMoveIncremental('Work', posCoord)
 
         except Exception as e:
             cmd.warn("text='%s move to %s failed failed %s'" % (self.name.upper(), reference,
-                                                                self.formatException(e, sys.exc_info()[2])))
+                                                                formatException(e, sys.exc_info()[2])))
             if not "Warning: [X, Y, Z, U, V, W] exceed" in str(e):
                 return False
 
         return True
 
     def getSystem(self, system):
-        """getSystem
-        Get system from the controller and update the actor's current value
+        """| Get system from the controller and update the actor's current value.
 
-        :param system (Work or Home)
-
-        :return: True, system
-                 False, ret : if a an error ret occured
+        :param system: Work|Tool
+        :type system: str
+        :return:  [x, y, z, u, v, w] coordinate system definition
+        :raise: Exception if the coordinate system does not exist
         """
         ret = self._hexapodCoordinateSysGet(system)
         if system == "Work":
@@ -193,126 +193,145 @@ class slit(Device):
         return ret
 
     def setSystem(self, system, posCoord):
-        """setSystem
-        Send new coordinate system to the controller
+        """| Send new coordinate system to the controller
 
-        :param system (Work or Home)
-        :param posCoord : [x, y, z, u, v, w]
-
-        :return: True, ''
-                 False, ret : if a an error ret occured
+        :param system: Work|Tool
+        :param posCoord: [x, y, z, u, v, w]
+        :type system: str
+        :type posCoord: list
+        :raise: Exception if an error is raised by errorChecker
         """
-        return self._hexapodCoordinateSysSet(system, *posCoord)
+        return self._hexapodCoordinateSysSet(system, posCoord)
 
-    def shutdown(self, cmd):
-        """shutdown.
-        prepared controller for shutdown
-
-        :param cmd:
-        :return: True : if every steps are successfully operated, cmd is not finished
-                 False: if the command fail, command is finished with cmd.fail
+    def shutdown(self, cmd, enable):
+        """| Prepared controller for shutdown, fsm (IDLE => OFF).
+        
+        :param cmd: on going command:
+        :raise: if a command fail, user if warned with error
         """
-        if self.fsm.current == "IDLE":
-            cmd.inform("text='going to home ...'")
-            self._hexapodMoveAbsolute(*[0, 0, 0, 0, 0, 0])
+        if enable:
+            ret = self._hexapodEnable()
+            cmd.inform("text='loading Slit controller..._'")
+            self.fsm.startLoading()
+        else:
+            ret = self._hexapodDisable()
+            cmd.inform("text='killing existing socket..._'")
+            self._kill()
+            self.fsm.shutdown()
 
-        cmd.inform("text='killing existing socket..._'")
-        self._kill()
-
-        cmd.inform("text='shutting down ..._'")
-        self.fsm.shutdown()
+        return ret
 
     def abort(self, cmd):
+        """| Aborting current move, fsm (BUSY -> ?).
+
+        :param cmd: on going command:
+        :raise: if a command fail, user if warned with error
+        """
+
         cmd.inform("text='aborting move..._'")
         self._kill()
 
     def compute(self, type, pix):
-        """compute.
-        compute array for moveTo relative to input parameters
+        """| Compute array for moveTo relative to input parameters.
 
         :param type: focus|dither
         :param pix: number of pixel
+        :type type: str
+        :type pix: int
+        :rtype: list
         :return: magnification*pix*[x, y, z, 0, 0, 0]
         """
         array = np.array(self.focus_axis) if type == "focus" else np.array(self.dither_axis)
         return list(self.magnification * pix * array)
 
     def _getCurrentPosition(self):
-        """_getCurrentPosition.
-         :return: True, position [x, y, z, u, v, w]
-                  False, ret : if a an error ret occured
+        """| Get current position.
+
+        :return: position [x, y, z, u, v, w]
+        :rtype: list
+        :raise: Exception if an error occured
         """
         return self.errorChecker(self.myxps.GroupPositionCurrentGet, self.socketId, self.groupName, 6)
 
     def _getHxpStatus(self):
-        """_getHxpStatus.
-         :return: [error, code]
+        """| Get hexapod status as an integer.
+
+        :return: error code
+        :rtype: int
+        :raise: Exception if an error occured
         """
         return self.errorChecker(self.myxps.GroupStatusGet, self.socketId, self.groupName)
 
     def _getHxpStatusString(self, code):
-        """_getHxpStatusString.
-         :param code, error code
-         :return: [error, status string]
+        """| Get hexapod status interpreted as a string.
+
+        :param code: error code
+        :return: status_string
+        :rtype: str
+        :raise: Exception if an error occured
         """
         return self.errorChecker(self.myxps.GroupStatusStringGet, self.socketId, code)
 
     def _kill(self):
-        """_kill.
-         :return: True, ''
-                  False, ret : if a an error ret occured
+        """| Kill socket.
+
+        :return: ''
+        :raise: Exception if an error occured
         """
         return self.errorChecker(self.myxps.GroupKill, self.socketId, self.groupName)
 
     def _initialize(self):
-        """_initialize.
-         :return: True, ''
-                  False, ret : if a an error ret occured
+        """| Initialize communication.
+
+        :return: ''
+        :raise: Exception if an error occured
         """
         return self.errorChecker(self.myxps.GroupInitialize, self.socketId, self.groupName)
 
     def _homeSearch(self):
-        """_homeSearch.
-         :return: True, ''
-                  False, ret : if a an error ret occured
+        """| Home searching.
+
+        :return: ''
+        :raise: Exception if an error occured
         """
         return self.errorChecker(self.myxps.GroupHomeSearch, self.socketId, self.groupName)
 
     def _hexapodCoordinateSysGet(self, coordSystem):
-        """_hexapodCoordinateSysGet.
-         :param coordSystem ( Work or Tool)
-         :return: True, coordSystem [x, y, z, u, v, w]
-                  False, ret : if a an error ret occured
+        """| Get coordinates system definition from hexapod memory.
+
+        :param coordSystem: Work|Tool
+        :type coordSystem: str
+        :rtype: list
+        :return: coordSystem [x, y, z, u, v, w]
+        :raise: Exception if an error occured
         """
         return self.errorChecker(self.myxps.HexapodCoordinateSystemGet, self.socketId, self.groupName, coordSystem)
 
-    def _hexapodCoordinateSysSet(self, coordSystem, x, y, z, u, v, w):
-        """_hexapodCoordinateSysSet.
-         :param coordSystem ( Work or Tool)
-         :param x, x position
-         :param y, y position
-         :param z, z position
-         :param u, u position
-         :param v, v position
-         :param w, w position
-         :return: True, ''
-                  False, ret : if a an error ret occured
+    def _hexapodCoordinateSysSet(self, coordSystem, posCoord):
+        """| Set coordinates system from parameters.
+
+        :param coordSystem: Work|Tool
+        :param posCoord: [x, y, z, u, v, w]
+        :type posCoord: list
+        :return: ''
+        :raise: Exception if an error occured
         """
+        [x, y, z, u, v, w] = posCoord
         return self.errorChecker(self.myxps.HexapodCoordinateSystemSet, self.socketId, self.groupName, coordSystem,
                                  x, y, z, u, v, w)
 
-    def _hexapodMoveAbsolute(self, x, y, z, u, v, w):
-        """_hexapodMoveAbsolute.
-         :param coordSystem ( Work or Tool)
-         :param x, x position
-         :param y, y position
-         :param z, z position
-         :param u, u position
-         :param v, v position
-         :param w, w position
-         :return: True, ''
-                  False, ret : if a an error ret occured
+    def _hexapodMoveAbsolute(self, posCoord):
+        """| Move hexapod in absolute.
+        | In our application, hexapod has a smaller range of motion due to the mechanical interfaces.
+        | Software limits are set to prevent any risk of collision.
+
+        :param posCoord: [x, y, z, u, v, w].
+        :type posCoord: list
+        :return: ''
+        :raise: Exception if an error occured
         """
+        [x, y, z, u, v, w] = posCoord
+
         for lim_inf, lim_sup, coord in zip(self.lowerBounds, self.upperBounds, [x, y, z, u, v, w]):
             if not lim_inf <= coord <= lim_sup:
                 raise Exception("Warning: [X, Y, Z, U, V, W] exceed : %.5f not permitted" % coord)
@@ -320,18 +339,17 @@ class slit(Device):
         return self.errorChecker(self.myxps.HexapodMoveAbsolute, self.socketId, self.groupName, 'Work', x, y, z, u, v,
                                  w)
 
-    def _hexapodMoveIncremental(self, coordSystem, x, y, z, u, v, w):
-        """_hexapodMoveIncremental.
-         :param coordSystem ( Work or Tool)
-         :param x, x position
-         :param y, y position
-         :param z, z position
-         :param u, u position
-         :param v, v position
-         :param w, w position
-         :return: True, ''
-                  False, ret : if a an error ret occured
+    def _hexapodMoveIncremental(self, coordSystem, posCoord):
+        """| Move hexapod in relative.
+        | In our application, hexapod has a smaller range of motion due to the mechanical interfaces.
+        | Therefor software limit are set to prevent any risk of collision.
+
+        :param posCoord: [x, y, z, u, v, w]
+        :type posCoord: list
+        :return: ''
+        :raise: Exception if an error occured
         """
+        [x, y, z, u, v, w] = posCoord
 
         for lim_inf, lim_sup, coord, pos in zip(self.lowerBounds, self.upperBounds, [x, y, z, u, v, w], self.currPos):
             if not lim_inf <= pos + coord <= lim_sup:
@@ -340,10 +358,30 @@ class slit(Device):
         return self.errorChecker(self.myxps.HexapodMoveIncremental, self.socketId, self.groupName, coordSystem, x,
                                  y, z, u, v, w)
 
-    def errorChecker(self, func, *args):
-        """ Kind of decorator who check error after routine.
+    def _hexapodDisable(self):
+        """| Disable hexapod.
 
-        :returns: error, ret
+        :return: ''
+        :raise: Exception if an error occured
+        """
+        return self.errorChecker(self.myxps.GroupMotionDisable, self.socketId, self.groupName)
+
+    def _hexapodEnable(self):
+        """| Enable hexapod.
+
+        :return: ''
+        :raise: Exception if an error occured
+        """
+        return self.errorChecker(self.myxps.GroupMotionEnable, self.socketId, self.groupName)
+
+    def errorChecker(self, func, *args):
+        """| Decorator for slit lower level functions.
+
+        :param func: function to check
+        :param args: function arguments
+        :returns: ret
+        :rtype: str
+        :raise: Exception if an error is returned by hxp drivers
         """
 
         buf = func(*args)
@@ -361,4 +399,4 @@ class slit(Device):
                 else:
                     raise Exception(func.func_name + ' : ' + errorString)
 
-        return buf[1:]
+        return buf[1:] if len(buf) > 2 else buf[1]

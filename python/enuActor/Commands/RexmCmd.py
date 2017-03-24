@@ -1,13 +1,12 @@
 #!/usr/bin/env python
 
 
-import subprocess
 import sys
 
 import opscore.protocols.keys as keys
-
-from enuActor.utils.wrap import threaded
 from enuActor.fysom import FysomError
+from enuActor.utils.wrap import threaded, formatException
+
 
 class RexmCmd(object):
     def __init__(self, actor):
@@ -43,8 +42,7 @@ class RexmCmd(object):
     @threaded
     def ping(self, cmd):
         """Query the actor for liveness/happiness."""
-        cmd.inform('version=%s' % subprocess.check_output(["git", "describe"]))
-        cmd.finish("text='Present and (probably) well'")
+        cmd.finish("text='%s controller Present and (probably) well'" % self.name)
 
     @threaded
     def status(self, cmd):
@@ -54,49 +52,46 @@ class RexmCmd(object):
 
     @threaded
     def initialise(self, cmd):
-        """Initialise Device LOADED -> INIT
-        """
+        """Initialise REXM, call fsm startInit event """
 
         try:
             self.controller.fsm.startInit(cmd=cmd)
+        # That transition may not be allowed, see state machine
         except FysomError as e:
-            cmd.warn("text='%s  %s'" % (self.name.upper(),
-                                        self.controller.formatException(e, sys.exc_info()[2])))
+            cmd.warn("text='%s  %s'" % (self.name.upper(), formatException(e, sys.exc_info()[2])))
 
-        self.status(cmd)
+        self.controller.getStatus(cmd)
 
     @threaded
     def changeMode(self, cmd):
-        """Change device mode operation|simulation"""
+        """Change device mode operation|simulation call fsm changeMode event"""
+
         cmdKeys = cmd.cmd.keywords
         mode = "simulation" if "simulation" in cmdKeys else "operation"
 
         try:
             self.controller.fsm.changeMode(cmd=cmd, mode=mode)
+        # That transition may not be allowed, see state machine
         except FysomError as e:
-            cmd.warn("text='%s  %s'" % (self.name.upper(),
-                                        self.controller.formatException(e, sys.exc_info()[2])))
+            cmd.warn("text='%s  %s'" % (self.name.upper(), formatException(e, sys.exc_info()[2])))
 
-        self.status(cmd)
+        self.controller.getStatus(cmd)
 
     @threaded
     def moveTo(self, cmd):
-        """ Move to low|mid resolution position
-        """
+        """ Move to low|mid resolution position """
         cmdKeys = cmd.cmd.keywords
         position = "low" if "low" in cmdKeys else "mid"
 
         self.controller.moveTo(cmd, position)
 
-        self.status(cmd)
+        self.controller.getStatus(cmd)
 
     def abort(self, cmd):
-        """ Move to low|mid resolution position
-        """
+        """ Abort current motion """
 
         try:
             self.controller.abort(cmd)
-            self.status(cmd)
+            self.controller.getStatus(cmd)
         except Exception as e:
-            cmd.fail("text='%s failed to stop movement %s'" % (self.name.upper(),
-                                                               self.controller.formatException(e, sys.exc_info()[2])))
+            cmd.fail("text='%s failed to stop motion %s'" % (self.name.upper(), formatException(e, sys.exc_info()[2])))

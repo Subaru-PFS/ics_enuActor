@@ -6,7 +6,7 @@ import sys
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
 from enuActor.fysom import FysomError
-from enuActor.utils.wrap import threaded
+from enuActor.utils.wrap import threaded, formatException
 
 
 class BshCmd(object):
@@ -30,6 +30,8 @@ class BshCmd(object):
             ('bia', '@(on|off) [@(force)]', self.biaSwitch),
             ('bia', '@(strobe) @(on|off)', self.biaStrobe),
             ('shutters', '@(open|close) [@(force)]', self.shutterSwitch),
+            ('shutters', '@(expose) <exptime> [@(force)]', self.shutterExpose),
+            ('shutters', 'abort', self.abort),
 
         ]
 
@@ -38,6 +40,8 @@ class BshCmd(object):
                                         keys.Key("duty", types.Float(), help="bia duty cycle (0..255)"),
                                         keys.Key("period", types.Float(), help="bia period"),
                                         keys.Key("raw", types.String(), help="raw command"),
+                                        keys.Key("exptime", types.Float(), help="exposure time"),
+
                                         )
 
     @property
@@ -49,10 +53,9 @@ class BshCmd(object):
 
     @threaded
     def ping(self, cmd):
-        """Query the actor for liveness/happiness."""
+        """Query the controller for liveness/happiness."""
 
-        cmd.inform('version=%s' % subprocess.check_output(["git", "describe"]))
-        cmd.finish("text='Present and (probably) well'")
+        cmd.finish("text='%s controller Present and (probably) well'"%self.name)
 
     @threaded
     def status(self, cmd):
@@ -62,35 +65,35 @@ class BshCmd(object):
 
     @threaded
     def initialise(self, cmd):
-        """Initialise Device LOADED -> INIT
-        """
+        """Initialise BSH, call fsm startInit event """
 
         try:
             self.controller.fsm.startInit(cmd=cmd)
+        # That transition may not be allowed, see state machine
         except FysomError as e:
-            cmd.warn("text='%s  %s'" % (self.name.upper(),
-                                        self.controller.formatException(e, sys.exc_info()[2])))
+            cmd.warn("text='%s  %s'" % (self.name.upper(), formatException(e, sys.exc_info()[2])))
 
-        self.status(cmd)
+        self.controller.getStatus(cmd)
 
     @threaded
     def changeMode(self, cmd):
-        """Change device mode operation|simulation"""
+        """Change device mode operation|simulation call fsm changeMode event"""
+
         cmdKeys = cmd.cmd.keywords
         mode = "simulation" if "simulation" in cmdKeys else "operation"
 
         try:
             self.controller.fsm.changeMode(cmd=cmd, mode=mode)
-
+        # That transition may not be allowed, see state machine
         except FysomError as e:
-            cmd.warn("text='%s  %s'" % (self.name.upper(),
-                                        self.controller.formatException(e, sys.exc_info()[2])))
+            cmd.warn("text='%s  %s'" % (self.name.upper(), formatException(e, sys.exc_info()[2])))
 
-        self.status(cmd)
+        self.controller.getStatus(cmd)
 
     @threaded
     def sendConfig(self, cmd):
         """Update bia parameters """
+
         cmdKeys = cmd.cmd.keywords
         period, duty = None, None
 
@@ -112,11 +115,11 @@ class BshCmd(object):
 
         except Exception as e:
             cmd.fail("text='%s failed to send Bia Config %s'" % (self.name.upper(),
-                                                                 self.controller.formatException(e, sys.exc_info()[2])))
+                                                                 formatException(e, sys.exc_info()[2])))
 
     @threaded
     def biaStrobe(self, cmd):
-        """Update bia parameters """
+        """Activate|desactivate bia strobe mode  """
         cmdKeys = cmd.cmd.keywords
         state = "off" if "off" in cmdKeys else "on"
 
@@ -126,12 +129,11 @@ class BshCmd(object):
 
         except Exception as e:
             cmd.fail("text='%s failed to change Bia Strobe %s'" % (self.name.upper(),
-                                                                   self.controller.formatException(e,
-                                                                                                   sys.exc_info()[2])))
+                                                                   formatException(e, sys.exc_info()[2])))
 
     @threaded
     def biaSwitch(self, cmd):
-        """Switch bia on/off"""
+        """Switch bia on/off, optional keyword force to force transition (without breaking interlock)"""
         cmdKeys = cmd.cmd.keywords
 
         cmdStr = "bia_on" if "on" in cmdKeys else "bia_off"
@@ -139,11 +141,11 @@ class BshCmd(object):
 
         self.controller.switch(cmd, cmdStr, doForce=doForce)
 
-        self.status(cmd)
+        self.controller.getStatus(cmd)
 
     @threaded
     def shutterSwitch(self, cmd):
-        """Open/close shutters"""
+        """Open/close , optional keyword force to force transition (without breaking interlock)"""
         cmdKeys = cmd.cmd.keywords
 
         cmdStr = "shut_open" if "open" in cmdKeys else "shut_close"
@@ -151,11 +153,28 @@ class BshCmd(object):
 
         self.controller.switch(cmd, cmdStr, doForce=doForce)
 
-        self.status(cmd)
+        self.controller.getStatus(cmd)
+
+    @threaded
+    def shutterExpose(self, cmd):
+        """Open/close shutters with temporization"""
+        cmdKeys = cmd.cmd.keywords
+
+        exptime = cmdKeys["exptime"].values[0]
+        doForce = True if "force" in cmdKeys else False
+
+        if exptime <= 0:
+            cmd.fail("text='exptime must be positive'")
+            return
+
+        self.controller.stopExposure = False
+
+        self.controller.expose(cmd, exptime, doForce=doForce)
+        self.controller.getStatus(cmd)
 
     @threaded
     def rawCommand(self, cmd):
-        """Switch bia on/off"""
+        """Send a raw command to the bsh board """
         cmdKeys = cmd.cmd.keywords
 
         cmdStr = cmdKeys["raw"].values[0]
@@ -165,7 +184,12 @@ class BshCmd(object):
 
         except Exception as e:
             cmd.warn("text='%s failed to send raw command %s'" % (self.name.upper(),
-                                                                  self.controller.formatException(e,
+                                                                  formatException(e,
                                                                                                   sys.exc_info()[2])))
 
-        self.status(cmd)
+        self.controller.getStatus(cmd)
+
+    def abort(self, cmd):
+        """Abort current exposure"""
+        self.controller.stopExposure = True
+        cmd.finish("text='stopping current exposure'")

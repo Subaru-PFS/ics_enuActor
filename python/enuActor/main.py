@@ -9,7 +9,7 @@ import actorcore.ICC
 from opscore.utility.qstr import qstr
 
 
-class OurActor(actorcore.ICC.ICC):
+class enuActor(actorcore.ICC.ICC):
     def __init__(self, name, productName=None, configFile=None, logLevel=logging.INFO):
         # This sets up the connections to/from the hub, the logger, and the twisted reactor.
         #
@@ -23,6 +23,10 @@ class OurActor(actorcore.ICC.ICC):
         self.monitors = dict()
 
         self.statusLoopCB = self.statusLoop
+
+        self.monitor("bsh", 120)
+        self.monitor("slit", 120)
+        self.monitor("rexm", 120)
 
     def reloadConfiguration(self, cmd):
         logging.info("reading config file %s", self.configFile)
@@ -65,6 +69,8 @@ class OurActor(actorcore.ICC.ICC):
                               controller)
 
     def monitor(self, controller, period, cmd=None):
+        cmd = cmd if cmd is not None else self.actor.bcast
+
         if controller not in self.monitors:
             self.monitors[controller] = 0
 
@@ -72,8 +78,8 @@ class OurActor(actorcore.ICC.ICC):
         self.monitors[controller] = period
 
         if (not running) and period > 0:
-            cmd.warn('text="starting %gs loop for %s"' % (self.monitors[controller],
-                                                          controller))
+
+            cmd.warn('text="starting %gs loop for %s"' % (self.monitors[controller], controller))
             self.statusLoopCB(controller)
         else:
             cmd.warn('text="adjusted %s loop to %gs"' % (controller, self.monitors[controller]))
@@ -89,7 +95,7 @@ def main():
                         help='identity')
     args = parser.parse_args()
 
-    theActor = OurActor('enu',
+    theActor = enuActor('enu',
                         productName='enuActor',
                         configFile=args.config,
                         logLevel=args.logLevel)

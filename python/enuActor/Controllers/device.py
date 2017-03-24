@@ -1,19 +1,20 @@
 __author__ = 'alefur'
 import logging
-import sys
 import socket
+import sys
 
 from actorcore.QThread import QThread
-
 from enuActor.fysom import Fysom
-from enuActor.utils.wrap import loading, initialising
-
+from enuActor.utils.wrap import formatException, loading, initialising
 
 
 class Device(QThread):
     def __init__(self, actor, name, loglevel=logging.DEBUG):
-        # This sets up the connections to/from the hub, the logger, and the twisted reactor.
-        #
+        """This sets up the connections to/from the hub, the logger, and the twisted reactor.
+
+        :param actor: enuActor
+        :param name: controller name
+        """
         QThread.__init__(self, actor, name, timeout=2)
 
         self.logger = logging.getLogger(self.name)
@@ -40,14 +41,12 @@ class Device(QThread):
 
     @loading
     def loadDevice(self, e):
-        """load device
+        """| *Wrapper @loading* handles the state machine.
+        | Load the device and catch any raised exception
 
-        load Configuration file and startcommunication
-        wrapper @safeCheck handles the state machine
-
-        :param e,fsm event
-        :return: True, ret : Config File successfully loaded'
-                 False, ret : Config file badly formatted, Exception
+        :param e: fsm event
+        :return: - True : fsm (LOADING => LOADED)
+                 - False : fsm (LOADING => FAILED)
         """
         cmd = e.cmd if hasattr(e, "cmd") else self.actor.bcast
         mode = e.mode if hasattr(e, "mode") else None
@@ -68,22 +67,19 @@ class Device(QThread):
                 raise
 
         except Exception as e:
-            cmd.warn("text='%s load device failed %s'" % (self.name.upper(), self.formatException(e, sys.exc_info()[2])))
-
+            cmd.warn("text='%s load device failed %s'" % (self.name.upper(), formatException(e, sys.exc_info()[2])))
             return False
 
         return True
 
     @initialising
     def initDevice(self, e):
-        """load device
+        """| *wrapper @initialising* handles the state machine.
+        | Call initialise and catch any raised Exception,
 
-        load Configuration file and startcommunication
-        wrapper @safeCheck handles the state machine
-
-        :param e,fsm event
-        :return: True, ret : Config File successfully loaded'
-                 False, ret : Config file badly formatted, Exception
+        :param e: fsm event
+        :return: - True : fsm (INITIALISING => IDLE)
+                 - False : fsm (INITIALISING => FAILED)
         """
         cmd = e.cmd if hasattr(e, "cmd") else self.actor.bcast
         try:
@@ -91,97 +87,76 @@ class Device(QThread):
             cmd.inform("text='%s successfully initialised" % self.name)
 
         except Exception as e:
-            cmd.warn("text='%s init device failed %s'" % (self.name.upper(), self.formatException(e, sys.exc_info()[2])))
-
+            cmd.warn("text='%s init device failed %s'" % (self.name.upper(), formatException(e, sys.exc_info()[2])))
             return False
 
         return True
 
     def loadCfg(self, cmd, mode=None):
-        """loadCfg
-        load Configuration file
-        :param cmd
-        :param mode (operation or simulation, loaded from config file if None
-        :return: True, ret : Config File successfully loaded'
-                 False, ret : Config file badly formatted, Exception ret
+        """| Load configuration file. (prototype)
+
+        :param cmd: on going command
+        :param mode: operation|simulation, loaded from config file if None
+        :type mode: str
+        :raise: Exception Config file badly formatted
         """
 
         self.currMode = self.actor.config.get(self.name, 'mode') if mode is None else mode
 
     def startCommunication(self, cmd):
-        """startCommunication
-        Start socket with the controller or simulate it
-        :param cmd,
-        :return: True, ret: if the communication is established with the board, fsm (LOADING => LOADED)
-                 False, ret: if the communication failed with the board, ret is the error, fsm (LOADING => FAILED)
+        """| Start communication with the controller. (prototype)
+
+        :param cmd: on going command
+        :raise: Exception if the communication has failed with the controller
         """
         pass
 
     def initialise(self, cmd):
-        """ Initialise device
+        """ | Initialise device. (prototype)
 
-
-        wrapper @safeCheck handles the state machine
-        :param e, fsm event
-        :return: True, ret : if every steps are successfully operated, fsm (LOADED => IDLE)
-                 False, ret : if a command fail, user if warned with error ret, fsm (LOADED => FAILED)
+        :param cmd: on going command
+        :raise: Exception if a command fail
         """
         pass
 
     def getStatus(self, cmd, doFinish=True):
-        """getStatus
-        position is nan if the controller is unreachable
-        :param cmd,
-        :return True, status
+        """| Get controller status and published its keywords. (prototype)
+         - controller=fsm, mode
+
+        :param cmd: on going command
+        :param doFinish: if True finish command
 
         """
         ender = cmd.finish if doFinish else cmd.inform
         ender("%s=%s,%s" % (self.name.upper(), self.fsm.current, self.currMode))
 
-    def printstatechange(self, e):
-        print ('%s state=%s' % (self.name.upper(), self.fsm.current))
-
-    def stop(self):
-        self.exit()
-
-    def handleTimeout(self):
-        pass
-
-    def formatException(self, e, traceback=""):
-
-        return "%s %s %s" % (str(type(e)).replace("'", ""), str(type(e)(*e.args)).replace("'", ""), traceback)
-
     def connectSock(self):
-        """ Connect socket if self.sock is None
+        """| Connect socket if self.sock is None.
 
-        :param cmd : current command,
-        :return: sock in operation
-                 bsh simulator in simulation
+        :return: - sock in operation
+                 - simulator in simulation
         """
-
         if self.sock is None:
             try:
                 s = socket.socket(socket.AF_INET,
                                   socket.SOCK_STREAM) if self.currMode == "operation" else self.simulator
                 s.settimeout(1.0)
             except Exception as e:
-                raise Exception("%s failed to create socket : %s" % (self.name, self.formatException(e)))
+                raise Exception("%s failed to create socket : %s" % (self.name, formatException(e, sys.exc_info()[2])))
 
             try:
                 s.connect((self.host, self.port))
             except Exception as e:
-                raise Exception("%s failed to connect socket : %s" % (self.name, self.formatException(e)))
+                raise Exception("%s failed to connect socket : %s" % (self.name, formatException(e, sys.exc_info()[2])))
 
             self.sock = s
 
         return self.sock
 
     def closeSock(self):
-        """ close socket
+        """| Close the socket.
 
-        :param cmd : current command,
-        :return: sock in operation
-                 bsh simulator in simulation
+        :raise: Exception if closing socket has failed
         """
 
         if self.sock is not None:
@@ -189,29 +164,20 @@ class Device(QThread):
                 self.sock.close()
 
             except Exception as e:
-                raise Exception("%s failed to close socket : %s" % (self.name, self.formatException(e)))
+                self.sock = None
+                raise Exception("%s failed to close socket : %s" % (self.name, formatException(e, sys.exc_info()[2])))
 
         self.sock = None
 
     def sendOneCommand(self, cmdStr, doClose=True, cmd=None):
-        """ Send one command and return one response.
+        """| Send one command and return one response.
 
-        Args
-        ----
-        cmdStr : str
-           The command to send.
-        doClose : bool
-           If True (the default), the device socket is closed before returning.
-
-        Returns
-        -------
-        str : the single response string, with EOLs stripped.
-
-        Raises
-        ------
-        IOError : from any communication errors.
+        :param cmdStr: (str) The command to send.
+        :param doClose: If True (the default), the device socket is closed before returning.
+        :param cmd: on going command
+        :return: reply : the single response string, with EOLs stripped.
+        :raise: IOError : from any communication errors.
         """
-
         if cmd is None:
             cmd = self.actor.bcast
 
@@ -223,7 +189,8 @@ class Device(QThread):
             s.sendall(fullCmd)
 
         except Exception as e:
-            raise Exception("%s failed to send %s : %s" % (self.name.upper(), fullCmd, self.formatException(e)))
+            raise Exception(
+                "%s failed to send %s : %s" % (self.name.upper(), fullCmd, formatException(e, sys.exc_info()[2])))
 
         reply = self.getOneResponse(sock=s, cmd=cmd)
         if doClose:
@@ -232,6 +199,13 @@ class Device(QThread):
         return reply
 
     def getOneResponse(self, sock=None, cmd=None):
+        """| Attempt to receive data from the socket.
+
+        :param sock: socket
+        :param cmd: command
+        :return: reply : the single response string, with EOLs stripped.
+        :raise: IOError : from any communication errors.
+        """
         if sock is None:
             sock = self.connectSock()
 
@@ -241,3 +215,20 @@ class Device(QThread):
         self.logger.debug('received %r', reply)
 
         return reply
+
+    def printstatechange(self, e):
+        """| Print state when fsm change.
+
+        :param e: fsm event
+        """
+        self.logger.debug('%s state=%r' % self.name.upper(), self.fsm.current)
+
+    def stop(self):
+        """| Stop thread
+        """
+        self.exit()
+
+    def handleTimeout(self):
+        """| Is called when the thread is idle
+        """
+        pass
