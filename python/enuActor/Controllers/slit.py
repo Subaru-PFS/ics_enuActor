@@ -134,15 +134,15 @@ class slit(Device):
         fender = cmd.fail if doFinish else cmd.warn
         self.currPos = 6 * [np.nan]
 
-        if self.fsm.current in ['LOADED', 'IDLE', 'BUSY']:
-            try:
-                ret = self._getHxpStatusString(self._getHxpStatus())
-                cmd.inform("slitInfo='%s'" % ret)
-                self.currPos = self._getCurrentPosition()
-            except Exception as e:
-                cmd.warn(
-                    "text='%s getStatus failed %s'" % (self.name.upper(), formatException(e, sys.exc_info()[2])))
-                ender = fender
+        # if self.fsm.current in ['LOADED', 'IDLE', 'BUSY']:
+        try:
+            ret = self._getHxpStatusString(self._getHxpStatus())
+            cmd.inform("slitInfo='%s'" % ret)
+            self.currPos = self._getCurrentPosition()
+        except Exception as e:
+            cmd.warn(
+                "text='%s getStatus failed %s'" % (self.name.upper(), formatException(e, sys.exc_info()[2])))
+            ender = fender
 
         ender("slit=%s,%s,%s" % (self.fsm.current, self.currMode, ','.join(["%.5f" % p for p in self.currPos])))
 
@@ -215,8 +215,8 @@ class slit(Device):
             self.fsm.startLoading()
         else:
             ret = self._hexapodDisable()
-            cmd.inform("text='killing existing socket..._'")
-            self._kill()
+            # cmd.inform("text='killing existing socket..._'")
+            # self._kill()
             self.fsm.shutdown()
 
         return ret

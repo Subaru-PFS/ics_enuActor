@@ -18,7 +18,7 @@ class TopCmd(object):
         #
         self.vocab = [
             ('ping', '', self.ping),
-            ('status', self.status),
+            ('status', '', self.status),
             ('monitor', '<controllers> <period>', self.monitor),
             ('start', '', self.initControllers),
         ]

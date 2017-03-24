@@ -69,7 +69,7 @@ class enuActor(actorcore.ICC.ICC):
                               controller)
 
     def monitor(self, controller, period, cmd=None):
-        cmd = cmd if cmd is not None else self.actor.bcast
+        cmd = cmd if cmd is not None else self.bcast
 
         if controller not in self.monitors:
             self.monitors[controller] = 0
