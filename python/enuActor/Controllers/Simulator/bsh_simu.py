@@ -1,11 +1,11 @@
-#!/usr/bin/env python
+# !/usr/bin/env python
 
 import time
 import socket
 
 
 class BshSimulator(socket.socket):
-    statword = {0: "01001000", 1: "10010000", 2: "01001000"}
+    statword = {0: 82, 10: 82, 20: 100, 30: 98, 40: 84}
 
     def __init__(self):
         socket.socket.__init__(self, socket.AF_INET, socket.SOCK_STREAM)
@@ -28,59 +28,105 @@ class BshSimulator(socket.socket):
 
     def fakeSend(self, mycommand):
         time.sleep(0.1)
-        self.cmdnok = 2
+        cmdOk = False
         self.statword = BshSimulator.statword[self.bia_mode]
         if self.bia_mode == 0:  # IDLE STATE
             if mycommand == "bia_on\r\n":
-                self.bia_mode = 2
-                self.cmdnok = 0
+                bia_mode = 10
+                cmdOk = True
             elif mycommand == "shut_open\r\n":
-                self.bia_mode = 1
-                self.cmdnok = 0
+                bia_mode = 20
+                cmdOk = True
+            elif mycommand == "blue_open\r\n":
+                bia_mode = 30
+                cmdOk = True
+            elif mycommand == "red_open\r\n":
+                bia_mode = 40
+                cmdOk = True
+            elif mycommand == "init\r\n":
+                bia_mode = 0
+                cmdOk = True
 
-        elif self.bia_mode == 1:  # SHUTTER STATE
-            if mycommand == "shut_close\r\n":
-                self.bia_mode = 0
-                self.cmdnok = 0
-            elif mycommand == "bia_on\r\n":
-                self.buf.append("intlk")
-                self.cmdnok = 1
-
-        elif self.bia_mode == 2:  # BIA STATE
+        elif self.bia_mode == 10:  # BIA IS ON
             if mycommand == "bia_off\r\n":
-                self.bia_mode = 0
-                self.cmdnok = 0
-            elif mycommand == "shut_open\r\n":
-                self.buf.append("intlk")
-                self.cmdnok = 1
+                bia_mode = 0
+                cmdOk = True
+            elif mycommand == "init\r\n":
+                bia_mode = 0
+                cmdOk = True
 
-        if mycommand == "init\r\n":
-            self.bia_mode = 0
-            self.cmdnok = 0
+        elif self.bia_mode == 20:  # SHUTTERS OPEN
+            if mycommand == "shut_close\r\n":
+                bia_mode = 0
+                cmdOk = True
+            elif mycommand == "blue_close\r\n":
+                bia_mode = 40
+                cmdOk = True
+            elif mycommand == "red_close\r\n":
+                bia_mode = 30
+                cmdOk = True
+            if mycommand == "init\r\n":
+                bia_mode = 0
+                cmdOk = True
+
+        elif self.bia_mode == 30:  # SHUTTERS OPEN
+            if mycommand == "shut_open\r\n":
+                bia_mode = 20
+                cmdOk = True
+            elif mycommand == "blue_close\r\n":
+                bia_mode = 0
+                cmdOk = True
+            elif mycommand == "red_close\r\n":
+                bia_mode = 20
+                cmdOk = True
+            if mycommand == "init\r\n":
+                bia_mode = 0
+                cmdOk = True
+
+        elif self.bia_mode == 40:  # SHUTTERS OPEN
+            if mycommand == "shut_open\r\n":
+                bia_mode = 20
+                cmdOk = True
+            elif mycommand == "blue_close\r\n":
+                bia_mode = 20
+                cmdOk = True
+            elif mycommand == "red_close\r\n":
+                bia_mode = 0
+                cmdOk = True
+            if mycommand == "init\r\n":
+                bia_mode = 0
+                cmdOk = True
+        if bia_mode != self.bia_mode:
+            self.bia_mode = bia_mode
+            if bia_mode != 10:
+                time.sleep(0.35)  # Shutters motion time
 
         if mycommand == "statword\r\n":
             self.buf.append(self.statword)
-            self.cmdnok = 1
+            cmdOk = True
 
         if mycommand == "status\r\n":
             self.buf.append(self.bia_mode)
-            self.cmdnok = 1
+            cmdOk = True
 
         if mycommand[:10] == "set_period":
             self.g_aperiod = int(mycommand[10:])
-            self.cmdnok = 0
+            cmdOk = True
 
         if mycommand[:8] == "set_duty":
             self.g_aduty = int(mycommand[8:])
-            self.cmdnok = 0
+            cmdOk = True
 
         if mycommand == "get_period\r\n":
             self.buf.append(self.g_aperiod)
-            self.cmdnok = 1
+            cmdOk = True
 
         if mycommand == "get_duty\r\n":
             self.buf.append(self.g_aduty)
-            self.cmdnok = 1
+            cmdOk = True
+        if mycommand == "get_param\r\n":
+            self.buf.append("%i,%i,%i" % (self.pulse_on, self.g_aperiod, self.g_aduty))
+            cmdOk = True
 
         if mycommand == "pulse_on\r\n":
             self.pulse_on = 1
@@ -90,7 +136,7 @@ class BshSimulator(socket.socket):
             self.pulse_on = 0
             self.cmdnok = 0
 
-        if self.cmdnok < 2:
+        if cmdOk:
             self.buf.append("ok\r\n")
 
         else:
