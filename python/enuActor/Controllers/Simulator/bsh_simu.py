@@ -133,11 +133,11 @@ class BshSimulator(socket.socket):
 
         if mycommand == "pulse_on\r\n":
             self.pulse_on = 1
-            self.cmdnok = 0
+            cmdOk = True
 
         if mycommand == "pulse_off\r\n":
             self.pulse_on = 0
-            self.cmdnok = 0
+            cmdOk = True
 
         if cmdOk:
             self.buf.append("ok\r\n")
