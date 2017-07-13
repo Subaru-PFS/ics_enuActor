@@ -29,8 +29,10 @@ class BshSimulator(socket.socket):
     def fakeSend(self, mycommand):
         time.sleep(0.1)
         cmdOk = False
-        self.statword = BshSimulator.statword[self.bia_mode]
-        if self.bia_mode == 0:  # IDLE STATE
+        bia_mode = self.bia_mode
+        self.statword = BshSimulator.statword[bia_mode]
+
+        if bia_mode == 0:  # IDLE STATE
             if mycommand == "bia_on\r\n":
                 bia_mode = 10
                 cmdOk = True
@@ -47,7 +49,7 @@ class BshSimulator(socket.socket):
                 bia_mode = 0
                 cmdOk = True
 
-        elif self.bia_mode == 10:  # BIA IS ON
+        elif bia_mode == 10:  # BIA IS ON
             if mycommand == "bia_off\r\n":
                 bia_mode = 0
                 cmdOk = True
@@ -55,7 +57,7 @@ class BshSimulator(socket.socket):
                 bia_mode = 0
                 cmdOk = True
 
-        elif self.bia_mode == 20:  # SHUTTERS OPEN
+        elif bia_mode == 20:  # SHUTTERS OPEN
             if mycommand == "shut_close\r\n":
                 bia_mode = 0
                 cmdOk = True
@@ -69,7 +71,7 @@ class BshSimulator(socket.socket):
                 bia_mode = 0
                 cmdOk = True
 
-        elif self.bia_mode == 30:  # SHUTTERS OPEN
+        elif bia_mode == 30:  # BLUE SHUTTER OPEN
             if mycommand == "shut_open\r\n":
                 bia_mode = 20
                 cmdOk = True
@@ -83,7 +85,7 @@ class BshSimulator(socket.socket):
                 bia_mode = 0
                 cmdOk = True
 
-        elif self.bia_mode == 40:  # SHUTTERS OPEN
+        elif bia_mode == 40:  # RED SHUTTER OPEN
             if mycommand == "shut_open\r\n":
                 bia_mode = 20
                 cmdOk = True
@@ -96,6 +98,7 @@ class BshSimulator(socket.socket):
             if mycommand == "init\r\n":
                 bia_mode = 0
                 cmdOk = True
+
         if bia_mode != self.bia_mode:
             self.bia_mode = bia_mode
             if bia_mode != 10:
