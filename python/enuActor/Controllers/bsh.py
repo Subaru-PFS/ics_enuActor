@@ -296,17 +296,51 @@ class bsh(Device):
 
         transition = {
             (("close", "off"), "shut_open"): (True, ""),
+            (("close", "off"), "red_open"): (True, ""),
+            (("close", "off"), "blue_open"): (True, ""),
+            (("close", "off"), "shut_close"): (doForce, "shutters already closed"),
+            (("close", "off"), "red_close"): (doForce, "red shutter already closed"),
+            (("close", "off"), "blue_close"): (doForce, "blue shutter already closed"),
             (("close", "off"), "bia_off"): (doForce, "bia already off"),
             (("close", "off"), "bia_on"): (True, ""),
-            (("close", "off"), "shut_close"): (doForce, "shutters already closed"),
-            (("close", "on"), "shut_close"): (doForce, "shutters already closed"),
+
             (("close", "on"), "shut_open"): (False, "Interlock !"),
+            (("close", "on"), "red_open"): (False, "Interlock !"),
+            (("close", "on"), "blue_open"): (False, "Interlock !"),
+            (("close", "on"), "shut_close"): (doForce, "shutters already closed"),
+            (("close", "on"), "red_close"): (doForce, "red shutter already closed"),
+            (("close", "on"), "blue_close"): (doForce, "blue shutter already closed"),
             (("close", "on"), "bia_off"): (True, ""),
             (("close", "on"), "bia_on"): (doForce, "bia already on"),
-            (("open", "off"), "shut_close"): (True, ""),
+
             (("open", "off"), "shut_open"): (doForce, "shutters already open"),
+            (("open", "off"), "red_open"): (doForce, "shutters already open"),
+            (("open", "off"), "blue_open"): (doForce, "shutters already open"),
+            (("open", "off"), "shut_close"): (True, ""),
+            (("open", "off"), "red_close"): (True, ""),
+            (("open", "off"), "blue_close"): (True, ""),
             (("open", "off"), "bia_off"): (doForce, "bia already off"),
-            (("open", "off"), "bia_on"): (False, "Interlock !")}
+            (("open", "off"), "bia_on"): (False, "Interlock !"),
+
+            (("openred", "off"), "shut_open"): (True, ""),
+            (("openred", "off"), "red_open"): (doForce, "shutter red already open"),
+            (("openred", "off"), "blue_open"): (True, ""),
+            (("openred", "off"), "shut_close"): (True, ""),
+            (("openred", "off"), "red_close"): (True, ""),
+            (("openred", "off"), "blue_close"): (doForce, "shutter blue already closed"),
+            (("openred", "off"), "bia_off"): (doForce, "bia already off"),
+            (("openred", "off"), "bia_on"): (False, "Interlock !"),
+
+            (("openblue", "off"), "shut_open"): (True, ""),
+            (("openblue", "off"), "red_open"): (True, ""),
+            (("openblue", "off"), "blue_open"): (doForce, "shutter blue already open"),
+            (("openblue", "off"), "shut_close"): (True, ""),
+            (("openblue", "off"), "red_close"): (doForce, "shutter red already closed"),
+            (("openblue", "off"), "blue_close"): (True, ""),
+            (("openblue", "off"), "bia_off"): (doForce, "bia already off"),
+            (("openblue", "off"), "bia_on"): (False, "Interlock !"),
+
+        }
 
         (ok, ret) = transition[(shState, biaState), cmdStr]
         if not ok:
