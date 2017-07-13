@@ -75,6 +75,9 @@ class BshSimulator(socket.socket):
             if mycommand == "shut_open\r\n":
                 bia_mode = 20
                 cmdOk = True
+            elif mycommand == "red_open\r\n":
+                bia_mode = 20
+                cmdOk = True
             elif mycommand == "blue_close\r\n":
                 bia_mode = 0
                 cmdOk = True
@@ -87,6 +90,9 @@ class BshSimulator(socket.socket):
 
         elif bia_mode == 40:  # RED SHUTTER OPEN
             if mycommand == "shut_open\r\n":
+                bia_mode = 20
+                cmdOk = True
+            elif mycommand == "blue_open\r\n":
                 bia_mode = 20
                 cmdOk = True
             elif mycommand == "blue_close\r\n":
