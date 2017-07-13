@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
-import subprocess
 import sys
 
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
+
 from enuActor.fysom import FysomError
 from enuActor.utils.wrap import threaded, formatException
 
@@ -29,7 +29,7 @@ class BshCmd(object):
             ('bsh', '<raw>', self.rawCommand),
             ('bia', '@(on|off) [@(force)]', self.biaSwitch),
             ('bia', '@(strobe) @(on|off)', self.biaStrobe),
-            ('shutters', '@(open|close) [@(force)]', self.shutterSwitch),
+            ('shutters', '@(open|close) [blue|red] [@(force)]', self.shutterSwitch),
             ('shutters', '@(expose) <exptime> [@(force)]', self.shutterExpose),
             ('shutters', 'abort', self.abort),
 
@@ -55,7 +55,7 @@ class BshCmd(object):
     def ping(self, cmd):
         """Query the controller for liveness/happiness."""
 
-        cmd.finish("text='%s controller Present and (probably) well'"%self.name)
+        cmd.finish("text='%s controller Present and (probably) well'" % self.name)
 
     @threaded
     def status(self, cmd):
@@ -147,8 +147,12 @@ class BshCmd(object):
     def shutterSwitch(self, cmd):
         """Open/close , optional keyword force to force transition (without breaking interlock)"""
         cmdKeys = cmd.cmd.keywords
+        shutter = 'shut'
+        shutter = 'red' if 'red' in cmdKeys else shutter
+        shutter = 'blue' if 'blue' in cmdKeys else shutter
+        move = "open" if "open" in cmdKeys else "close"
 
-        cmdStr = "shut_open" if "open" in cmdKeys else "shut_close"
+        cmdStr = "%s_%s" % (shutter, move)
         doForce = True if "force" in cmdKeys else False
 
         self.controller.switch(cmd, cmdStr, doForce=doForce)
@@ -185,7 +189,7 @@ class BshCmd(object):
         except Exception as e:
             cmd.warn("text='%s failed to send raw command %s'" % (self.name.upper(),
                                                                   formatException(e,
-                                                                                                  sys.exc_info()[2])))
+                                                                                  sys.exc_info()[2])))
 
         self.controller.getStatus(cmd)
 

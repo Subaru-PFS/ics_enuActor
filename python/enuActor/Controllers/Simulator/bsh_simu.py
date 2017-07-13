@@ -84,7 +84,7 @@ class BshSimulator(socket.socket):
             elif mycommand == "red_close\r\n":
                 bia_mode = 20
                 cmdOk = True
-            if mycommand == "init\r\n":
+            elif mycommand == "init\r\n":
                 bia_mode = 0
                 cmdOk = True
 
@@ -101,7 +101,7 @@ class BshSimulator(socket.socket):
             elif mycommand == "red_close\r\n":
                 bia_mode = 0
                 cmdOk = True
-            if mycommand == "init\r\n":
+            elif mycommand == "init\r\n":
                 bia_mode = 0
                 cmdOk = True
 
