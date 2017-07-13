@@ -14,9 +14,18 @@ reload(bufferedSocket)
 
 
 class bsh(Device):
-    ilock_s_machine = {0: ("close", "off"), 1: ("open", "off"), 2: ("close", "on")}
+    ilock_s_machine = {0: ("close", "off"),
+                       10: ("close", "on"),
+                       20: ("open", "off"),
+                       30: ("openblue", "off"),
+                       40: ("openred", "off")}
+
     shut_stat = [{0: "close", 1: "open"}, {0: "open", 1: "close"}, {0: "ok", 1: "error"}]
-    in_position = {0: '01001000', 1: '10010000', 2: '01001000'}
+    in_position = {0: '010010',
+                   10: '010010',
+                   20: '100100',
+                   30: '100010',
+                   40: '010100'}
 
     def __init__(self, actor, name):
         """__init__.
@@ -85,7 +94,6 @@ class bsh(Device):
         reply = self.sendOneCommand("init", doClose=False, cmd=cmd)
         if reply != "":
             raise Exception("%s has replied nok" % self.name)
-        time.sleep(0.4)  # Shutters closing/opening time is 0.4 need to be remove once limit check is implemented
 
     @busy
     def switch(self, cmd, cmdStr, doForce=False):
@@ -214,8 +222,6 @@ class bsh(Device):
             cmd.warn("text='%s switch failed %s'" % (self.name.upper(), formatException(e, sys.exc_info()[2])))
             return False
 
-        time.sleep(0.4)  # Shutters closing/opening time is 0.4
-
         return True
 
     def _checkStatus(self, cmd):
@@ -228,10 +234,12 @@ class bsh(Device):
         :return: (shuttersPosition, biaState)
         """
 
-        reply = self.sendOneCommand("status", doClose=False, cmd=cmd)
-        self.ilockState = int(reply)
+        ilockState = self.sendOneCommand("status", doClose=False, cmd=cmd)
+        self.ilockState = int(ilockState)
 
         statword = self.sendOneCommand("statword", doClose=True, cmd=cmd)
+        statword = bin(int(statword))[-6:]
+
         if bsh.in_position[self.ilockState] != statword:
             cmd.warn("text='shutters not in position'")
             for i, shutter in enumerate(["shr", "shb"]):
@@ -267,7 +275,6 @@ class bsh(Device):
         duty = self.sendOneCommand("get_duty", doClose=False, cmd=cmd)
 
         reply = self.sendOneCommand("pulse_%s" % biaStrobe, doClose=doClose, cmd=cmd)
-
         self.biaStrobe = biaStrobe
         cmd.inform("biaStrobe=%s" % biaStrobe)
 
