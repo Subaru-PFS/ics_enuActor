@@ -27,10 +27,10 @@ class BshCmd(object):
             ('bsh', '@(operation|simulation)', self.changeMode),
             ('bsh', 'config [<duty>] [<period>]', self.sendConfig),
             ('bsh', '<raw>', self.rawCommand),
-            ('bia', '@(on|off) [@(force)]', self.biaSwitch),
+            ('bia', '@(on|off)', self.biaSwitch),
             ('bia', '@(strobe) @(on|off)', self.biaStrobe),
-            ('shutters', '@(open|close) [blue|red] [@(force)]', self.shutterSwitch),
-            ('shutters', '@(expose) <exptime> [@(force)]', self.shutterExpose),
+            ('shutters', '@(open|close) [blue|red]', self.shutterSwitch),
+            ('shutters', '@(expose) <exptime> [blue|red]', self.shutterExpose),
             ('shutters', 'abort', self.abort),
 
         ]
@@ -110,7 +110,7 @@ class BshCmd(object):
                 else:
                     raise Exception("duty not in range : %i => %i" % (0, 255))
 
-            self.controller.sendBiaConfig(cmd, period, duty, doClose=True)
+            self.controller.setBiaConfig(cmd, period, duty, doClose=True)
             cmd.finish()
 
         except Exception as e:
@@ -124,7 +124,7 @@ class BshCmd(object):
         state = "off" if "off" in cmdKeys else "on"
 
         try:
-            self.controller.sendBiaConfig(cmd, biaStrobe=state, doClose=True)
+            self.controller.setBiaConfig(cmd, biaStrobe=state, doClose=True)
             cmd.finish()
 
         except Exception as e:
@@ -137,9 +137,8 @@ class BshCmd(object):
         cmdKeys = cmd.cmd.keywords
 
         cmdStr = "bia_on" if "on" in cmdKeys else "bia_off"
-        doForce = True if "force" in cmdKeys else False
 
-        self.controller.switch(cmd, cmdStr, doForce=doForce)
+        self.controller.switch(cmd, cmdStr)
 
         self.controller.getStatus(cmd)
 
@@ -153,9 +152,8 @@ class BshCmd(object):
         move = "open" if "open" in cmdKeys else "close"
 
         cmdStr = "%s_%s" % (shutter, move)
-        doForce = True if "force" in cmdKeys else False
 
-        self.controller.switch(cmd, cmdStr, doForce=doForce)
+        self.controller.switch(cmd, cmdStr)
 
         self.controller.getStatus(cmd)
 
@@ -165,7 +163,9 @@ class BshCmd(object):
         cmdKeys = cmd.cmd.keywords
 
         exptime = cmdKeys["exptime"].values[0]
-        doForce = True if "force" in cmdKeys else False
+        shutter = 'shut'
+        shutter = 'red' if 'red' in cmdKeys else shutter
+        shutter = 'blue' if 'blue' in cmdKeys else shutter
 
         if exptime <= 0:
             cmd.fail("text='exptime must be positive'")
@@ -173,7 +173,7 @@ class BshCmd(object):
 
         self.controller.stopExposure = False
 
-        self.controller.expose(cmd, exptime, doForce=doForce)
+        self.controller.expose(cmd, exptime, shutter)
         self.controller.getStatus(cmd)
 
     @threaded
