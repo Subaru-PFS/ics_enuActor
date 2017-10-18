@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
-import subprocess
 import sys
 
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
+
 from enuActor.fysom import FysomError
 from enuActor.utils.wrap import threaded, formatException
 
@@ -25,12 +25,12 @@ class BshCmd(object):
             ('bsh', 'status', self.status),
             ('bsh', 'init', self.initialise),
             ('bsh', '@(operation|simulation)', self.changeMode),
-            ('bsh', 'config [<duty>] [<period>]', self.sendConfig),
             ('bsh', '<raw>', self.rawCommand),
-            ('bia', '@(on|off) [@(force)]', self.biaSwitch),
+            ('bia', '@(on|off)', self.biaSwitch),
             ('bia', '@(strobe) @(on|off)', self.biaStrobe),
-            ('shutters', '@(open|close) [@(force)]', self.shutterSwitch),
-            ('shutters', '@(expose) <exptime> [@(force)]', self.shutterExpose),
+            ('bia', 'config [<duty>] [<period>]', self.sendConfig),
+            ('shutters', '@(open|close) [blue|red]', self.shutterSwitch),
+            ('shutters', '@(expose) <exptime> [blue|red]', self.shutterExpose),
             ('shutters', 'abort', self.abort),
 
         ]
@@ -55,7 +55,7 @@ class BshCmd(object):
     def ping(self, cmd):
         """Query the controller for liveness/happiness."""
 
-        cmd.finish("text='%s controller Present and (probably) well'"%self.name)
+        cmd.finish("text='%s controller Present and (probably) well'" % self.name)
 
     @threaded
     def status(self, cmd):
@@ -110,7 +110,7 @@ class BshCmd(object):
                 else:
                     raise Exception("duty not in range : %i => %i" % (0, 255))
 
-            self.controller.sendBiaConfig(cmd, period, duty, doClose=True)
+            self.controller.setBiaConfig(cmd, period, duty, doClose=True)
             cmd.finish()
 
         except Exception as e:
@@ -124,7 +124,7 @@ class BshCmd(object):
         state = "off" if "off" in cmdKeys else "on"
 
         try:
-            self.controller.sendBiaConfig(cmd, biaStrobe=state, doClose=True)
+            self.controller.setBiaConfig(cmd, biaStrobe=state, doClose=True)
             cmd.finish()
 
         except Exception as e:
@@ -137,9 +137,8 @@ class BshCmd(object):
         cmdKeys = cmd.cmd.keywords
 
         cmdStr = "bia_on" if "on" in cmdKeys else "bia_off"
-        doForce = True if "force" in cmdKeys else False
 
-        self.controller.switch(cmd, cmdStr, doForce=doForce)
+        self.controller.switch(cmd, cmdStr)
 
         self.controller.getStatus(cmd)
 
@@ -147,11 +146,14 @@ class BshCmd(object):
     def shutterSwitch(self, cmd):
         """Open/close , optional keyword force to force transition (without breaking interlock)"""
         cmdKeys = cmd.cmd.keywords
+        shutter = 'shut'
+        shutter = 'red' if 'red' in cmdKeys else shutter
+        shutter = 'blue' if 'blue' in cmdKeys else shutter
+        move = "open" if "open" in cmdKeys else "close"
 
-        cmdStr = "shut_open" if "open" in cmdKeys else "shut_close"
-        doForce = True if "force" in cmdKeys else False
+        cmdStr = "%s_%s" % (shutter, move)
 
-        self.controller.switch(cmd, cmdStr, doForce=doForce)
+        self.controller.switch(cmd, cmdStr)
 
         self.controller.getStatus(cmd)
 
@@ -161,7 +163,9 @@ class BshCmd(object):
         cmdKeys = cmd.cmd.keywords
 
         exptime = cmdKeys["exptime"].values[0]
-        doForce = True if "force" in cmdKeys else False
+        shutter = 'shut'
+        shutter = 'red' if 'red' in cmdKeys else shutter
+        shutter = 'blue' if 'blue' in cmdKeys else shutter
 
         if exptime <= 0:
             cmd.fail("text='exptime must be positive'")
@@ -169,7 +173,7 @@ class BshCmd(object):
 
         self.controller.stopExposure = False
 
-        self.controller.expose(cmd, exptime, doForce=doForce)
+        self.controller.expose(cmd, exptime, shutter)
         self.controller.getStatus(cmd)
 
     @threaded
@@ -185,7 +189,7 @@ class BshCmd(object):
         except Exception as e:
             cmd.warn("text='%s failed to send raw command %s'" % (self.name.upper(),
                                                                   formatException(e,
-                                                                                                  sys.exc_info()[2])))
+                                                                                  sys.exc_info()[2])))
 
         self.controller.getStatus(cmd)
 

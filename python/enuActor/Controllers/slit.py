@@ -84,7 +84,7 @@ class slit(Device):
             self.myxps = hxp_drivers.XPS()
             self.socketId = self.myxps.TCP_ConnectToServer(self.host, self.port, slit.timeout)
         else:
-            self.myxps = SlitSimulator(self.home)
+            self.myxps = SlitSimulator()
             self.socketId = 1
 
         if self.socketId == -1:
