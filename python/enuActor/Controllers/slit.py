@@ -3,6 +3,7 @@
 import sys
 
 import numpy as np
+
 from enuActor.Controllers.Simulator.slit_simu import SlitSimulator
 from enuActor.Controllers.device import Device
 from enuActor.Controllers.drivers import hxp_drivers
@@ -139,9 +140,12 @@ class slit(Device):
             ret = self._getHxpStatusString(self._getHxpStatus())
             cmd.inform("slitInfo='%s'" % ret)
             self.currPos = self._getCurrentPosition()
+            cmd.inform('slitLocation=%s' % self.location)
+
         except Exception as e:
             cmd.warn(
                 "text='%s getStatus failed %s'" % (self.name.upper(), formatException(e, sys.exc_info()[2])))
+            cmd.warn('slitLocation=undef')
             ender = fender
 
         ender("slit=%s,%s,%s" % (self.fsm.current, self.currMode, ','.join(["%.5f" % p for p in self.currPos])))
@@ -243,6 +247,14 @@ class slit(Device):
         """
         array = np.array(self.focus_axis) if type == "focus" else np.array(self.dither_axis)
         return list(self.magnification * pix * array)
+
+    @property
+    def location(self):
+        delta = np.sum(np.abs(np.zeros(6) - np.array(self.currPos)))
+        if delta > 0.001:
+            return 'undef'
+        else:
+            return 'home'
 
     def _getCurrentPosition(self):
         """| Get current position.
