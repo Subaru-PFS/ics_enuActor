@@ -323,12 +323,19 @@ class bsh(Device):
         :raise: Exception("Exposure aborted by user") if the an abort command has been received
         """
 
+        t0 = dt.utcnow()
+        tlim = t0 + datetime.timedelta(seconds=exptime)
+
         cmd.inform("integratingTime=%.2f" % exptime)
-        tlim = dt.utcnow() + datetime.timedelta(seconds=exptime)
+        cmd.inform("elapsedTime=%.2f" % (dt.utcnow() - t0).total_seconds())
+        inform = dt.utcnow()
 
         while dt.utcnow() < tlim:
             if self.stopExposure:
                 raise Exception("Exposure aborted by user")
+            if (dt.utcnow() - inform).total_seconds() > 2:
+                cmd.inform("elapsedTime=%.2f" % (dt.utcnow() - t0).total_seconds())
+                inform = dt.utcnow()
             time.sleep(ti)
 
     def _safeSwitch(self, cmd, cmdStr):
