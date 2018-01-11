@@ -3,6 +3,7 @@
 
 import sys
 import time
+import datetime
 from datetime import datetime as dt
 
 import enuActor.Controllers.bufferedSocket as bufferedSocket
@@ -91,7 +92,6 @@ class bsh(Device):
 
         self.setBiaConfig(cmd, self.biaPeriod, self.biaDuty, self.biaStrobe, doClose=False)
         self._sendOrder(cmd, 'init')
-
 
     @busy
     def switch(self, cmd, cmdStr):
@@ -189,7 +189,6 @@ class bsh(Device):
         talk("shutters=%s,%s,%s" % (self.fsm.current, self.currMode, self.shState))
         ender("bia=%s,%s,%s" % (self.fsm.current, self.currMode, self.biaState))
 
-
     def checkStatus(self, cmd):
         """| Get status from bsh board and update controller's attributes.
         | Warn the user if the shutters limits switch state does not match with interlock state machine
@@ -227,7 +226,6 @@ class bsh(Device):
 
         return biaStrobe, biaPeriod, biaDuty
 
-
     def setBiaConfig(self, cmd, biaPeriod=None, biaDuty=None, biaStrobe=None, doClose=False):
         """| Send new parameters for bia
 
@@ -242,7 +240,7 @@ class bsh(Device):
         """
 
         if biaPeriod is not None:
-            self._sendOrder(cmd, "set_period%i"% biaPeriod)
+            self._sendOrder(cmd, "set_period%i" % biaPeriod)
 
         if biaDuty is not None:
             self._sendOrder(cmd, "set_duty%i" % biaDuty)
@@ -316,8 +314,8 @@ class bsh(Device):
         if not ok:
             raise Exception("Transition not allowed : %s" % ret)
 
-    def safeTempo(self, cmd, exptime):
-        """| Temporization, check every 0.1 sec for a user abort command.
+    def safeTempo(self, cmd, exptime, ti=0.01):
+        """| Temporization, check every 0.01 sec for a user abort command.
 
         :param cmd: current command,
         :param exptime: exposure time,
@@ -325,15 +323,13 @@ class bsh(Device):
         :raise: Exception("Exposure aborted by user") if the an abort command has been received
         """
 
-        ti = 0.1
         cmd.inform("integratingTime=%.2f" % exptime)
-        for i in range(int(exptime // ti)):
+        tlim = dt.utcnow() + datetime.timedelta(seconds=exptime)
+
+        while dt.utcnow() < tlim:
             if self.stopExposure:
                 raise Exception("Exposure aborted by user")
             time.sleep(ti)
-
-        time.sleep(exptime % ti)
-
 
     def _safeSwitch(self, cmd, cmdStr):
         """| Send the command string to the interlock board.
@@ -362,7 +358,6 @@ class bsh(Device):
             return False
 
         return True
-
 
     def _ilockStat(self, cmd):
         """| check and return interlock board current state .
@@ -396,7 +391,6 @@ class bsh(Device):
         strobe = 'on' if int(strobe) else 'off'
 
         return strobe, int(period), int(duty)
-
 
     def _sendOrder(self, cmd, cmdStr):
         reply = self.sendOneCommand(cmdStr, doClose=False, cmd=cmd)
