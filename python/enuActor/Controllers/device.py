@@ -4,7 +4,7 @@ import socket
 import sys
 
 from actorcore.QThread import QThread
-from enuActor.fysom import Fysom
+from fysom import Fysom
 from enuActor.utils.wrap import formatException, loading, initialising
 
 
@@ -185,6 +185,7 @@ class Device(QThread):
         self.logger.debug('sending %r', fullCmd)
 
         s = self.connectSock()
+
         try:
             s.sendall(fullCmd.encode())
 
@@ -193,10 +194,11 @@ class Device(QThread):
                 "%s failed to send %s : %s" % (self.name.upper(), fullCmd, formatException(e, sys.exc_info()[2])))
 
         reply = self.getOneResponse(sock=s, cmd=cmd)
+
         if doClose:
             self.closeSock()
 
-        return reply.decode()
+        return reply
 
     def getOneResponse(self, sock=None, cmd=None):
         """| Attempt to receive data from the socket.

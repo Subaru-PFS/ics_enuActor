@@ -371,7 +371,6 @@ class bsh(Device):
         :param cmd: current command,
         :raise: Exception if a command has failed
         """
-
         ilockState = self.sendOneCommand("status", doClose=False, cmd=cmd)
 
         return int(ilockState)

@@ -3,7 +3,7 @@ import sys
 import traceback as tb
 from functools import partial
 
-from enuActor.fysom import FysomError
+from fysom import FysomError
 
 
 def formatException(e, traceback):
