@@ -9,7 +9,7 @@ class BshSimulator(socket.socket):
 
     def __init__(self):
         socket.socket.__init__(self, socket.AF_INET, socket.SOCK_STREAM)
-        self.send = self.fakeSend
+        self.sendall = self.fakeSend
         self.recv = self.fakeRecv
         self.g_aduty = 0
         self.g_aperiod = 100
@@ -19,89 +19,92 @@ class BshSimulator(socket.socket):
 
         self.buf = []
 
-    def connect(self, (ip, port)):
+    def connect(self, server):
+        (ip, port) = server
         time.sleep(0.5)
         if type(ip) is not str:
             raise TypeError
         if type(port) is not int:
             raise TypeError
 
-    def fakeSend(self, mycommand):
+    def fakeSend(self, cmdStr):
         time.sleep(0.1)
         cmdOk = False
+        cmdStr = cmdStr.decode()
+
         bia_mode = self.bia_mode
         self.statword = BshSimulator.statword[bia_mode]
 
         if bia_mode == 0:  # IDLE STATE
-            if mycommand == "bia_on\r\n":
+            if cmdStr == "bia_on\r\n":
                 bia_mode = 10
                 cmdOk = True
-            elif mycommand == "shut_open\r\n":
+            elif cmdStr == "shut_open\r\n":
                 bia_mode = 20
                 cmdOk = True
-            elif mycommand == "blue_open\r\n":
+            elif cmdStr == "blue_open\r\n":
                 bia_mode = 30
                 cmdOk = True
-            elif mycommand == "red_open\r\n":
+            elif cmdStr == "red_open\r\n":
                 bia_mode = 40
                 cmdOk = True
-            elif mycommand == "init\r\n":
+            elif cmdStr == "init\r\n":
                 bia_mode = 0
                 cmdOk = True
 
         elif bia_mode == 10:  # BIA IS ON
-            if mycommand == "bia_off\r\n":
+            if cmdStr == "bia_off\r\n":
                 bia_mode = 0
                 cmdOk = True
-            elif mycommand == "init\r\n":
+            elif cmdStr == "init\r\n":
                 bia_mode = 0
                 cmdOk = True
 
         elif bia_mode == 20:  # SHUTTERS OPEN
-            if mycommand == "shut_close\r\n":
+            if cmdStr == "shut_close\r\n":
                 bia_mode = 0
                 cmdOk = True
-            elif mycommand == "blue_close\r\n":
+            elif cmdStr == "blue_close\r\n":
                 bia_mode = 40
                 cmdOk = True
-            elif mycommand == "red_close\r\n":
+            elif cmdStr == "red_close\r\n":
                 bia_mode = 30
                 cmdOk = True
-            if mycommand == "init\r\n":
+            if cmdStr == "init\r\n":
                 bia_mode = 0
                 cmdOk = True
 
         elif bia_mode == 30:  # BLUE SHUTTER OPEN
-            if mycommand == "shut_open\r\n":
+            if cmdStr == "shut_open\r\n":
                 bia_mode = 20
                 cmdOk = True
-            elif mycommand == "red_open\r\n":
+            elif cmdStr == "red_open\r\n":
                 bia_mode = 20
                 cmdOk = True
-            elif mycommand == "blue_close\r\n":
+            elif cmdStr == "blue_close\r\n":
                 bia_mode = 0
                 cmdOk = True
-            elif mycommand == "red_close\r\n":
+            elif cmdStr == "red_close\r\n":
                 bia_mode = 20
                 cmdOk = True
-            elif mycommand == "init\r\n":
+            elif cmdStr == "init\r\n":
                 bia_mode = 0
                 cmdOk = True
 
         elif bia_mode == 40:  # RED SHUTTER OPEN
-            if mycommand == "shut_open\r\n":
+            if cmdStr == "shut_open\r\n":
                 bia_mode = 20
                 cmdOk = True
-            elif mycommand == "blue_open\r\n":
+            elif cmdStr == "blue_open\r\n":
                 bia_mode = 20
                 cmdOk = True
-            elif mycommand == "blue_close\r\n":
+            elif cmdStr == "blue_close\r\n":
                 bia_mode = 20
                 cmdOk = True
-            elif mycommand == "red_close\r\n":
+            elif cmdStr == "red_close\r\n":
                 bia_mode = 0
                 cmdOk = True
-            elif mycommand == "init\r\n":
+            elif cmdStr == "init\r\n":
                 bia_mode = 0
                 cmdOk = True
 
@@ -110,38 +113,38 @@ class BshSimulator(socket.socket):
             if bia_mode != 10:
                 time.sleep(0.35)  # Shutters motion time
 
-        if mycommand == "statword\r\n":
+        if cmdStr == "statword\r\n":
             self.buf.append(self.statword)
             cmdOk = True
 
-        if mycommand == "status\r\n":
+        if cmdStr == "status\r\n":
             self.buf.append(self.bia_mode)
             cmdOk = True
 
-        if mycommand[:10] == "set_period":
-            self.g_aperiod = int(mycommand[10:])
+        if cmdStr[:10] == "set_period":
+            self.g_aperiod = int(cmdStr[10:])
             cmdOk = True
 
-        if mycommand[:8] == "set_duty":
-            self.g_aduty = int(mycommand[8:])
+        if cmdStr[:8] == "set_duty":
+            self.g_aduty = int(cmdStr[8:])
             cmdOk = True
 
-        if mycommand == "get_period\r\n":
+        if cmdStr == "get_period\r\n":
             self.buf.append(self.g_aperiod)
             cmdOk = True
 
-        if mycommand == "get_duty\r\n":
+        if cmdStr == "get_duty\r\n":
             self.buf.append(self.g_aduty)
             cmdOk = True
-        if mycommand == "get_param\r\n":
+        if cmdStr == "get_param\r\n":
             self.buf.append("%i,%i,%i" % (self.pulse_on, self.g_aperiod, self.g_aduty))
             cmdOk = True
 
-        if mycommand == "pulse_on\r\n":
+        if cmdStr == "pulse_on\r\n":
             self.pulse_on = 1
             cmdOk = True
 
-        if mycommand == "pulse_off\r\n":
+        if cmdStr == "pulse_off\r\n":
             self.pulse_on = 0
             cmdOk = True
 
@@ -151,13 +154,11 @@ class BshSimulator(socket.socket):
         else:
             self.buf.append("nok\r\n")
 
-    def sendall(self, fullCmd):
-        self.fakeSend(fullCmd)
 
     def fakeRecv(self, buffer_size):
         ret = self.buf[0]
         self.buf = self.buf[1:]
-        return str(ret)
+        return str(ret).encode()
 
     def close(self):
         pass

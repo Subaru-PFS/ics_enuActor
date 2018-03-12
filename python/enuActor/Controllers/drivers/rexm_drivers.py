@@ -1,3 +1,4 @@
+from __future__ import division
 # XPS Python class
 
 #
@@ -31,20 +32,20 @@ class sendPacket(object):
         self.ctype = np.uint8(ctype)
         self.motorAddress = np.uint8(motorAddress)
         self.data = np.uint32(data)
-        self.checksum()
-        self.cmdStr = pack('>BBBBIB', self.moduleAddress, self.cmd, self.ctype, self.motorAddress, self.data,
-                           self.checksum)
 
+    @property
     def checksum(self):
         data = pack('>BBBBI', self.moduleAddress, self.cmd, self.ctype, self.motorAddress, self.data)
-        self.checksum = sum(map(ord, data))
-        self.checksum %= 256
+        checksum = sum(data)
+        checksum %= 256
+        return checksum
+    
+    @property
+    def cmdStr(self):
+        return pack('>BBBBIB', self.moduleAddress, self.cmd, self.ctype, self.motorAddress, self.data, self.checksum)
 
-    def getCmd(self):
-        return self.cmdStr
 
-
-class recvPacket():
+class recvPacket(object):
     def __init__(self, bytes, fmtRet):
         self.getRet(*(unpack(fmtRet, bytes)))
 
@@ -57,7 +58,7 @@ class recvPacket():
         self.checksum = checksum
 
 
-class TMCM():
+class TMCM(object):
     controllerStatus = {100: "Successfully executed, no error",
                         101: "Command loaded into TMCL program EEPROM",
                         0: "Unkown Error",
@@ -165,7 +166,7 @@ class TMCM():
 
         Args
         ----
-        cmdStr : str
+        cmdStr : byte
            The command to send.
         doClose : bool
            If True (the default), the device serial is closed before returning.
@@ -216,7 +217,7 @@ class TMCM():
                             ctype=0,
                             motorAddress=TMCM.MOTOR_ADDRESS)
 
-        ret = self.sendOneCommand(packet.getCmd(), doClose=False)
+        ret = self.sendOneCommand(packet.cmdStr, doClose=False)
 
     def mm2counts(self, val):
 
@@ -251,7 +252,7 @@ class TMCM():
                             motorAddress=TMCM.MOTOR_ADDRESS,
                             data=-counts if direction == TMCM.DIRECTION_A else counts)
 
-        ret = self.sendOneCommand(packet.getCmd(), doClose=doClose)
+        ret = self.sendOneCommand(packet.cmdStr, doClose=doClose)
 
     def sap(self, paramId, data, doClose=False):
         """fonction set axis parameter du manuel du controleur
@@ -262,7 +263,7 @@ class TMCM():
                             motorAddress=TMCM.MOTOR_ADDRESS,
                             data=data)
 
-        return self.sendOneCommand(packet.getCmd(), doClose=doClose)
+        return self.sendOneCommand(packet.cmdStr, doClose=doClose)
 
     def gap(self, paramId, doClose=False, fmtRet='>BBBBIB'):
         """fonction get axis parameter du manuel du controleur
@@ -272,7 +273,7 @@ class TMCM():
                             ctype=paramId,
                             motorAddress=TMCM.MOTOR_ADDRESS)
 
-        return self.sendOneCommand(packet.getCmd(), doClose=doClose, fmtRet=fmtRet)
+        return self.sendOneCommand(packet.cmdStr, doClose=doClose, fmtRet=fmtRet)
 
     def setOutput(self, paramId, boolean, doClose=False):
         packet = sendPacket(moduleAddress=TMCM.MODULE_ADDRESS,
@@ -281,7 +282,7 @@ class TMCM():
                             motorAddress=2,
                             data=boolean)
 
-        return self.sendOneCommand(packet.getCmd(), doClose=doClose)
+        return self.sendOneCommand(packet.cmdStr, doClose=doClose)
 
     def sgp(self, paramId, data, doClose=False):
         """fonction set global parameter du manuel du controleur
@@ -292,7 +293,7 @@ class TMCM():
                             motorAddress=TMCM.MOTOR_ADDRESS,
                             data=data)
 
-        return self.sendOneCommand(packet.getCmd(), doClose=doClose)
+        return self.sendOneCommand(packet.cmdStr, doClose=doClose)
 
     def ggp(self, paramId, doClose=False):
         """fonction get global parameter du manuel du controleur
@@ -302,7 +303,7 @@ class TMCM():
                             ctype=paramId,
                             motorAddress=TMCM.MOTOR_ADDRESS)
 
-        return self.sendOneCommand(packet.getCmd(), doClose=doClose)
+        return self.sendOneCommand(packet.cmdStr, doClose=doClose)
 
     def minmax(self, x, a, b):
         if x < a:

@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 
+
 import argparse
 import logging
-import ConfigParser
+import configparser
 
 from twisted.internet import reactor
 import actorcore.ICC
@@ -32,9 +33,9 @@ class enuActor(actorcore.ICC.ICC):
         logging.info("reading config file %s", self.configFile)
 
         try:
-            newConfig = ConfigParser.ConfigParser()
+            newConfig = configparser.ConfigParser()
             newConfig.read(self.configFile)
-        except Exception, e:
+        except Exception as e:
             if cmd:
                 cmd.fail('text=%s' % (qstr("failed to read the configuration file, old config untouched: %s" % (e))))
             raise

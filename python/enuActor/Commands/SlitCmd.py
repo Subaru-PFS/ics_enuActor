@@ -4,7 +4,7 @@ import sys
 
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
-from enuActor.fysom import FysomError
+from fysom import FysomError
 from enuActor.utils.wrap import threaded, formatException
 
 

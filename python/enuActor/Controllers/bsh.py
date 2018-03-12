@@ -11,7 +11,6 @@ from enuActor.Controllers.Simulator.bsh_simu import BshSimulator
 from enuActor.Controllers.device import Device
 from enuActor.utils.wrap import busy, formatException
 
-reload(bufferedSocket)
 
 
 class bsh(Device):
@@ -372,7 +371,6 @@ class bsh(Device):
         :param cmd: current command,
         :raise: Exception if a command has failed
         """
-
         ilockState = self.sendOneCommand("status", doClose=False, cmd=cmd)
 
         return int(ilockState)

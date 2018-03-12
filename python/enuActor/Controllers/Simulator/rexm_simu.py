@@ -83,7 +83,7 @@ class RexmSimulator(object):
 
     def counts2mm(self, counts):
 
-        return np.float64(counts / self.mm2counts(1.0))
+        return np.float64(counts, self.mm2counts(1.0))
 
     def fakeMove(self, direction, distance, speed):
 
@@ -126,13 +126,15 @@ class RexmSimulator(object):
         """fonction get axis parameter du manuel du controleur
         """
         if paramId == 1:
-            return self.mm2counts(self.currPos)
+            ret = self.mm2counts(self.currPos)
         elif paramId == 3:
-            return self.mm2counts(self.currSpeed)
+            ret = self.mm2counts(self.currSpeed)
         elif paramId == 11:
             ret = 1 if self.currPos <= 0 else 0
         elif paramId == 10:
             ret = 1 if self.currPos >= self.DISTANCE_MAX - 10 else 0
+        else:
+            raise Exception('Unknown Parameter')
 
         return ret
 

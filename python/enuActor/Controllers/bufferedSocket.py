@@ -32,7 +32,7 @@ class BufferedSocket(object):
             if cmd is not None:
                 cmd.warn('text="%s"' % msg)
             raise IOError(msg)
-        return sock.recv(1024)
+        return sock.recv(1024).decode()
 
     def getOneResponse(self, sock=None, timeout=None, cmd=None):
         """ Return the next available complete line. Fetch new input if necessary. 
