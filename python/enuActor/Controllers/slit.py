@@ -399,16 +399,16 @@ class slit(Device):
         buf = func(*args)
         if buf[0] != 0:
             if buf[0] == -2:
-                raise Exception(func.func_name + 'TCP timeout')
+                raise Exception(func.__name__ + 'TCP timeout')
             elif buf[0] == -108:
-                raise Exception(func.func_name + 'TCP/IP connection was closed by an admin')
+                raise Exception(func.__name__ + 'TCP/IP connection was closed by an admin')
             else:
                 [errorCode, errorString] = self.myxps.ErrorStringGet(self.socketId, buf[0])
                 if buf[0] == -17:
                     raise Exception("Warning: [X, Y, Z, U, V, W] exceed : %s" % errorString)
                 elif errorCode != 0:
-                    raise Exception(func.func_name + ' : ERROR ' + str(errorCode))
+                    raise Exception(func.__name__ + ' : ERROR ' + str(errorCode))
                 else:
-                    raise Exception(func.func_name + ' : ' + errorString)
+                    raise Exception(func.__name__ + ' : ' + errorString)
 
         return buf[1:] if len(buf) > 2 else buf[1]

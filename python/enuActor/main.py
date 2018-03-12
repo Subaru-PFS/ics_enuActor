@@ -34,7 +34,7 @@ class enuActor(actorcore.ICC.ICC):
         try:
             newConfig = ConfigParser.ConfigParser()
             newConfig.read(self.configFile)
-        except Exception, e:
+        except Exception as e:
             if cmd:
                 cmd.fail('text=%s' % (qstr("failed to read the configuration file, old config untouched: %s" % (e))))
             raise

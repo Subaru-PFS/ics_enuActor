@@ -13,7 +13,8 @@ class TempsSimulator(socket.socket):
         self.recv = self.fakeRecv
         self.buf = []
 
-    def connect(self, (ip, port)):
+    def connect(self, xxx_todo_changeme):
+        (ip, port) = xxx_todo_changeme
         time.sleep(0.25)
         if type(ip) is not str:
             raise TypeError
