@@ -5,6 +5,7 @@ import sdss3tools
 import os
 
 sdss3tools.setup(
+    name='ics_enuActor',
     description = "Toy SDSS-3 actor.",
     )
 
