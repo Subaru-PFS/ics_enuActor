@@ -132,7 +132,6 @@ class rexm(Device):
             cmd.warn("text='%s failed to stop motion '" % self.name)
             raise
 
-
     @busy
     def moveTo(self, cmd, position):
         """ |  *Wrapper busy* handles the state machine.
@@ -154,7 +153,7 @@ class rexm(Device):
                                                                 formatException(e, sys.exc_info()[2])))
 
             return False
-        
+
     def _checkStatus(self, cmd, doClose=False, doShow=True):
         """| Check current status from controller and publish rexmInfo keywords
 
@@ -174,8 +173,7 @@ class rexm(Device):
         self.currPos = self.myTMCM.gap(1, doClose=doClose, fmtRet='>BBBBiB')
 
         if doShow:
-            cmd.inform("rexmInfo=%i,%i,%i,%i" % (self.positionA, self.positionB, self.speed, self.currPos))  
-        
+            cmd.inform("rexmInfo=%i,%i,%i,%i" % (self.positionA, self.positionB, self.speed, self.currPos))
 
     def _moveAccurate(self, cmd, direction):
         """| Move accurately to the required direction.

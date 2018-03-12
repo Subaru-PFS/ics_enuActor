@@ -11,7 +11,6 @@ from enuActor.Controllers.Simulator.bsh_simu import BshSimulator
 from enuActor.Controllers.device import Device
 from enuActor.utils.wrap import busy, formatException
 
-reload(bufferedSocket)
 
 
 class bsh(Device):

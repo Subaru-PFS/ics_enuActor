@@ -19,8 +19,8 @@ class BshSimulator(socket.socket):
 
         self.buf = []
 
-    def connect(self, xxx_todo_changeme):
-        (ip, port) = xxx_todo_changeme
+    def connect(self, server):
+        (ip, port) = server
         time.sleep(0.5)
         if type(ip) is not str:
             raise TypeError

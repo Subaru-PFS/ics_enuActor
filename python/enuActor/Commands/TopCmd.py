@@ -61,7 +61,7 @@ class TopCmd(object):
     def controllerKey(self):
         """Return controllers keyword
         """
-        controllerNames = self.actor.controllers.keys()
+        controllerNames = list(self.actor.controllers.keys())
         key = 'controllers=%s' % (','.join([c for c in controllerNames]))
 
         return key

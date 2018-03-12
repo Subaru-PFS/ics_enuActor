@@ -186,7 +186,7 @@ class Device(QThread):
 
         s = self.connectSock()
         try:
-            s.sendall(fullCmd)
+            s.sendall(fullCmd.encode())
 
         except Exception as e:
             raise Exception(
@@ -196,7 +196,7 @@ class Device(QThread):
         if doClose:
             self.closeSock()
 
-        return reply
+        return reply.decode()
 
     def getOneResponse(self, sock=None, cmd=None):
         """| Attempt to receive data from the socket.

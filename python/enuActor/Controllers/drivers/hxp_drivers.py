@@ -10,11 +10,10 @@ from __future__ import print_function
 #  See Programmer's manual for more information on XPS function calls
 
 
-
 import socket
 
 
-class XPS:
+class XPS(object):
     # Defines
     MAX_NB_SOCKETS = 100
 
@@ -38,8 +37,8 @@ class XPS:
                 ret += XPS.__sockets[socketId].recv(1024)
         except socket.timeout:
             return [-2, '']
-        except socket.error(errNb, errString):
-            print('Socket error : ' + errString)
+        except socket.error:
+            print('Socket error : ')
             return [-2, '']
 
         for i in range(len(ret)):
