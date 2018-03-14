@@ -7,7 +7,7 @@ import numpy as np
 from enuActor.Controllers.Simulator.slit_simu import SlitSimulator
 from enuActor.Controllers.device import Device
 from enuActor.Controllers.drivers import hxp_drivers
-from enuActor.utils.wrap import busy, formatException
+from enuActor.utils.wrap import busy
 
 
 class slit(Device):
@@ -50,7 +50,7 @@ class slit(Device):
         """
         self.actor.reloadConfiguration(cmd=cmd)
 
-        self.currMode = self.actor.config.get('slit', 'mode') if mode is None else mode
+        self.mode = self.actor.config.get('slit', 'mode') if mode is None else mode
         self.host = self.actor.config.get('slit', 'host')
         self.port = int(self.actor.config.get('slit', 'port'))
         self.home = [float(val) for val in self.actor.config.get('slit', 'home').split(',')]
@@ -81,7 +81,7 @@ class slit(Device):
         :raise: Exception if the communication has failed with the controller
         """
 
-        if self.currMode == 'operation':
+        if self.mode == 'operation':
             self.myxps = hxp_drivers.XPS()
             self.socketId = self.myxps.TCP_ConnectToServer(self.host, self.port, slit.timeout)
         else:
@@ -143,12 +143,11 @@ class slit(Device):
             cmd.inform('slitLocation=%s' % self.location)
 
         except Exception as e:
-            cmd.warn(
-                "text='%s getStatus failed %s'" % (self.name.upper(), formatException(e, sys.exc_info()[2])))
+            cmd.warn('text=%s' % self.actor.strTraceback(e))
             cmd.warn('slitLocation=undef')
             ender = fender
 
-        ender("slit=%s,%s,%s" % (self.fsm.current, self.currMode, ','.join(["%.5f" % p for p in self.currPos])))
+        ender("slit=%s,%s,%s" % (self.fsm.current, self.mode, ','.join(["%.5f" % p for p in self.currPos])))
 
     @busy
     def moveTo(self, cmd, reference, posCoord):
@@ -171,8 +170,7 @@ class slit(Device):
                 ret = self._hexapodMoveIncremental('Work', posCoord)
 
         except Exception as e:
-            cmd.warn("text='%s move to %s failed failed %s'" % (self.name.upper(), reference,
-                                                                formatException(e, sys.exc_info()[2])))
+            cmd.warn('text=%s' % self.actor.strTraceback(e))
             if not "Warning: [X, Y, Z, U, V, W] exceed" in str(e):
                 return False
 
@@ -192,7 +190,7 @@ class slit(Device):
         elif system == "Tool":
             self.tool_value = ret
         else:
-            raise Exception("system : %s does not exist" % system)
+            raise ValueError("system : %s does not exist" % system)
 
         return ret
 

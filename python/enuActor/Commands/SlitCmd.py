@@ -1,11 +1,9 @@
 #!/usr/bin/env python
 
-import sys
-
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
 from fysom import FysomError
-from enuActor.utils.wrap import threaded, formatException
+from enuActor.utils.wrap import threaded
 
 
 class SlitCmd(object):
@@ -75,7 +73,7 @@ class SlitCmd(object):
             self.controller.fsm.startInit(cmd=cmd)
         # That transition may not be allowed, see state machine
         except FysomError as e:
-            cmd.warn("text='%s  %s'" % (self.name.upper(), formatException(e, sys.exc_info()[2])))
+            cmd.warn('text=%s' % self.actor.strTraceback(e))
 
         self.controller.getStatus(cmd)
 
@@ -90,7 +88,7 @@ class SlitCmd(object):
             self.controller.fsm.changeMode(cmd=cmd, mode=mode)
         # That transition may not be allowed, see state machine
         except FysomError as e:
-            cmd.warn("text='%s  %s'" % (self.name.upper(), formatException(e, sys.exc_info()[2])))
+            cmd.warn('text=%s' % self.actor.strTraceback(e))
 
         self.controller.getStatus(cmd)
 
@@ -116,35 +114,36 @@ class SlitCmd(object):
         self.controller.getStatus(cmd)
 
     @threaded
-    def getSystem(self, cmd, doFinish=True):
+    def getSystem(self, cmd):
         """ Return system coordinate value position (Home or Tool)"""
 
         cmdKeys = cmd.cmd.keywords
         system, keyword = ("Work", "slitHome") if "home" in cmdKeys else ("Tool", "slitTool")
 
-        ender = cmd.finish if doFinish else cmd.inform
-        fender = cmd.fail if doFinish else cmd.warn
-        try:
-            ret = self.controller.getSystem(system)
-            ender("%s=%s" % (keyword, ','.join(["%.5f" % p for p in ret])))
-        except Exception as e:
-            fender("text='%s get %s failed %s'" % (self.name.upper(), system, formatException(e, sys.exc_info()[2])))
+        ret = self.controller.getSystem(system)
+        cmd.finish("%s=%s" % (keyword, ','.join(["%.5f" % p for p in ret])))
+
 
     @threaded
     def setSystem(self, cmd):
         """ set new system coordinate value position (Home or Tool)"""
 
         cmdKeys = cmd.cmd.keywords
-        system, vec = ("Work", self.controller.home) if "home" in cmdKeys else ("Tool", self.controller.tool_value)
+        coords = ['X', 'Y', 'Z', 'U', 'V', 'W']
 
-        posCoord = [cmdKeys[coord].values[0] if coord in cmdKeys else vec[i] for i, coord in
-                    enumerate(['X', 'Y', 'Z', 'U', 'V', 'W'])]
+        if "home" in cmdKeys:
+            system, keyword, vec = ("Work", "slitHome", self.controller.home)
+        else:
+            system, keyword, vec = ("Tool", "slitTool", self.controller.tool_value)
+
+        posCoord = [cmdKeys[coord].values[0] if coord in cmdKeys else vec[i] for i, coord in enumerate(coords)]
 
         try:
             self.controller.setSystem(system, posCoord)
-            self.getSystem(cmd, doFinish=False)
+            ret = self.controller.getSystem(system)
+            cmd.inform("%s=%s" % (keyword, ','.join(["%.5f" % p for p in ret])))
         except Exception as e:
-            cmd.warn("text='%s set %s failed %s'" % (self.name.upper(), system, formatException(e, sys.exc_info()[2])))
+            cmd.warn('text=%s' % self.actor.strTraceback(e))
 
         self.controller.getStatus(cmd)
 
@@ -156,7 +155,8 @@ class SlitCmd(object):
         try:
             self.controller.shutdown(cmd, enable)
         except Exception as e:
-            cmd.warn("text='%s shutdown failed %s'" % (self.name.upper(), formatException(e, sys.exc_info()[2])))
+            cmd.warn('text=%s' % self.actor.strTraceback(e))
+
         self.controller.getStatus(cmd)
 
         # pdu should do something at this point
@@ -167,7 +167,7 @@ class SlitCmd(object):
         try:
             self.controller.abort(cmd)
         except Exception as e:
-            cmd.warn("text='%s abort failed %s'" % (self.name.upper(), formatException(e, sys.exc_info()[2])))
+            cmd.warn('text=%s' % self.actor.strTraceback(e))
 
         self.controller.getStatus(cmd)
 

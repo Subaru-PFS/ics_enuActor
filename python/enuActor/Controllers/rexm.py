@@ -1,14 +1,13 @@
 #!/usr/bin/env python
 
 import logging
-import sys
 import time
 from datetime import datetime as dt
 
 from enuActor.Controllers.Simulator.rexm_simu import RexmSimulator
 from enuActor.Controllers.device import Device
 from enuActor.Controllers.drivers import rexm_drivers
-from enuActor.utils.wrap import busy, formatException
+from enuActor.utils.wrap import busy
 
 
 class rexm(Device):
@@ -50,7 +49,7 @@ class rexm(Device):
         """
         self.actor.reloadConfiguration(cmd=cmd)
 
-        self.currMode = self.actor.config.get('rexm', 'mode') if mode is None else mode
+        self.mode = self.actor.config.get('rexm', 'mode') if mode is None else mode
         self.port = self.actor.config.get('rexm', 'port')
 
     def startCommunication(self, cmd=None):
@@ -62,7 +61,7 @@ class rexm(Device):
         :param cmd: on going command
         :raise: Exception if the communication has failed with the controller
         """
-        self.myTMCM = rexm_drivers.TMCM(self.port) if self.currMode == 'operation' else RexmSimulator()
+        self.myTMCM = rexm_drivers.TMCM(self.port) if self.mode == 'operation' else RexmSimulator()
 
         ret = self.myTMCM.gap(11)
 
@@ -100,11 +99,10 @@ class rexm(Device):
                 self.currPos = rexm.switch[(self.positionA, self.positionB)] if (self.positionA, self.positionB) \
                                                                                 in rexm.switch else "undef"
             except Exception as e:
-                cmd.warn("text='%s getStatus failed %s'" % (self.name.upper(), formatException(e, sys.exc_info()[2])))
-
+                cmd.warn('text=%s' % self.actor.strTraceback(e))
                 ender = fender
 
-        ender("rexm=%s,%s,%s" % (self.fsm.current, self.currMode, self.currPos))
+        ender("rexm=%s,%s,%s" % (self.fsm.current, self.mode, self.currPos))
 
     def abort(self, cmd):
         """| Abort current motion
@@ -149,8 +147,7 @@ class rexm(Device):
             return True
 
         except Exception as e:
-            cmd.warn("text='%s failed to command motion %s'" % (self.name.upper(),
-                                                                formatException(e, sys.exc_info()[2])))
+            cmd.warn('text=%s' % self.actor.strTraceback(e))
 
             return False
 

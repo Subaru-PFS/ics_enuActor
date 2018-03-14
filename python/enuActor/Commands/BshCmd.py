@@ -1,12 +1,9 @@
 #!/usr/bin/env python
 
-import sys
-
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
-
+from enuActor.utils.wrap import threaded
 from fysom import FysomError
-from enuActor.utils.wrap import threaded, formatException
 
 
 class BshCmd(object):
@@ -71,7 +68,7 @@ class BshCmd(object):
             self.controller.fsm.startInit(cmd=cmd)
         # That transition may not be allowed, see state machine
         except FysomError as e:
-            cmd.warn("text='%s  %s'" % (self.name.upper(), formatException(e, sys.exc_info()[2])))
+            cmd.warn('text=%s' % self.actor.strTraceback(e))
 
         self.controller.getStatus(cmd)
 
@@ -86,7 +83,7 @@ class BshCmd(object):
             self.controller.fsm.changeMode(cmd=cmd, mode=mode)
         # That transition may not be allowed, see state machine
         except FysomError as e:
-            cmd.warn("text='%s  %s'" % (self.name.upper(), formatException(e, sys.exc_info()[2])))
+            cmd.warn('text=%s' % self.actor.strTraceback(e))
 
         self.controller.getStatus(cmd)
 
@@ -97,25 +94,21 @@ class BshCmd(object):
         cmdKeys = cmd.cmd.keywords
         period, duty = None, None
 
-        try:
-            if "period" in cmdKeys:
-                if 0 < cmdKeys["period"].values[0] < 65536:
-                    period = int(cmdKeys["period"].values[0])
-                else:
-                    raise Exception("period not in range : %i=> %i" % (0, 65535))
+        if "period" in cmdKeys:
+            if 0 < cmdKeys["period"].values[0] < 65536:
+                period = int(cmdKeys["period"].values[0])
+            else:
+                raise ValueError("period not in range : %i=> %i" % (0, 65535))
 
-            if "duty" in cmdKeys:
-                if 0 < cmdKeys["duty"].values[0] < 256:
-                    duty = int(cmdKeys["duty"].values[0])
-                else:
-                    raise Exception("duty not in range : %i => %i" % (0, 255))
+        if "duty" in cmdKeys:
+            if 0 < cmdKeys["duty"].values[0] < 256:
+                duty = int(cmdKeys["duty"].values[0])
+            else:
+                raise ValueError("duty not in range : %i => %i" % (0, 255))
 
-            self.controller.setBiaConfig(cmd, period, duty, doClose=True)
-            cmd.finish()
+        self.controller.setBiaConfig(cmd, period, duty, doClose=True)
+        cmd.finish()
 
-        except Exception as e:
-            cmd.fail("text='%s failed to send Bia Config %s'" % (self.name.upper(),
-                                                                 formatException(e, sys.exc_info()[2])))
 
     @threaded
     def biaStrobe(self, cmd):
@@ -123,13 +116,9 @@ class BshCmd(object):
         cmdKeys = cmd.cmd.keywords
         state = "off" if "off" in cmdKeys else "on"
 
-        try:
-            self.controller.setBiaConfig(cmd, biaStrobe=state, doClose=True)
-            cmd.finish()
+        self.controller.setBiaConfig(cmd, biaStrobe=state, doClose=True)
+        cmd.finish()
 
-        except Exception as e:
-            cmd.fail("text='%s failed to change Bia Strobe %s'" % (self.name.upper(),
-                                                                   formatException(e, sys.exc_info()[2])))
 
     @threaded
     def biaSwitch(self, cmd):
@@ -187,9 +176,7 @@ class BshCmd(object):
             reply = self.controller.sendOneCommand(cmdStr, doClose=False, cmd=cmd)
 
         except Exception as e:
-            cmd.warn("text='%s failed to send raw command %s'" % (self.name.upper(),
-                                                                  formatException(e,
-                                                                                  sys.exc_info()[2])))
+            cmd.warn('text=%s' % self.actor.strTraceback(e))
 
         self.controller.getStatus(cmd)
 

@@ -31,7 +31,7 @@ class IisCmd(object):
     def status(self, cmd, doFinish=True):
         """Report iis"""
         cmd.inform('state=%s' % self.actor.controllers['iis'].fsm.current)
-        cmd.inform('mode=%s' % self.actor.controllers['iis'].currMode)
+        cmd.inform('mode=%s' % self.actor.controllers['iis'].mode)
         ender = cmd.finish if doFinish else cmd.inform
         ok, status = self.actor.controllers['iis'].getStatus(cmd)
         if ok:

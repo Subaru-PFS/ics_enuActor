@@ -1,30 +1,24 @@
-from builtins import str
 import sys
-import traceback as tb
-from functools import partial
 
 from fysom import FysomError
-
-
-def formatException(e, traceback):
-    """ Format the caught exception as a string
-
-    :param e: caught exception
-    :param traceback: exception traceback
-    """
-
-    def clean(string):
-        return str(string).replace("'", "").replace('"', "")
-
-    return "%s %s %s" % (clean(type(e)), clean(type(e)(*e.args)), clean(tb.format_tb(traceback, limit=1)[0]))
+from functools import partial
 
 
 def threaded(func):
+    @putMsg
+    def wrapper(self, *args, **kwargs):
+        try:
+            return func(self, *args, **kwargs)
+        except Exception as e:
+            cmd = args[0]
+            cmd.fail('text=%s' % self.actor.strTraceback(e))
+
+    return wrapper
+
+
+def putMsg(func):
     def wrapper(self, *args, **kwargs):
         self.actor.controllers[self.name].putMsg(partial(func, self, *args, **kwargs))
-
-    wrapper.__doc__ = func.__doc__
-    wrapper.__repr__ = func.__repr__
 
     return wrapper
 
@@ -68,7 +62,7 @@ def busy(func):
         try:
             self.fsm.goBusy()
         except FysomError as e:
-            cmd.warn("text='%s  %s'" % (self.name.upper(), formatException(e, sys.exc_info()[2])))
+            cmd.warn('text=%s' % self.actor.strTraceback(e))
             return
         self.getStatus(cmd, doFinish=False)
 

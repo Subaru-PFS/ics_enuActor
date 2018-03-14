@@ -21,7 +21,6 @@ from struct import pack, unpack
 
 import numpy as np
 import serial
-from enuActor.utils.wrap import formatException
 
 
 class sendPacket(object):
@@ -124,25 +123,21 @@ class TMCM(object):
                  bsh simulator in simulation
         """
         if self.ser is None:
-            try:
-                s = serial.Serial(port=self.port,
+
+            s = serial.Serial(port=self.port,
                                   baudrate=9600,
                                   bytesize=serial.EIGHTBITS,
                                   parity=serial.PARITY_NONE,
                                   stopbits=serial.STOPBITS_ONE,
                                   timeout=2.)
-            except Exception as e:
-                raise Exception("%s failed to create serial : %s" % (self.name, formatException(e, sys.exc_info()[2])))
 
-            try:
-                if not s.isOpen():
-                    s.open()
-                if s.readable() and s.writable():
-                    self.ser = s
-                else:
-                    raise Exception('serial port is not readable')
-            except Exception as e:
-                raise Exception("%s failed to open-rw serial : %s" % (self.name, formatException(e, sys.exc_info()[2])))
+            if not s.isOpen():
+                s.open()
+
+            if s.readable() and s.writable():
+                self.ser = s
+            else:
+                raise Exception('serial port is not readable')
 
         return self.ser
 
@@ -157,7 +152,8 @@ class TMCM(object):
             try:
                 self.ser.close()
             except Exception as e:
-                raise Exception("%s failed to close serial : %s" % (self.name, formatException(e, sys.exc_info()[2])))
+                self.ser = None
+                raise
 
         self.ser = None
 
@@ -184,10 +180,11 @@ class TMCM(object):
         try:
             ret = s.write(cmdStr)
             if ret != 9:
-                raise Exception('cmdStr is badly formatted')
+                raise ValueError('cmdStr is badly formatted')
 
         except Exception as e:
-            raise Exception("%s failed to send %s : %s" % (self.name, cmdStr, formatException(e, sys.exc_info()[2])))
+            self.closeSerial()
+            raise
 
         reply = self.getOneResponse(ser=s, fmtRet=fmtRet)
         if doClose:
@@ -197,15 +194,14 @@ class TMCM(object):
 
     def getOneResponse(self, ser=None, fmtRet='>BBBBIB'):
         time.sleep(0.05)
-        try:
-            if ser is None:
-                ser = self.openSerial()
 
-            ret = recvPacket(ser.read(9), fmtRet=fmtRet)
-            if ret.status != 100:
-                raise Exception(TMCM.controllerStatus[ret.status])
-        except Exception as e:
-            raise Exception("%s failed to get answer : %s" % (self.name, formatException(e, sys.exc_info()[2])))
+        if ser is None:
+            ser = self.openSerial()
+
+        ret = recvPacket(ser.read(9), fmtRet=fmtRet)
+        if ret.status != 100:
+            raise Exception(TMCM.controllerStatus[ret.status])
+
 
         return ret.data
 

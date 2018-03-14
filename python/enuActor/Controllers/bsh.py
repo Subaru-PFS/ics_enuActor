@@ -9,7 +9,7 @@ from datetime import datetime as dt
 import enuActor.Controllers.bufferedSocket as bufferedSocket
 from enuActor.Controllers.Simulator.bsh_simu import BshSimulator
 from enuActor.Controllers.device import Device
-from enuActor.utils.wrap import busy, formatException
+from enuActor.utils.wrap import busy
 
 
 
@@ -60,7 +60,7 @@ class bsh(Device):
 
         self.actor.reloadConfiguration(cmd=cmd)
 
-        self.currMode = self.actor.config.get('bsh', 'mode') if mode is None else mode
+        self.mode = self.actor.config.get('bsh', 'mode') if mode is None else mode
         self.host = self.actor.config.get('bsh', 'host')
         self.port = int(self.actor.config.get('bsh', 'port'))
         self.biaPeriod = int(self.actor.config.get('bsh', 'bia_period'))
@@ -75,7 +75,7 @@ class bsh(Device):
         :raise: Exception if the communication has failed with the controller
         """
 
-        self.simulator = BshSimulator() if self.currMode == "simulation" else None  # Create new simulator
+        self.simulator = BshSimulator() if self.mode == "simulation" else None  # Create new simulator
 
         s = self.connectSock()
 
@@ -152,7 +152,7 @@ class bsh(Device):
             return True
 
         except Exception as e:
-            cmd.warn("text='%s expose has failed %s'" % (self.name.upper(), formatException(e, sys.exc_info()[2])))
+            cmd.warn('text=%s' % self.actor.strTraceback(e))
             cmd.warn("exptime=nan")
             if self.stopExposure:
                 return self._safeSwitch(cmd, "shut_close")
@@ -179,14 +179,13 @@ class bsh(Device):
                 self.getBiaConfig(cmd, doClose=True)
 
             except Exception as e:
-                cmd.warn("text='%s getStatus failed %s'" % (self.name.upper(),
-                                                            formatException(e, sys.exc_info()[2])))
+                cmd.warn('text=%s' % self.actor.strTraceback(e))
                 ender = fender
 
         talk = cmd.inform if ender != fender else cmd.warn
 
-        talk("shutters=%s,%s,%s" % (self.fsm.current, self.currMode, self.shState))
-        ender("bia=%s,%s,%s" % (self.fsm.current, self.currMode, self.biaState))
+        talk("shutters=%s,%s,%s" % (self.fsm.current, self.mode, self.shState))
+        ender("bia=%s,%s,%s" % (self.fsm.current, self.mode, self.biaState))
 
     def checkStatus(self, cmd):
         """| Get status from bsh board and update controller's attributes.
@@ -353,14 +352,14 @@ class bsh(Device):
         try:
             self.checkInterlock(self.shState, self.biaState, cmdStr)
         except Exception as e:
-            cmd.warn("text='%s switch failed %s'" % (self.name.upper(), formatException(e, sys.exc_info()[2])))
+            cmd.warn('text=%s' % self.actor.strTraceback(e))
             return True
 
         try:
             self._sendOrder(cmd, cmdStr)
 
         except Exception as e:
-            cmd.warn("text='%s switch failed %s'" % (self.name.upper(), formatException(e, sys.exc_info()[2])))
+            cmd.warn('text=%s' % self.actor.strTraceback(e))
             return False
 
         return True

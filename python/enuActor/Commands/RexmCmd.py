@@ -5,7 +5,7 @@ import sys
 
 import opscore.protocols.keys as keys
 from fysom import FysomError
-from enuActor.utils.wrap import threaded, formatException
+from enuActor.utils.wrap import threaded
 
 
 class RexmCmd(object):
@@ -58,7 +58,7 @@ class RexmCmd(object):
             self.controller.fsm.startInit(cmd=cmd)
         # That transition may not be allowed, see state machine
         except FysomError as e:
-            cmd.warn("text='%s  %s'" % (self.name.upper(), formatException(e, sys.exc_info()[2])))
+            cmd.warn('text=%s' % self.actor.strTraceback(e))
 
         self.controller.getStatus(cmd)
 
@@ -73,7 +73,7 @@ class RexmCmd(object):
             self.controller.fsm.changeMode(cmd=cmd, mode=mode)
         # That transition may not be allowed, see state machine
         except FysomError as e:
-            cmd.warn("text='%s  %s'" % (self.name.upper(), formatException(e, sys.exc_info()[2])))
+            cmd.warn('text=%s' % self.actor.strTraceback(e))
 
         self.controller.getStatus(cmd)
 
@@ -90,8 +90,5 @@ class RexmCmd(object):
     def abort(self, cmd):
         """ Abort current motion """
 
-        try:
-            self.controller.abort(cmd)
-            self.controller.getStatus(cmd)
-        except Exception as e:
-            cmd.fail("text='%s failed to stop motion %s'" % (self.name.upper(), formatException(e, sys.exc_info()[2])))
+        self.controller.abort(cmd)
+        self.controller.getStatus(cmd)

@@ -85,6 +85,11 @@ class enuActor(actorcore.ICC.ICC):
         else:
             cmd.warn('text="adjusted %s loop to %gs"' % (controller, self.monitors[controller]))
 
+    def strTraceback(self, e):
+
+        oneLiner = self.cmdTraceback(e)
+        return qstr("command failed: %s" % oneLiner)
+
 
 def main():
     parser = argparse.ArgumentParser()

@@ -30,7 +30,7 @@ class PduCmd(object):
     def status(self, cmd, doFinish=True):
         """Report pdu"""
         cmd.inform('state=%s' % self.actor.controllers['pdu'].fsm.current)
-        cmd.inform('mode=%s' % self.actor.controllers['pdu'].currMode)
+        cmd.inform('mode=%s' % self.actor.controllers['pdu'].mode)
         ender = cmd.finish if doFinish else cmd.inform
         ok, status = self.actor.controllers['pdu'].getStatus(cmd)
         if ok:

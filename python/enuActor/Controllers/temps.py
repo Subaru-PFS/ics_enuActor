@@ -34,7 +34,7 @@ class temps(Device):
         """
         self.actor.reloadConfiguration(cmd=cmd)
 
-        self.currMode = self.actor.config.get('temps', 'mode') if mode is None else mode
+        self.mode = self.actor.config.get('temps', 'mode') if mode is None else mode
         self.host = self.actor.config.get('temps', 'host')
         self.port = int(self.actor.config.get('temps', 'port'))
 
@@ -45,7 +45,7 @@ class temps(Device):
         :return: True, ret: if the communication is established with the board, fsm (LOADING => LOADED)
                  False, ret: if the communication failed with the board, ret is the error, fsm (LOADING => FAILED)
         """
-        self.simulator = TempsSimulator() if self.currMode == "simulation" else None  # Create new simulator
+        self.simulator = TempsSimulator() if self.mode == "simulation" else None  # Create new simulator
 
         s = self.connectSock()
 
@@ -85,7 +85,7 @@ class temps(Device):
         fender = cmd.fail if doFinish else cmd.warn
 
         ender = ender if ok else fender
-        ender("temps=%s,%s,%s" % (self.fsm.current, self.currMode, temps))
+        ender("temps=%s,%s,%s" % (self.fsm.current, self.mode, temps))
 
     def fetchTemps(self, cmd):
         """fetchTemps

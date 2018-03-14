@@ -5,7 +5,7 @@ import sys
 
 from actorcore.QThread import QThread
 from fysom import Fysom
-from enuActor.utils.wrap import formatException, loading, initialising
+from enuActor.utils.wrap import loading, initialising
 
 
 class Device(QThread):
@@ -19,7 +19,7 @@ class Device(QThread):
 
         self.logger = logging.getLogger(self.name)
         self.logger.setLevel(loglevel)
-        self.currMode = "undef"
+        self.mode = "undef"
         self.fsm = Fysom({'initial': 'OFF',
                           'events': [
                               {'name': 'startLoading', 'src': 'OFF', 'dst': 'LOADING'},
@@ -59,7 +59,7 @@ class Device(QThread):
                 cmd.warn("text='%s Config file badly formatted'" % self.name)
                 raise
             try:
-                cmd.inform("text='Connecting to %s in ...%s'" % (self.name.upper(), self.currMode))
+                cmd.inform("text='Connecting to %s in ...%s'" % (self.name.upper(), self.mode))
                 self.startCommunication(cmd)
                 cmd.inform("text=' %s Connected'" % self.name)
             except:
@@ -67,7 +67,7 @@ class Device(QThread):
                 raise
 
         except Exception as e:
-            cmd.warn("text='%s load device failed %s'" % (self.name.upper(), formatException(e, sys.exc_info()[2])))
+            cmd.warn('text=%s' % self.actor.strTraceback(e))
             return False
 
         return True
@@ -87,7 +87,7 @@ class Device(QThread):
             cmd.inform("text='%s successfully initialised" % self.name)
 
         except Exception as e:
-            cmd.warn("text='%s init device failed %s'" % (self.name.upper(), formatException(e, sys.exc_info()[2])))
+            cmd.warn('text=%s' % self.actor.strTraceback(e))
             return False
 
         return True
@@ -101,7 +101,7 @@ class Device(QThread):
         :raise: Exception Config file badly formatted
         """
 
-        self.currMode = self.actor.config.get(self.name, 'mode') if mode is None else mode
+        self.mode = self.actor.config.get(self.name, 'mode') if mode is None else mode
 
     def startCommunication(self, cmd):
         """| Start communication with the controller. (prototype)
@@ -128,7 +128,7 @@ class Device(QThread):
 
         """
         ender = cmd.finish if doFinish else cmd.inform
-        ender("%s=%s,%s" % (self.name.upper(), self.fsm.current, self.currMode))
+        ender("%s=%s,%s" % (self.name.upper(), self.fsm.current, self.mode))
 
     def connectSock(self):
         """| Connect socket if self.sock is None.
@@ -137,17 +137,9 @@ class Device(QThread):
                  - simulator in simulation
         """
         if self.sock is None:
-            try:
-                s = socket.socket(socket.AF_INET,
-                                  socket.SOCK_STREAM) if self.currMode == "operation" else self.simulator
-                s.settimeout(1.0)
-            except Exception as e:
-                raise Exception("%s failed to create socket : %s" % (self.name, formatException(e, sys.exc_info()[2])))
-
-            try:
-                s.connect((self.host, self.port))
-            except Exception as e:
-                raise Exception("%s failed to connect socket : %s" % (self.name, formatException(e, sys.exc_info()[2])))
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM) if self.mode == "operation" else self.simulator
+            s.settimeout(1.0)
+            s.connect((self.host, self.port))
 
             self.sock = s
 
@@ -165,7 +157,7 @@ class Device(QThread):
 
             except Exception as e:
                 self.sock = None
-                raise Exception("%s failed to close socket : %s" % (self.name, formatException(e, sys.exc_info()[2])))
+                raise
 
         self.sock = None
 
@@ -190,8 +182,8 @@ class Device(QThread):
             s.sendall(fullCmd.encode())
 
         except Exception as e:
-            raise Exception(
-                "%s failed to send %s : %s" % (self.name.upper(), fullCmd, formatException(e, sys.exc_info()[2])))
+            self.closeSock()
+            raise
 
         reply = self.getOneResponse(sock=s, cmd=cmd)
 
