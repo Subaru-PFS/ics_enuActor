@@ -1,7 +1,6 @@
 __author__ = 'alefur'
 import logging
 import socket
-import sys
 
 from actorcore.QThread import QThread
 from fysom import Fysom
