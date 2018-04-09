@@ -155,7 +155,7 @@ class bsh(Device):
             cmd.warn('text=%s' % self.actor.strTraceback(e))
             cmd.warn("exptime=nan")
             if self.stopExposure:
-                return self._safeSwitch(cmd, "shut_close")
+                return self._safeSwitch(cmd, "%s_close" % shutter)
 
             return False
 

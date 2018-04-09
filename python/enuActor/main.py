@@ -101,7 +101,7 @@ def main():
                         help='identity')
     args = parser.parse_args()
 
-    theActor = enuActor('enu',
+    theActor = enuActor(args.name,
                         productName='enuActor',
                         configFile=args.config,
                         logLevel=args.logLevel)

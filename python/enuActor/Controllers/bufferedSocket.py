@@ -1,7 +1,96 @@
 import select
 import logging
-
+import socket
 from opscore.utility.qstr import qstr
+
+class EthComm(object):
+    def __init__(self):
+        object.__init__(self)
+        self.host = None
+        self.port = None
+        self.sock = None
+        self.EOL = '\r\n'
+
+    def connectSock(self):
+        """| Connect socket if self.sock is None.
+
+        :return: - socket
+        """
+        if self.sock is None:
+            s = self.createSock()
+            s.settimeout(2.0)
+            s.connect((self.host, self.port))
+
+            self.sock = s
+
+        return self.sock
+
+    def createSock(self):
+        return socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    def closeSock(self):
+        """| Close the socket.
+
+        :raise: Exception if closing socket has failed
+        """
+
+        try:
+            self.sock.close()
+        except:
+            pass
+
+        self.sock = None
+
+    def sendOneCommand(self, cmdStr, doClose=True, cmd=None):
+        """| Send one command and return one response.
+
+        :param cmdStr: (str) The command to send.
+        :param doClose: If True (the default), the device socket is closed before returning.
+        :param cmd: on going command
+        :return: reply : the single response string, with EOLs stripped.
+        :raise: IOError : from any communication errors.
+        """
+        if cmd is None:
+            cmd = self.actor.bcast
+
+        fullCmd = "%s%s" % (cmdStr, self.EOL)
+        self.logger.debug('sending %r', fullCmd)
+
+        s = self.connectSock()
+
+        try:
+            s.sendall(fullCmd.encode())
+
+        except Exception as e:
+            self.closeSock()
+            raise
+
+        reply = self.getOneResponse(sock=s, cmd=cmd)
+
+        if doClose:
+            self.closeSock()
+
+        return reply
+
+    def getOneResponse(self, sock=None, cmd=None):
+        """| Attempt to receive data from the socket.
+
+        :param sock: socket
+        :param cmd: command
+        :return: reply : the single response string, with EOLs stripped.
+        :raise: IOError : from any communication errors.
+        """
+        if sock is None:
+            sock = self.connectSock()
+
+        ret = self.ioBuffer.getOneResponse(sock=sock, cmd=cmd)
+        reply = ret.strip()
+
+        self.logger.debug('received %r', reply)
+
+        return reply
+
+
 
 class BufferedSocket(object):
     """ Buffer the input from a socket and block it into lines. """
