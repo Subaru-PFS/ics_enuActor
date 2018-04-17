@@ -1,28 +1,52 @@
-#!/usr/bin/env python
-# encoding: utf-8
+__author__ = 'alefur'
 
 import logging
-
-import numpy as np
-
-from Controllers.device import Device
-from Controllers.Simulator.temps_simu import TempsSimulator
 import enuActor.Controllers.bufferedSocket as bufferedSocket
+from actorcore.FSM import FSMDev
+from actorcore.QThread import QThread
+from enuActor.simulator.temps_simu import TempsSim
 
 
-class temps(Device):
-    timeout = 5
+class temps(FSMDev, QThread, bufferedSocket.EthComm):
 
     def __init__(self, actor, name, loglevel=logging.DEBUG):
-        Device.__init__(self, actor, name)
+        """__init__.
+        This sets up the connections to/from the hub, the logger, and the twisted reactor.
 
-        self.logger = logging.getLogger('temps')
-        self.logger.setLevel(loglevel)
+        :param actor: enuActor
+        :param name: controller name
+        :type name: str
+        """
+
+        bufferedSocket.EthComm.__init__(self)
+        QThread.__init__(self, actor, name)
+        FSMDev.__init__(self, actor, name)
 
         self.sock = None
-        self.simulator = None
-        self.EOL = '\n'
+        self.sim = None
+        self.EOL = '\r\n'
+
         self.ioBuffer = bufferedSocket.BufferedSocket(self.name + "IO", EOL='\r\n')
+
+        self.logger = logging.getLogger(self.name)
+        self.logger.setLevel(loglevel)
+
+    @property
+    def simulated(self):
+        if self.mode == 'simulation':
+            return True
+        elif self.mode == 'operation':
+            return False
+        else:
+            raise ValueError('unknown mode')
+
+    def start(self, cmd=None, doInit=True, mode=None):
+        QThread.start(self)
+        FSMDev.start(self, cmd=cmd, doInit=doInit, mode=mode)
+
+    def stop(self, cmd=None):
+        FSMDev.stop(self, cmd=cmd)
+        self.exit()
 
     def loadCfg(self, cmd, mode=None):
         """loadCfg
@@ -32,24 +56,23 @@ class temps(Device):
         :return: True, ret : Config File successfully loaded'
                  False, ret : Config file badly formatted, Exception ret
         """
-        self.actor.reloadConfiguration(cmd=cmd)
 
         self.mode = self.actor.config.get('temps', 'mode') if mode is None else mode
         self.host = self.actor.config.get('temps', 'host')
         self.port = int(self.actor.config.get('temps', 'port'))
 
-    def startCommunication(self, cmd):
-        """startCommunication
-        Start socket with the controller or simulate it
-        :param cmd,
-        :return: True, ret: if the communication is established with the board, fsm (LOADING => LOADED)
-                 False, ret: if the communication failed with the board, ret is the error, fsm (LOADING => FAILED)
-        """
-        self.simulator = TempsSimulator() if self.mode == "simulation" else None  # Create new simulator
+    def startComm(self, cmd):
+        """| Start socket with the interlock board or simulate it.
+        | Called by device.loadDevice()
 
+        :param cmd: on going command,
+        :raise: Exception if the communication has failed with the controller
+        """
+
+        self.sim = TempsSim()  # Create new simulator
         s = self.connectSock()
 
-    def initialise(self, cmd):
+    def init(self, cmd):
         """ Initialise the temperature controller
 
         wrapper @safeCheck handles the state machine
@@ -58,17 +81,12 @@ class temps(Device):
                  False, ret : if a command fail, user if warned with error ret, fsm (LOADED => FAILED)
         """
 
-        reply = self.sendOneCommand("MEAS", doClose=False, cmd=cmd)
+        ret = self.sendOneCommand("CRDG?A", doClose=False, cmd=cmd)
+        for temp in ret.split(','):
+            if not -10 <= float(temp) < 50:
+                raise Exception("Temp reading is wrong : %.2f" % ret)
 
-        temps = reply.split(',')
-        if len(temps) == 8:
-            for t in temps:
-                if not 0 <= float(t) < 30:
-                    raise Exception("Temperatures values wrong : %.1f" % t)
-        else:
-            raise Exception("Controller is not returning correct values")
-
-    def getStatus(self, cmd=None, doFinish=True):
+    def getStatus(self, cmd):
         """getStatus
         temperature is nan if the controller is unreachable
         :param cmd,
@@ -76,16 +94,13 @@ class temps(Device):
                  False, state, mode, 8*nan if not initialised or an error had occured
         """
 
-        if self.fsm.current in ['IDLE']:
-            ok, temps = self.fetchTemps(cmd)
-        else:
-            ok, temps = True, ','.join(["%.2f" % t for t in [np.nan] * 8])
+        cmd.inform('tempsFSM=%s,%s' % (self.states.current, self.substates.current))
+        cmd.inform('tempsMode=%s' % self.mode)
 
-        ender = cmd.finish if doFinish else cmd.inform
-        fender = cmd.fail if doFinish else cmd.warn
+        if self.states.current == 'ONLINE':
+            self.fetchTemps(cmd)
 
-        ender = ender if ok else fender
-        ender("temps=%s,%s,%s" % (self.fsm.current, self.mode, temps))
+        cmd.finish()
 
     def fetchTemps(self, cmd):
         """fetchTemps
@@ -96,8 +111,23 @@ class temps(Device):
         """
 
         try:
-            reply = self.sendOneCommand("MEAS", doClose=True, cmd=cmd)
-            return True, reply
-        except Exception as e:
-            cmd.warn("text='failed to get Temperature :%s'" % e)
-            return False, ','.join(["%.2f" % t for t in [np.nan] * 8])
+            temps1 = self.sendOneCommand("CRDG?A", doClose=False, cmd=cmd)
+            temps2 = self.sendOneCommand("CRDG?B", cmd=cmd)
+
+        except:
+            cmd.warn('temps=%s' % ','.join(10 * ['nan']))
+            raise
+
+        cmd.inform('temps=%s,%s' % (temps1, temps2))
+
+    def createSock(self):
+        if self.simulated:
+            s = self.sim
+        else:
+            s = bufferedSocket.EthComm.createSock(self)
+
+        return s
+
+    def handleTimeout(self):
+        if self.exitASAP:
+            raise SystemExit()

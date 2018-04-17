@@ -18,8 +18,6 @@ class IisCmd(object):
         #
         self.vocab = [
             ('iis', 'status', self.status),
-            ('iis', 'mode [@(operation|simulation)]', self.changeMode),
-            ('iis', 'init', self.initialise),
 
         ]
 
@@ -27,32 +25,16 @@ class IisCmd(object):
         self.keys = keys.KeysDictionary("enu_iis", (1, 1),
                                         )
 
-    @threaded
-    def status(self, cmd, doFinish=True):
-        """Report iis"""
-        cmd.inform('state=%s' % self.actor.controllers['iis'].fsm.current)
-        cmd.inform('mode=%s' % self.actor.controllers['iis'].mode)
-        ender = cmd.finish if doFinish else cmd.inform
-        ok, status = self.actor.controllers['iis'].getStatus(cmd)
-        if ok:
-            ender('iis=%s' % status)
+    @property
+    def controller(self):
+        try:
+            return self.actor.controllers[self.name]
+        except KeyError:
+            raise RuntimeError('%s controller is not connected.' % (self.name))
+
 
     @threaded
-    def changeMode(self, cmd, doFinish=True):
-        """Change device mode operation|simulation"""
-        cmdKeys = cmd.cmd.keywords
-        mode = "simulation" if "simulation" in cmdKeys else "operation"
-        self.actor.controllers['iis'].fsm.changeMode()
+    def status(self, cmd):
+        """Report state, mode, position"""
 
-        if self.actor.controllers['iis'].changeMode(cmd, mode):
-            self.status(cmd, doFinish)
-
-    @threaded
-    def initialise(self, cmd):
-        """Initialise Device LOADED -> INIT
-        """
-        if self.actor.controllers['iis'].initialise(cmd):
-            self.actor.controllers['iis'].fsm.initOk()
-            self.status(cmd)
-        else:
-            self.actor.controllers['iis'].fsm.initFailed()
+        self.controller.getStatus(cmd)

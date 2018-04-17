@@ -5,7 +5,7 @@ from threading import Thread
 import numpy as np
 
 
-class RexmSimulator(object):
+class RexmSim(object):
     controllerStatus = {100: "Successfully executed, no error",
                         101: "Command loaded into TMCL program EEPROM",
                         1: "Wrong checksum",
@@ -23,7 +23,7 @@ class RexmSimulator(object):
     # unit : mm/s
     SPEED_MAX = 1000
 
-    g_speed = 3.2;  # mm/s
+    g_speed = 3.2  # mm/s
     g_pauseDelay = 60.0  # secondes
 
     # 410mm + 10mm de marge
@@ -65,10 +65,10 @@ class RexmSimulator(object):
         self.currPos = 210.
         self.safeStop = False
 
-    def stop(self):
+    def stop(self, temp):
         """fonction stop  controleur
         """
-        time.sleep(0.2)
+        time.sleep(temp)
         self.safeStop = True
 
     def mm2counts(self, val):
@@ -92,13 +92,13 @@ class RexmSimulator(object):
         if self.safeStop:
             self.safeStop = False
 
-        if direction == RexmSimulator.DIRECTION_A:
+        if direction == RexmSim.DIRECTION_A:
             goal = self.currPos - distance
             while (self.currPos > goal) and not self.safeStop:
                 if self.currPos < 0: break
                 time.sleep(tempo)
                 self.currPos -= tempo * speed
-        elif direction == RexmSimulator.DIRECTION_B:
+        elif direction == RexmSim.DIRECTION_B:
             goal = self.currPos + distance
             while (self.currPos < goal) and not self.safeStop:
                 if self.currPos > self.DISTANCE_MAX - 10: break

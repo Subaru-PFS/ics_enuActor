@@ -1,39 +1,65 @@
-#!/usr/bin/env python
-
 import logging
 import time
-from datetime import datetime as dt
+from functools import partial
+import enuActor.Controllers.bufferedSocket as bufferedSocket
+from actorcore.FSM import FSMDev
+from actorcore.QThread import QThread
+from enuActor.simulator.rexm_simu import RexmSim
+from enuActor.drivers import rexm_drivers
 
-from enuActor.Controllers.Simulator.rexm_simu import RexmSimulator
-from enuActor.Controllers.device import Device
-from enuActor.Controllers.drivers import rexm_drivers
-from enuActor.utils.wrap import busy
 
-
-class rexm(Device):
+class rexm(FSMDev, QThread):
     timeout = 5
-    switch = {(1, 0): "low", (0, 1): "mid"}
+    switch = {(1, 0): 'low', (0, 1): 'mid', (0, 0): 'undef', (1, 1): 'error'}
     toPos = {0: 'low', 1: 'mid'}
     toDir = {'low': 0, 'mid': 1}
 
     def __init__(self, actor, name, loglevel=logging.DEBUG):
-        """| This sets up the connections to/from the hub, the logger, and the twisted reactor.
+        """__init__.
+        This sets up the connections to/from the hub, the logger, and the twisted reactor.
 
         :param actor: enuActor
         :param name: controller name
-        :type name:str
+        :type name: str
         """
-        Device.__init__(self, actor, name)
+        substates = ['IDLE', 'MOVING', 'FAILED']
+        events = [{'name': 'move', 'src': 'IDLE', 'dst': 'MOVING'},
+                  {'name': 'idle', 'src': ['MOVING'], 'dst': 'IDLE'},
+                  {'name': 'fail', 'src': ['MOVING'], 'dst': 'FAILED'},
+                  ]
 
-        self.logger = logging.getLogger('rexm')
-        self.logger.setLevel(loglevel)
+        QThread.__init__(self, actor, name)
+        FSMDev.__init__(self, actor, name, events=events, substates=substates)
+
+        self.addStateCB('MOVING', self.moveTo)
 
         self.EOL = '\n'
-        self.currPos = 'undef'
+        self.position = 'undef'
         self.serial = None
-        self.positionA = 0
-        self.positionB = 0
+        self.switchA = 0
+        self.switchB = 0
         self.speed = 0
+
+        self.samptime = time.time()
+        self.logger = logging.getLogger(self.name)
+        self.logger.setLevel(loglevel)
+
+    @property
+    def simulated(self):
+        if self.mode == 'simulation':
+            return True
+        elif self.mode == 'operation':
+            return False
+        else:
+            raise ValueError('unknown mode')
+
+    def start(self, cmd=None, doInit=False, mode=None):
+        FSMDev.start(self, cmd=cmd, doInit=doInit, mode=mode)
+        QThread.start(self)
+
+    def stop(self, cmd=None):
+        self.exit()
+        FSMDev.stop(self, cmd=cmd)
 
     @property
     def isMoving(self):
@@ -47,12 +73,11 @@ class rexm(Device):
         :type mode: str
         :raise: Exception Config file badly formatted
         """
-        self.actor.reloadConfiguration(cmd=cmd)
 
         self.mode = self.actor.config.get('rexm', 'mode') if mode is None else mode
         self.port = self.actor.config.get('rexm', 'port')
 
-    def startCommunication(self, cmd=None):
+    def startComm(self, cmd):
         """| Start serial communication with the controller or simulate it.
         | Called by device.loadDevice().
 
@@ -61,11 +86,12 @@ class rexm(Device):
         :param cmd: on going command
         :raise: Exception if the communication has failed with the controller
         """
-        self.myTMCM = rexm_drivers.TMCM(self.port) if self.mode == 'operation' else RexmSimulator()
+        self.sim = RexmSim()  # Create new simulator
+        self.myTMCM = self.createSock()
 
         ret = self.myTMCM.gap(11)
 
-    def initialise(self, cmd):
+    def init(self, cmd):
         """| Initialise rexm controller, called y device.initDevice().
 
         - search for low position
@@ -76,33 +102,34 @@ class rexm(Device):
         :raise: Exception if a command fail, user is warned with error ret.
         """
 
-        cmd.inform("text='seeking home ...'")
+        cmd.inform('text="seeking home ..."')
         self._moveAccurate(cmd, rexm.toDir['low'])
 
         ret = self.myTMCM.sap(1, 0)  # set 0 as home
 
-    def getStatus(self, cmd=None, doFinish=True):
-        """| Get status from the controller and publish rexm keywords.
+    def getStatus(self, cmd):
+        """| Get status from the controller and publish slit keywords.
 
-        - rexm = state, mode, position(undef if device is not initialised or both limit switches not activated)
+        - slit = state, mode, pos_x, pos_y, pos_z, pos_u, pos_v, pos_w
+        - slitInfo = str : *an interpreted status returned by the controller*
 
         :param cmd: on going command
         :param doFinish: if True finish the command
         """
-        self.currPos = "undef"
-        ender = cmd.finish if doFinish else cmd.inform
-        fender = cmd.fail if doFinish else cmd.warn
 
-        if self.fsm.current in ['IDLE', 'BUSY', 'LOADED']:
+        cmd.inform('rexmFSM=%s,%s' % (self.states.current, self.substates.current))
+        cmd.inform('rexmMode=%s' % self.mode)
+
+        if self.states.current == 'ONLINE':
             try:
-                self._checkStatus(cmd, doClose=doFinish)
-                self.currPos = rexm.switch[(self.positionA, self.positionB)] if (self.positionA, self.positionB) \
-                                                                                in rexm.switch else "undef"
-            except Exception as e:
-                cmd.warn('text=%s' % self.actor.strTraceback(e))
-                ender = fender
+                self._checkStatus(cmd=cmd, doClose=True)
+                self._checkPosition(cmd=cmd)
 
-        ender("rexm=%s,%s,%s" % (self.fsm.current, self.mode, self.currPos))
+            except:
+                cmd.warn('rexm=undef')
+                raise
+
+        cmd.finish()
 
     def abort(self, cmd):
         """| Abort current motion
@@ -111,27 +138,22 @@ class rexm(Device):
         :raise: Exception if a communication error occurs.
         :raise: Timeout if the command takes too long.
         """
-        t = dt.now()
-        ts = dt.now()
+        start = time.time()
+
         try:
-            self.myTMCM.stop()
-            cmd.inform("text='stopping rexm motion'")
+            cmd.inform('text="stopping rexm motion"')
+
             while self.isMoving:
-                if (dt.now() - t).total_seconds() > 5:
-                    raise Exception("timeout aborting motion")
-                if (dt.now() - ts).total_seconds() > 2:
-                    self._checkStatus(cmd)
-                    self.myTMCM.stop()
-                    ts = dt.now()
-                else:
-                    self._checkStatus(cmd, doShow=False)
-            self._checkStatus(cmd)
+                self.myTMCM.stop(temp=1)
+                self._checkStatus(cmd)
+
+                if (time.time() - start) > 5:
+                    raise TimeoutError('timeout aborting motion')
         except:
-            cmd.warn("text='%s failed to stop motion '" % self.name)
+            cmd.warn('text="rexm failed to stop motion"')
             raise
 
-    @busy
-    def moveTo(self, cmd, position):
+    def moveTo(self, e):
         """ |  *Wrapper busy* handles the state machine.
         | Move to desired position (low|mid).
 
@@ -142,16 +164,21 @@ class rexm(Device):
                  - False, if the command fail,fsm (BUSY => FAILED)
         """
 
+        cmd, position = e.cmd, e.position
         try:
             self._moveAccurate(cmd, rexm.toDir[position])
-            return True
 
-        except Exception as e:
+        except UserWarning:
+            self.abort(cmd)
             cmd.warn('text=%s' % self.actor.strTraceback(e))
 
-            return False
+        except:
+            self.substates.fail()
+            raise
 
-    def _checkStatus(self, cmd, doClose=False, doShow=True):
+        self.substates.idle()
+
+    def _checkStatus(self, cmd, doClose=False):
         """| Check current status from controller and publish rexmInfo keywords
 
         - rexmInfo = switchA state, switchB state, speed, position(ustep from origin)
@@ -164,13 +191,19 @@ class rexm(Device):
         """
         time.sleep(0.01)
 
-        self.positionA = self.myTMCM.gap(11)
-        self.positionB = self.myTMCM.gap(10)
+        self.switchA = self.myTMCM.gap(11)
+        self.switchB = self.myTMCM.gap(10)
         self.speed = self.myTMCM.gap(3, fmtRet='>BBBBiB')
-        self.currPos = self.myTMCM.gap(1, doClose=doClose, fmtRet='>BBBBiB')
+        self.stepCount = self.myTMCM.gap(1, doClose=doClose, fmtRet='>BBBBiB')
 
-        if doShow:
-            cmd.inform("rexmInfo=%i,%i,%i,%i" % (self.positionA, self.positionB, self.speed, self.currPos))
+        if (time.time() - self.samptime) > 2:
+            self.samptime = time.time()
+            cmd.inform('rexmInfo=%i,%i,%i,%i' % (self.switchA, self.switchB, self.speed, self.stepCount))
+
+    def _checkPosition(self, cmd):
+
+        self.position = rexm.switch[self.switchA, self.switchB]
+        cmd.inform('rexm=%s' % self.position)
 
     def _moveAccurate(self, cmd, direction):
         """| Move accurately to the required direction.
@@ -185,25 +218,37 @@ class rexm(Device):
         :raise: Exception if communication error occurs
         :raise: Timeout if the command takes too long
         """
+        self.stopMotion = False
         self._checkStatus(cmd)
         if not self.switchOn(direction):
-            self._stopAndMove(cmd, direction, self.myTMCM.DISTANCE_MAX, self.myTMCM.g_speed)
-
+            self._stopAndMove(cmd,
+                              direction=direction,
+                              distance=self.myTMCM.DISTANCE_MAX,
+                              speed=self.myTMCM.g_speed,
+                              hitSwitch=True)
         else:
-            cmd.inform("text='already at position %s'" % rexm.toPos[direction])
+            cmd.inform('text="already at position %s"' % rexm.toPos[direction])
             return
 
-        cmd.inform("text='arrived at position %s" % rexm.toPos[direction])
+        cmd.inform('text="arrived at position %s"' % rexm.toPos[direction])
 
-        cmd.inform("text='adjusting position backward %s" % rexm.toPos[direction])
-        self._stopAndMove(cmd, not direction, 20, self.myTMCM.g_speed / 3, bool=True)
+        cmd.inform('text="adjusting position backward %s"' % rexm.toPos[direction])
+        self._stopAndMove(cmd,
+                          direction=not direction,
+                          distance=20,
+                          speed=(self.myTMCM.g_speed / 3),
+                          hitSwitch=False)
 
-        cmd.inform("text='adjusting position forward %s" % rexm.toPos[direction])
-        self._stopAndMove(cmd, direction, 20.2, self.myTMCM.g_speed / 3)
+        cmd.inform('text="adjusting position forward %s"' % rexm.toPos[direction])
+        self._stopAndMove(cmd,
+                          direction=direction,
+                          distance=20.1,
+                          speed=(self.myTMCM.g_speed / 3),
+                          hitSwitch=True)
 
-        cmd.inform("text='arrived at desired position %s" % rexm.toPos[direction])
+        cmd.inform('text="arrived at desired position %s"' % rexm.toPos[direction])
 
-    def _stopAndMove(self, cmd, direction, distance, speed, bool=False):
+    def _stopAndMove(self, cmd, direction, distance, speed, hitSwitch=True):
         """| Go to specified distance, direction with desired speed.
 
         - Stop motion
@@ -220,32 +265,30 @@ class rexm(Device):
         :raise: Exception if communication error occurs
         :raise: timeout if commanding takes too long
         """
-        self.hasStarted = False
-        cond = direction if not bool else not direction
-        time.sleep(0.5)
+
+        # cond = direction if not bool else not direction
         self.abort(cmd)
 
-        cmd.inform("text='moving to %s, %i, %.2f" % (rexm.toPos[direction], distance, speed))
-        time.sleep(0.5)
+        cmd.inform('text="moving to %s, %i, %.2f"' % (rexm.toPos[direction], distance, speed))
         ok = self.myTMCM.MVP(direction, distance, speed)
 
-        t = dt.now()
-        ts = dt.now()
+        start = time.time()
 
-        while self.switchOn(cond) == bool:
-            self.checkStart(t)
-            if (dt.now() - t).total_seconds() > 200:
-                raise Exception("timeout commanding MOVE")
+        if (time.time() - start) > 5 and not self.isMoving:
+            raise TimeoutError('Rexm is not moving')
 
-            if (dt.now() - ts).total_seconds() > 2:
-                self._checkStatus(cmd)
-                ts = dt.now()
-            else:
-                self._checkStatus(cmd, doShow=False)
+        endOfMotion = partial(self.switchOn, direction) if hitSwitch else partial(self.switchOff, direction)
+
+        while not endOfMotion():
+            if (time.time() - start) > 200:
+                raise TimeoutError("Rexm haven't reach the limit switch")
+
+            if self.stopMotion:
+                raise UserWarning('Motion aborted by user')
+
+            self._checkStatus(cmd)
 
         self.abort(cmd)
-        time.sleep(0.5)
-        self._checkStatus(cmd)
 
     def switchOn(self, direction):
         """| Return limit switch state which will be reached by going in that direction.
@@ -254,18 +297,35 @@ class rexm(Device):
         :type direction: int
         :return: limit switch state
         """
-        return self.positionA if direction == 0 else self.positionB
+        if direction == 0:
+            return self.switchA
+        elif direction == 1:
+            return self.switchB
+        else:
+            raise ValueError('unknown direction')
 
-    def checkStart(self, t0):
-        """checkStart
-        - check if the motion has actually begun after a MVP command
+    def switchOff(self, direction):
+        """| Return limit switch state which will be reached by going in that direction.
 
-        :param t0: timestamp before send MVP command
-        :type t0: datetime.datetime
-        :raise: timeout if commanding takes too long
+        :param direction: 0 (go to low position ) 1 (go to mid position)
+        :type direction: int
+        :return: limit switch state
         """
+        if direction == 0:
+            return self.switchB
+        elif direction == 1:
+            return self.switchA
+        else:
+            raise ValueError('unknown direction')
 
-        if (dt.now() - t0).total_seconds() > 5 and not self.hasStarted:
-            if not self.isMoving:
-                raise Exception("timeout isMoving")
-            self.hasStarted = True
+    def createSock(self):
+        if self.simulated:
+            s = self.sim
+        else:
+            s = rexm_drivers.TMCM(self.port)
+
+        return s
+
+    def handleTimeout(self):
+        if self.exitASAP:
+            raise SystemExit()
