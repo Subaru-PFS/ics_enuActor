@@ -1,4 +1,3 @@
-from __future__ import print_function
 # XPS Python class
 
 #
@@ -8,7 +7,6 @@ from __future__ import print_function
 #
 
 #  See Programmer's manual for more information on XPS function calls
-
 
 import socket
 
@@ -31,10 +29,10 @@ class XPS(object):
     # Send command and get return
     def __sendAndReceive(self, socketId, command):
         try:
-            XPS.__sockets[socketId].send(command)
-            ret = XPS.__sockets[socketId].recv(1024)
+            XPS.__sockets[socketId].send(command.encode())
+            ret = ''
             while (ret.find(',EndOfAPI') == -1):
-                ret += XPS.__sockets[socketId].recv(1024)
+                ret += XPS.__sockets[socketId].recv(1024).decode()
         except socket.timeout:
             return [-2, '']
         except socket.error:

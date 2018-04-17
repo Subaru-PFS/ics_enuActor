@@ -3,7 +3,7 @@ import time
 from random import randint
 
 
-class SlitSimulator(object):
+class SlitSim(object):
     def __init__(self):
         object.__init__(self)
 
@@ -11,6 +11,14 @@ class SlitSimulator(object):
         self.tool = [0 for i in range(6)]
         self.pos = [0 for i in range(6)]
         self.intStatus = 12
+
+    def TCP_ConnectToServer(self, host, port, timeout):
+        if type(host) is not str:
+            raise TypeError
+        if type(port) is not int:
+            raise TypeError
+
+        return 1
 
     def GroupPositionCurrentGet(self, socketId, GroupName, nbElement):
         time.sleep(0.5)

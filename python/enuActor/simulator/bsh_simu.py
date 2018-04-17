@@ -1,21 +1,19 @@
 # !/usr/bin/env python
 
-import time
 import socket
+import time
 
 
-class BshSimulator(socket.socket):
+class BshSim(socket.socket):
     statword = {0: 82, 10: 82, 20: 100, 30: 98, 40: 84}
 
     def __init__(self):
         socket.socket.__init__(self, socket.AF_INET, socket.SOCK_STREAM)
-        self.sendall = self.fakeSend
-        self.recv = self.fakeRecv
         self.g_aduty = 0
         self.g_aperiod = 100
         self.bia_mode = 0
         self.pulse_on = 0
-        self.statword = BshSimulator.statword[self.bia_mode]
+        self.statword = BshSim.statword[self.bia_mode]
 
         self.buf = []
 
@@ -27,13 +25,13 @@ class BshSimulator(socket.socket):
         if type(port) is not int:
             raise TypeError
 
-    def fakeSend(self, cmdStr):
+    def sendall(self, cmdStr, flags=None):
         time.sleep(0.1)
         cmdOk = False
         cmdStr = cmdStr.decode()
 
         bia_mode = self.bia_mode
-        self.statword = BshSimulator.statword[bia_mode]
+        self.statword = BshSim.statword[bia_mode]
 
         if bia_mode == 0:  # IDLE STATE
             if cmdStr == "bia_on\r\n":
@@ -154,8 +152,7 @@ class BshSimulator(socket.socket):
         else:
             self.buf.append("nok\r\n")
 
-
-    def fakeRecv(self, buffer_size):
+    def recv(self, buffersize, flags=None):
         ret = self.buf[0]
         self.buf = self.buf[1:]
         return str(ret).encode()

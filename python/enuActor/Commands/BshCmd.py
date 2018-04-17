@@ -3,7 +3,6 @@
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
 from enuActor.utils.wrap import threaded
-from fysom import FysomError
 
 
 class BshCmd(object):
@@ -20,8 +19,6 @@ class BshCmd(object):
         self.vocab = [
             ('bsh', 'ping', self.ping),
             ('bsh', 'status', self.status),
-            ('bsh', 'init', self.initialise),
-            ('bsh', '@(operation|simulation)', self.changeMode),
             ('bsh', '<raw>', self.rawCommand),
             ('bia', '@(on|off)', self.biaSwitch),
             ('bia', '@(strobe) @(on|off)', self.biaStrobe),
@@ -57,33 +54,6 @@ class BshCmd(object):
     @threaded
     def status(self, cmd):
         """Report state, mode, position"""
-
-        self.controller.getStatus(cmd)
-
-    @threaded
-    def initialise(self, cmd):
-        """Initialise BSH, call fsm startInit event """
-
-        try:
-            self.controller.fsm.startInit(cmd=cmd)
-        # That transition may not be allowed, see state machine
-        except FysomError as e:
-            cmd.warn('text=%s' % self.actor.strTraceback(e))
-
-        self.controller.getStatus(cmd)
-
-    @threaded
-    def changeMode(self, cmd):
-        """Change device mode operation|simulation call fsm changeMode event"""
-
-        cmdKeys = cmd.cmd.keywords
-        mode = "simulation" if "simulation" in cmdKeys else "operation"
-
-        try:
-            self.controller.fsm.changeMode(cmd=cmd, mode=mode)
-        # That transition may not be allowed, see state machine
-        except FysomError as e:
-            cmd.warn('text=%s' % self.actor.strTraceback(e))
 
         self.controller.getStatus(cmd)
 
@@ -162,7 +132,9 @@ class BshCmd(object):
 
         self.controller.stopExposure = False
 
-        self.controller.expose(cmd, exptime, shutter)
+        self.controller.substates.expose(cmd=cmd,
+                                         exptime=exptime,
+                                         shutter=shutter)
         self.controller.getStatus(cmd)
 
     @threaded

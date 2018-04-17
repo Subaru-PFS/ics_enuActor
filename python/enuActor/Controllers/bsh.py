@@ -1,33 +1,30 @@
-#!/usr/bin/env python
-
-
-import sys
-import time
+__author__ = 'alefur'
 import datetime
+import logging
+import time
 from datetime import datetime as dt
 
 import enuActor.Controllers.bufferedSocket as bufferedSocket
-from enuActor.Controllers.Simulator.bsh_simu import BshSimulator
-from enuActor.Controllers.device import Device
-from enuActor.utils.wrap import busy
+from actorcore.FSM import FSMDev
+from actorcore.QThread import QThread
+from enuActor.simulator.bsh_simu import BshSim
 
 
+class bsh(FSMDev, QThread, bufferedSocket.EthComm):
+    ilockFSM = {0: ('close', 'off'),
+                10: ('close', 'on'),
+                20: ('open', 'off'),
+                30: ('openblue', 'off'),
+                40: ('openred', 'off')}
 
-class bsh(Device):
-    ilock_s_machine = {0: ("close", "off"),
-                       10: ("close", "on"),
-                       20: ("open", "off"),
-                       30: ("openblue", "off"),
-                       40: ("openred", "off")}
-
-    shut_stat = [{0: "close", 1: "open"}, {0: "open", 1: "close"}, {0: "ok", 1: "error"}]
+    shut_stat = [{0: 'close', 1: 'open'}, {0: 'open', 1: 'close'}, {0: 'ok', 1: 'error'}]
     in_position = {0: '010010',
                    10: '010010',
                    20: '100100',
                    30: '100010',
                    40: '010100'}
 
-    def __init__(self, actor, name):
+    def __init__(self, actor, name, loglevel=logging.DEBUG):
         """__init__.
         This sets up the connections to/from the hub, the logger, and the twisted reactor.
 
@@ -35,18 +32,48 @@ class bsh(Device):
         :param name: controller name
         :type name: str
         """
-        Device.__init__(self, actor, name)
+        substates = ['IDLE', 'EXPOSING', 'FAILED']
+        events = [{'name': 'expose', 'src': 'IDLE', 'dst': 'EXPOSING'},
+                  {'name': 'idle', 'src': ['EXPOSING'], 'dst': 'IDLE'},
+                  {'name': 'fail', 'src': ['EXPOSING'], 'dst': 'FAILED'},
+                  ]
 
-        self.shState = "undef"
-        self.biaState = "undef"
+        bufferedSocket.EthComm.__init__(self)
+        QThread.__init__(self, actor, name)
+        FSMDev.__init__(self, actor, name, events=events, substates=substates)
+
+        self.addStateCB('EXPOSING', self.expose)
+
+        self.shState = 'undef'
+        self.biaState = 'undef'
 
         self.stopExposure = False
         self.ilockState = 0
         self.sock = None
-        self.simulator = None
+        self.sim = None
         self.EOL = '\r\n'
 
         self.ioBuffer = bufferedSocket.BufferedSocket(self.name + "IO", EOL='ok\r\n')
+
+        self.logger = logging.getLogger(self.name)
+        self.logger.setLevel(loglevel)
+
+    @property
+    def simulated(self):
+        if self.mode == 'simulation':
+            return True
+        elif self.mode == 'operation':
+            return False
+        else:
+            raise ValueError('unknown mode')
+
+    def start(self, cmd=None, doInit=True, mode=None):
+        QThread.start(self)
+        FSMDev.start(self, cmd=cmd, doInit=doInit, mode=mode)
+
+    def stop(self, cmd=None):
+        FSMDev.stop(self, cmd=cmd)
+        self.exit()
 
     def loadCfg(self, cmd, mode=None):
         """| Load Configuration file. called by device.loadDevice().
@@ -58,8 +85,6 @@ class bsh(Device):
         :raise: Exception Config file badly formatted
         """
 
-        self.actor.reloadConfiguration(cmd=cmd)
-
         self.mode = self.actor.config.get('bsh', 'mode') if mode is None else mode
         self.host = self.actor.config.get('bsh', 'host')
         self.port = int(self.actor.config.get('bsh', 'port'))
@@ -67,7 +92,7 @@ class bsh(Device):
         self.biaDuty = int(self.actor.config.get('bsh', 'bia_duty'))
         self.biaStrobe = self.actor.config.get('bsh', 'bia_strobe')
 
-    def startCommunication(self, cmd):
+    def startComm(self, cmd):
         """| Start socket with the interlock board or simulate it.
         | Called by device.loadDevice()
 
@@ -75,11 +100,10 @@ class bsh(Device):
         :raise: Exception if the communication has failed with the controller
         """
 
-        self.simulator = BshSimulator() if self.mode == "simulation" else None  # Create new simulator
-
+        self.sim = BshSim()  # Create new simulator
         s = self.connectSock()
 
-    def initialise(self, cmd):
+    def init(self, cmd):
         """| Initialise the interlock board, called y device.initDevice().
 
         - Send the bia config to the interlock board
@@ -92,7 +116,6 @@ class bsh(Device):
         self.setBiaConfig(cmd, self.biaPeriod, self.biaDuty, self.biaStrobe, doClose=False)
         self._sendOrder(cmd, 'init')
 
-    @busy
     def switch(self, cmd, cmdStr):
         """| *wrapper @busy* handles the state machine.
         | Call bsh._safeSwitch() 
@@ -104,10 +127,9 @@ class bsh(Device):
                  - False, if the command fail,fsm (BUSY => FAILED)
         """
 
-        return self._safeSwitch(cmd, cmdStr)
+        self._safeSwitch(cmd, cmdStr)
 
-    @busy
-    def expose(self, cmd, exptime, shutter):
+    def expose(self, args):
         """| Command opening and closing of shutters with a chosen exposure time and publish keywords:
 
         - dateobs : exposure starting time isoformatted
@@ -120,46 +142,50 @@ class bsh(Device):
         :return: - True if the command raise no error, fsm (BUSY => IDLE)
                  - False, if the command fail,fsm (BUSY => FAILED)
         """
+        cmd, shutter, exptime = args.cmd, args.shutter, args.exptime
         try:
-            expStart = dt.utcnow()
+            start = dt.utcnow()
 
-            if not self._safeSwitch(cmd, "%s_open" % shutter):
-                raise Exception("OPEN failed")
+            self._safeSwitch(cmd, '%s_open' % shutter)
 
-            transientTime1 = (dt.utcnow() - expStart).total_seconds()
+            transientTime1 = (dt.utcnow() - start).total_seconds()
 
-            self.getStatus(cmd, doFinish=False)
-            if (self.shState not in ['open', 'openred', 'openblue']) or self.stopExposure:
-                raise Exception("OPEN failed or exposure stopped")
+            self.checkStatus(cmd)
+            if self.shState not in ['open', 'openred']:
+                raise Exception('OPEN failed')
 
-            self.safeTempo(cmd, exptime - (dt.utcnow() - expStart).total_seconds())
+            stopExposure = self.waitUntil(cmd, exptime - (dt.utcnow() - start).total_seconds())
+            if stopExposure:
+                raise UserWarning('expose aborted by user')
+
             transientTime2 = dt.utcnow()
 
-            if not self._safeSwitch(cmd, "%s_close" % shutter):
-                raise Exception("CLOSE failed")
+            self._safeSwitch(cmd, '%s_close' % shutter)
 
-            expEnd = dt.utcnow()
-            transientTime2 = (expEnd - transientTime2).total_seconds()
+            end = dt.utcnow()
+            transientTime2 = (end - transientTime2).total_seconds()
 
-            self.getStatus(cmd, doFinish=False)
-            if (self.shState not in ['close', 'openblue']) or self.stopExposure:
-                raise Exception("CLOSE failed or exposure stopped")
+            self.checkStatus(cmd)
+            if self.shState not in ['close']:
+                raise Exception('CLOSE failed')
 
-            cmd.inform("dateobs=%s" % expStart.isoformat())
-            cmd.inform("transientTime=%.3f" % (transientTime1 + transientTime2))
-            cmd.inform("exptime=%.3f" % ((expEnd - expStart).total_seconds() - 0.5 * (transientTime1 + transientTime2)))
+            cmd.inform('dateobs=%s' % start.isoformat())
+            cmd.inform('transientTime=%.3f' % (transientTime1 + transientTime2))
+            cmd.inform('exptime=%.3f' % ((end - start).total_seconds() - 0.5 * (transientTime1 + transientTime2)))
+            self.substates.idle()
 
-            return True
+        except UserWarning:
+            cmd.warn('exptime=nan')
+            self.substates.idle()
+            self._safeSwitch(cmd, '%s_close' % shutter)
 
-        except Exception as e:
-            cmd.warn('text=%s' % self.actor.strTraceback(e))
-            cmd.warn("exptime=nan")
-            if self.stopExposure:
-                return self._safeSwitch(cmd, "%s_close" % shutter)
+        except:
+            cmd.warn('exptime=nan')
+            self.substates.fail()
+            raise
 
-            return False
 
-    def getStatus(self, cmd, doFinish=True):
+    def getStatus(self, cmd):
         """| Call bsh._checkStatus() and publish shutters, bia keywords:
 
         - shutters = fsm_state, mode, position
@@ -169,23 +195,14 @@ class bsh(Device):
         :param doFinish: if True finish the command
         """
 
-        ender = cmd.finish if doFinish else cmd.inform
-        fender = cmd.fail if doFinish else cmd.warn
-        self.shState, self.biaState = "undef", "undef"
+        cmd.inform('bshFSM=%s,%s' % (self.states.current, self.substates.current))
+        cmd.inform('bshMode=%s' % self.mode)
 
-        if self.fsm.current in ['LOADED', 'IDLE', 'BUSY']:
-            try:
-                self.shState, self.biaState = self.checkStatus(cmd)
-                self.getBiaConfig(cmd, doClose=True)
+        if self.states.current == 'ONLINE':
+            self.checkStatus(cmd)
+            self.getBiaConfig(cmd, doClose=True)
 
-            except Exception as e:
-                cmd.warn('text=%s' % self.actor.strTraceback(e))
-                ender = fender
-
-        talk = cmd.inform if ender != fender else cmd.warn
-
-        talk("shutters=%s,%s,%s" % (self.fsm.current, self.mode, self.shState))
-        ender("bia=%s,%s,%s" % (self.fsm.current, self.mode, self.biaState))
+        cmd.finish()
 
     def checkStatus(self, cmd):
         """| Get status from bsh board and update controller's attributes.
@@ -197,16 +214,25 @@ class bsh(Device):
         :return: (shuttersPosition, biaState)
         """
 
-        self.ilockState = self._ilockStat(cmd)
-        statword = self._shutstat(cmd)
+        try:
+            ilockState = self._ilockStat(cmd)
+            statword = self._shutstat(cmd)
 
-        if bsh.in_position[self.ilockState] != statword:
-            cmd.warn("text='shutters not in position'")
-            for i, shutter in enumerate(["shr", "shb"]):
-                cmd.warn("%s=%s" % (
-                    shutter, ','.join([bsh.shut_stat[j % 3][int(statword[j])] for j in range(i * 3, (i + 1) * 3)])))
+            if bsh.in_position[ilockState] != statword:
+                cmd.warn('text="shutters not in position"')
+                for i, shutter in enumerate(['shr', 'shb']):
+                    cmd.warn('%s=%s' % (
+                        shutter, ','.join([bsh.shut_stat[j % 3][int(statword[j])] for j in range(i * 3, (i + 1) * 3)])))
 
-        return bsh.ilock_s_machine[self.ilockState]
+            self.shState, self.biaState = bsh.ilockFSM[ilockState]
+
+        except:
+            cmd.warn('shutters=undef')
+            cmd.warn('bia=undef')
+            raise
+
+        cmd.inform('shutters=%s' % self.shState)
+        cmd.inform('bia=%s' % self.biaState)
 
     def getBiaConfig(self, cmd, doClose=False):
         """|publish bia configuration keywords.
@@ -219,8 +245,8 @@ class bsh(Device):
         :raise: Exception if a command has failed
         """
         biaStrobe, biaPeriod, biaDuty = self._biastat(cmd, doClose=doClose)
-        cmd.inform("biaStrobe=%s" % biaStrobe)
-        cmd.inform("biaConfig=%i,%i" % (biaPeriod, biaDuty))
+        cmd.inform('biaStrobe=%s' % biaStrobe)
+        cmd.inform('biaConfig=%i,%i' % (biaPeriod, biaDuty))
 
         return biaStrobe, biaPeriod, biaDuty
 
@@ -238,13 +264,13 @@ class bsh(Device):
         """
 
         if biaPeriod is not None:
-            self._sendOrder(cmd, "set_period%i" % biaPeriod)
+            self._sendOrder(cmd, 'set_period%i' % biaPeriod)
 
         if biaDuty is not None:
-            self._sendOrder(cmd, "set_duty%i" % biaDuty)
+            self._sendOrder(cmd, 'set_duty%i' % biaDuty)
 
         if biaStrobe is not None:
-            self._sendOrder(cmd, "pulse_%s" % biaStrobe)
+            self._sendOrder(cmd, 'pulse_%s' % biaStrobe)
 
         self.biaStrobe, self.biaPeriod, self.biaDuty = self.getBiaConfig(cmd, doClose=doClose)
 
@@ -261,58 +287,58 @@ class bsh(Device):
         """
 
         transition = {
-            (("close", "off"), "shut_open"): (True, ""),
-            (("close", "off"), "red_open"): (True, ""),
-            (("close", "off"), "blue_open"): (True, ""),
-            (("close", "off"), "shut_close"): (False, "shutters already closed"),
-            (("close", "off"), "red_close"): (False, "red shutter already closed"),
-            (("close", "off"), "blue_close"): (False, "blue shutter already closed"),
-            (("close", "off"), "bia_off"): (False, "bia already off"),
-            (("close", "off"), "bia_on"): (True, ""),
+            (('close', 'off'), 'shut_open'): '',
+            (('close', 'off'), 'red_open'): '',
+            (('close', 'off'), 'blue_open'): '',
+            (('close', 'off'), 'shut_close'):  'shutters already closed',
+            (('close', 'off'), 'red_close'):  'red shutter already closed',
+            (('close', 'off'), 'blue_close'):  'blue shutter already closed',
+            (('close', 'off'), 'bia_off'):  'bia already off',
+            (('close', 'off'), 'bia_on'): '',
 
-            (("close", "on"), "shut_open"): (False, "Interlock !"),
-            (("close", "on"), "red_open"): (False, "Interlock !"),
-            (("close", "on"), "blue_open"): (False, "Interlock !"),
-            (("close", "on"), "shut_close"): (False, "shutters already closed"),
-            (("close", "on"), "red_close"): (False, "red shutter already closed"),
-            (("close", "on"), "blue_close"): (False, "blue shutter already closed"),
-            (("close", "on"), "bia_off"): (True, ""),
-            (("close", "on"), "bia_on"): (False, "bia already on"),
+            (('close', 'on'), 'shut_open'):  'Interlock !',
+            (('close', 'on'), 'red_open'):  'Interlock !',
+            (('close', 'on'), 'blue_open'):  'Interlock !',
+            (('close', 'on'), 'shut_close'):  'shutters already closed',
+            (('close', 'on'), 'red_close'):  'red shutter already closed',
+            (('close', 'on'), 'blue_close'):  'blue shutter already closed',
+            (('close', 'on'), 'bia_off'): '',
+            (('close', 'on'), 'bia_on'):  'bia already on',
 
-            (("open", "off"), "shut_open"): (False, "shutters already open"),
-            (("open", "off"), "red_open"): (False, "shutters already open"),
-            (("open", "off"), "blue_open"): (False, "shutters already open"),
-            (("open", "off"), "shut_close"): (True, ""),
-            (("open", "off"), "red_close"): (True, ""),
-            (("open", "off"), "blue_close"): (True, ""),
-            (("open", "off"), "bia_off"): (False, "bia already off"),
-            (("open", "off"), "bia_on"): (False, "Interlock !"),
+            (('open', 'off'), 'shut_open'):  'shutters already open',
+            (('open', 'off'), 'red_open'):  'shutters already open',
+            (('open', 'off'), 'blue_open'):  'shutters already open',
+            (('open', 'off'), 'shut_close'): '',
+            (('open', 'off'), 'red_close'): '',
+            (('open', 'off'), 'blue_close'): '',
+            (('open', 'off'), 'bia_off'):  'bia already off',
+            (('open', 'off'), 'bia_on'):  'Interlock !',
 
-            (("openred", "off"), "shut_open"): (True, ""),
-            (("openred", "off"), "red_open"): (False, "shutter red already open"),
-            (("openred", "off"), "blue_open"): (True, ""),
-            (("openred", "off"), "shut_close"): (True, ""),
-            (("openred", "off"), "red_close"): (True, ""),
-            (("openred", "off"), "blue_close"): (False, "shutter blue already closed"),
-            (("openred", "off"), "bia_off"): (False, "bia already off"),
-            (("openred", "off"), "bia_on"): (False, "Interlock !"),
+            (('openred', 'off'), 'shut_open'): '',
+            (('openred', 'off'), 'red_open'):  'shutter red already open',
+            (('openred', 'off'), 'blue_open'): '',
+            (('openred', 'off'), 'shut_close'): '',
+            (('openred', 'off'), 'red_close'): '',
+            (('openred', 'off'), 'blue_close'):  'shutter blue already closed',
+            (('openred', 'off'), 'bia_off'):  'bia already off',
+            (('openred', 'off'), 'bia_on'):  'Interlock !',
 
-            (("openblue", "off"), "shut_open"): (True, ""),
-            (("openblue", "off"), "red_open"): (True, ""),
-            (("openblue", "off"), "blue_open"): (False, "shutter blue already open"),
-            (("openblue", "off"), "shut_close"): (True, ""),
-            (("openblue", "off"), "red_close"): (False, "shutter red already closed"),
-            (("openblue", "off"), "blue_close"): (True, ""),
-            (("openblue", "off"), "bia_off"): (False, "bia already off"),
-            (("openblue", "off"), "bia_on"): (False, "Interlock !"),
+            (('openblue', 'off'), 'shut_open'): '',
+            (('openblue', 'off'), 'red_open'): '',
+            (('openblue', 'off'), 'blue_open'):  'shutter blue already open',
+            (('openblue', 'off'), 'shut_close'): '',
+            (('openblue', 'off'), 'red_close'):  'shutter red already closed',
+            (('openblue', 'off'), 'blue_close'): '',
+            (('openblue', 'off'), 'bia_off'):  'bia already off',
+            (('openblue', 'off'), 'bia_on'):  'Interlock !',
 
         }
 
-        (ok, ret) = transition[(shState, biaState), cmdStr]
-        if not ok:
-            raise Exception("Transition not allowed : %s" % ret)
+        ret = transition[(shState, biaState), cmdStr]
+        if ret:
+            raise UserWarning("Transition not allowed : %s" % ret)
 
-    def safeTempo(self, cmd, exptime, ti=0.01):
+    def waitUntil(self, cmd, exptime, ti=0.01):
         """| Temporization, check every 0.01 sec for a user abort command.
 
         :param cmd: current command,
@@ -330,11 +356,13 @@ class bsh(Device):
 
         while dt.utcnow() < tlim:
             if self.stopExposure:
-                raise Exception("Exposure aborted by user")
+                break
             if (dt.utcnow() - inform).total_seconds() > 2:
                 cmd.inform("elapsedTime=%.2f" % (dt.utcnow() - t0).total_seconds())
                 inform = dt.utcnow()
             time.sleep(ti)
+
+        return self.stopExposure
 
     def _safeSwitch(self, cmd, cmdStr):
         """| Send the command string to the interlock board.
@@ -351,18 +379,11 @@ class bsh(Device):
 
         try:
             self.checkInterlock(self.shState, self.biaState, cmdStr)
-        except Exception as e:
-            cmd.warn('text=%s' % self.actor.strTraceback(e))
-            return True
-
-        try:
             self._sendOrder(cmd, cmdStr)
 
-        except Exception as e:
+        except UserWarning as e:
             cmd.warn('text=%s' % self.actor.strTraceback(e))
-            return False
-
-        return True
+            return
 
     def _ilockStat(self, cmd):
         """| check and return interlock board current state .
@@ -398,5 +419,19 @@ class bsh(Device):
 
     def _sendOrder(self, cmd, cmdStr):
         reply = self.sendOneCommand(cmdStr, doClose=False, cmd=cmd)
+
         if reply != "":
             raise Exception("%s  %s cmd has replied nok" % (cmdStr, self.name))
+
+
+    def createSock(self):
+        if self.simulated:
+            s = self.sim
+        else:
+            s = bufferedSocket.EthComm.createSock(self)
+
+        return s
+
+    def handleTimeout(self):
+        if self.exitASAP:
+            raise SystemExit()

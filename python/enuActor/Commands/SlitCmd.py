@@ -2,7 +2,6 @@
 
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
-from fysom import FysomError
 from enuActor.utils.wrap import threaded
 
 
@@ -23,7 +22,6 @@ class SlitCmd(object):
             ('slit', 'init', self.initialise),
             ('slit', 'abort', self.abort),
             ('slit', '@(disable|enable)', self.shutdown),
-            ('slit', '@(operation|simulation)', self.changeMode),
             ('slit', '@(get) @(home|tool)', self.getSystem),
             ('slit', '@(set) @(home|tool) [<X>] [<Y>] [<Z>] [<U>] [<V>] [<W>]', self.setSystem),
             ('slit', 'move home', self.goHome),
@@ -69,27 +67,7 @@ class SlitCmd(object):
     def initialise(self, cmd):
         """Initialise Slit, call fsm startInit event """
 
-        try:
-            self.controller.fsm.startInit(cmd=cmd)
-        # That transition may not be allowed, see state machine
-        except FysomError as e:
-            cmd.warn('text=%s' % self.actor.strTraceback(e))
-
-        self.controller.getStatus(cmd)
-
-    @threaded
-    def changeMode(self, cmd):
-        """Change device mode operation|simulation call fsm changeMode event"""
-
-        cmdKeys = cmd.cmd.keywords
-        mode = "simulation" if "simulation" in cmdKeys else "operation"
-
-        try:
-            self.controller.fsm.changeMode(cmd=cmd, mode=mode)
-        # That transition may not be allowed, see state machine
-        except FysomError as e:
-            cmd.warn('text=%s' % self.actor.strTraceback(e))
-
+        self.controller.substates.init(cmd=cmd)
         self.controller.getStatus(cmd)
 
     @threaded
@@ -98,18 +76,22 @@ class SlitCmd(object):
                 else if relative then incremental move. NB: In relative move parameters are optional.
         """
         cmdKeys = cmd.cmd.keywords
-        mode = "absolute" if "absolute" in cmdKeys else "relative"
-        posCoord = [cmdKeys[coord].values[0] if coord in cmdKeys else 0.0 for coord in
-                    ['X', 'Y', 'Z', 'U', 'V', 'W']]
+        reference = "absolute" if "absolute" in cmdKeys else "relative"
+        allCoords = ['X', 'Y', 'Z', 'U', 'V', 'W']
+        coords = [cmdKeys[coord].values[0] if coord in cmdKeys else 0.0 for coord in allCoords]
 
-        self.controller.moveTo(cmd, mode, posCoord)
+        self.controller.substates.move(cmd=cmd,
+                                       reference=reference,
+                                       coords=coords)
 
         self.controller.getStatus(cmd)
 
     @threaded
     def goHome(self, cmd):
         """   Go to home related to work : [0,0,0,0,0,0] """
-        self.controller.moveTo(cmd, "absolute", [0.0] * 6)
+        self.controller.substates.move(cmd=cmd,
+                                       reference='absolute',
+                                       coords=6 * [0.])
 
         self.controller.getStatus(cmd)
 
@@ -122,7 +104,6 @@ class SlitCmd(object):
 
         ret = self.controller.getSystem(system)
         cmd.finish("%s=%s" % (keyword, ','.join(["%.5f" % p for p in ret])))
-
 
     @threaded
     def setSystem(self, cmd):
@@ -176,9 +157,11 @@ class SlitCmd(object):
         """ Move along dither."""
 
         pix = cmd.cmd.keywords["pix"].values[0]
-        posCoord = self.controller.compute("dither", pix)
+        coords = self.controller.compute("dither", pix)
 
-        self.controller.moveTo(cmd, 'relative', posCoord)
+        self.controller.substates.move(cmd=cmd,
+                                       reference='relative',
+                                       coords=coords)
 
         self.controller.getStatus(cmd)
 
@@ -187,9 +170,11 @@ class SlitCmd(object):
         """ Move along focus."""
 
         pix = cmd.cmd.keywords["pix"].values[0]
-        posCoord = self.controller.compute("focus", pix)
+        coords = self.controller.compute("focus", pix)
 
-        self.controller.moveTo(cmd, 'relative', posCoord)
+        self.controller.substates.move(cmd=cmd,
+                                       reference='relative',
+                                       coords=coords)
 
         self.controller.getStatus(cmd)
 

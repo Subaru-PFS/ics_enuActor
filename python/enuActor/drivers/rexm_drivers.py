@@ -205,7 +205,7 @@ class TMCM(object):
 
         return ret.data
 
-    def stop(self):
+    def stop(self, temp=0):
         """fonction stop  controleur
         """
         packet = sendPacket(moduleAddress=TMCM.MODULE_ADDRESS,
@@ -214,6 +214,7 @@ class TMCM(object):
                             motorAddress=TMCM.MOTOR_ADDRESS)
 
         ret = self.sendOneCommand(packet.cmdStr, doClose=False)
+        time.sleep(temp)
 
     def mm2counts(self, val):
 
