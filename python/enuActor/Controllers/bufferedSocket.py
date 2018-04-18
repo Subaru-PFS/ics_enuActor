@@ -1,6 +1,7 @@
 import select
 import logging
 import socket
+import time
 from opscore.utility.qstr import qstr
 
 class EthComm(object):
@@ -41,7 +42,7 @@ class EthComm(object):
 
         self.sock = None
 
-    def sendOneCommand(self, cmdStr, doClose=True, cmd=None):
+    def sendOneCommand(self, cmdStr, doClose=True, cmd=None, tempo=0.1):
         """| Send one command and return one response.
 
         :param cmdStr: (str) The command to send.
@@ -53,18 +54,19 @@ class EthComm(object):
         if cmd is None:
             cmd = self.actor.bcast
 
-        fullCmd = "%s%s" % (cmdStr, self.EOL)
+        fullCmd = ('%s%s' % (cmdStr, self.EOL)).encode('utf-8')
         self.logger.debug('sending %r', fullCmd)
 
         s = self.connectSock()
 
         try:
-            s.sendall(fullCmd.encode())
+            s.sendall(fullCmd)
 
         except Exception as e:
             self.closeSock()
             raise
 
+        time.sleep(tempo)
         reply = self.getOneResponse(sock=s, cmd=cmd)
 
         if doClose:
@@ -121,7 +123,8 @@ class BufferedSocket(object):
             if cmd is not None:
                 cmd.warn('text="%s"' % msg)
             raise IOError(msg)
-        return sock.recv(1024).decode()
+
+        return sock.recv(1024).decode('utf8', 'ignore')
 
     def getOneResponse(self, sock=None, timeout=None, cmd=None):
         """ Return the next available complete line. Fetch new input if necessary. 
