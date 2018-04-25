@@ -1,7 +1,6 @@
 __author__ = 'alefur'
 import logging
 
-import enuActor.Controllers.bufferedSocket as bufferedSocket
 import numpy as np
 from actorcore.FSM import FSMDev
 from actorcore.QThread import QThread
@@ -10,7 +9,7 @@ from enuActor.simulator.slit_simu import SlitSim
 
 
 
-class slit(FSMDev, QThread, bufferedSocket.EthComm):
+class slit(FSMDev, QThread):
     timeout = 2
 
     @staticmethod
@@ -36,7 +35,6 @@ class slit(FSMDev, QThread, bufferedSocket.EthComm):
                   {'name': 'fail', 'src': ['MOVING'], 'dst': 'FAILED'},
                   ]
 
-        bufferedSocket.EthComm.__init__(self)
         QThread.__init__(self, actor, name)
         FSMDev.__init__(self, actor, name, events=events, substates=substates)
 
@@ -379,7 +377,7 @@ class slit(FSMDev, QThread, bufferedSocket.EthComm):
 
         for lim_inf, lim_sup, coord in zip(self.lowerBounds, self.upperBounds, absCoords):
             if not lim_inf <= coord <= lim_sup:
-                raise Warning("Warning: [X, Y, Z, U, V, W] exceed : %.5f not permitted" % coord)
+                raise UserWarning("[X, Y, Z, U, V, W] exceed : %.5f not permitted" % coord)
 
         return self.errorChecker(self.myxps.HexapodMoveAbsolute, self.socketId, self.groupName, 'Work', *absCoords)
 
@@ -396,7 +394,7 @@ class slit(FSMDev, QThread, bufferedSocket.EthComm):
 
         for lim_inf, lim_sup, relCoord, coord in zip(self.lowerBounds, self.upperBounds, relCoords, self.coords):
             if not lim_inf <= relCoord + coord <= lim_sup:
-                raise Warning("Warning: [X, Y, Z, U, V, W] exceed : %.5f not permitted" % (relCoord + coord))
+                raise UserWarning("[X, Y, Z, U, V, W] exceed : %.5f not permitted" % (relCoord + coord))
 
         return self.errorChecker(self.myxps.HexapodMoveIncremental, self.socketId, self.groupName, coordSystem,
                                  *relCoords)
@@ -436,7 +434,7 @@ class slit(FSMDev, QThread, bufferedSocket.EthComm):
             else:
                 [errorCode, errorString] = self.myxps.ErrorStringGet(self.socketId, buf[0])
                 if buf[0] == -17:
-                    raise UserWarning("Warning: [X, Y, Z, U, V, W] exceed : %s" % errorString)
+                    raise UserWarning("[X, Y, Z, U, V, W] exceed : %s" % errorString)
                 elif errorCode != 0:
                     raise Exception(func.__name__ + ' : ERROR ' + str(errorCode))
                 else:
