@@ -6,7 +6,7 @@ from actorcore.FSM import FSMDev
 from actorcore.QThread import QThread
 from enuActor.drivers import hxp_drivers
 from enuActor.simulator.slit_simu import SlitSim
-
+import socket
 
 
 class slit(FSMDev, QThread):
@@ -116,6 +116,10 @@ class slit(FSMDev, QThread):
 
         self.myxps = self.createSock()
         self.socketId = self.myxps.TCP_ConnectToServer(self.host, self.port, slit.timeout)
+
+        if self.socketId == -1:
+            raise socket.error('Connection to Hexapod failed check IP & Port')
+
 
     def init(self, cmd):
         """| Initialise hexapod, called y device.initDevice().
