@@ -19,14 +19,14 @@ class BshSim(socket.socket):
 
     def connect(self, server):
         (ip, port) = server
-        time.sleep(0.5)
+        time.sleep(0.2)
         if type(ip) is not str:
             raise TypeError
         if type(port) is not int:
             raise TypeError
 
     def sendall(self, cmdStr, flags=None):
-        time.sleep(0.1)
+        time.sleep(0.02)
         cmdOk = False
         cmdStr = cmdStr.decode()
 
@@ -153,6 +153,7 @@ class BshSim(socket.socket):
             self.buf.append("nok\r\n")
 
     def recv(self, buffersize, flags=None):
+        time.sleep(0.02)
         ret = self.buf[0]
         self.buf = self.buf[1:]
         return str(ret).encode()

@@ -143,6 +143,7 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
                  - False, if the command fail,fsm (BUSY => FAILED)
         """
         cmd, shutter, exptime = args.cmd, args.shutter, args.exptime
+        self.checkStatus(cmd)
         try:
             start = dt.utcnow()
 
@@ -185,7 +186,7 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
             raise
 
 
-    def getStatus(self, cmd):
+    def getStatus(self, cmd, doClose=True):
         """| Call bsh._checkStatus() and publish shutters, bia keywords:
 
         - shutters = fsm_state, mode, position
@@ -200,7 +201,7 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
 
         if self.states.current == 'ONLINE':
             self.checkStatus(cmd)
-            self.getBiaConfig(cmd, doClose=True)
+            self.getBiaConfig(cmd, doClose=doClose)
 
         cmd.finish()
 
