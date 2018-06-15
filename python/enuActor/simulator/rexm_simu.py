@@ -66,25 +66,29 @@ class RexmSim(object):
         self.currPos = 0.
         self.safeStop = False
 
-    def stop(self, temp):
+    def init(self):
+        self.stepIdx = 2
+        self.pulseDivisor = 5
+
+    def getSpeed(self):
+        return self.mm2counts(self.currSpeed)
+
+    def stop(self):
         """fonction stop  controleur
         """
         self.safeStop = True
         self.currSpeed = 0
-        time.sleep(temp)
 
     def mm2counts(self, val):
 
-        stepIdx = 1
         screwStep = 5.0  # mm
-        step = 1 << stepIdx  # nombre de micro pas par pas moteur
+        step = 1 << self.stepIdx  # nombre de micro pas par pas moteur
         nbStepByRev = 200.0  # nombre de pas moteur dans un tour moteur
         reducer = 12.0  # nombre de tours moteur pour 1 tour en sortie du reducteur
 
         return np.float64(val / screwStep * reducer * nbStepByRev * step)
 
     def counts2mm(self, counts):
-
         return np.float64(counts, self.mm2counts(1.0))
 
     def fakeMove(self, direction, distance, speed, tempo=0.1):

@@ -1,21 +1,7 @@
-from __future__ import division
 # XPS Python class
-
 #
-
 # for TMCM-1180 firmware v4.45.
 
-#
-
-
-# XPS Python class
-
-#
-
-# for TMCM-1180 firmware v4.45.
-
-#
-import sys
 import time
 from struct import pack, unpack
 
@@ -38,7 +24,7 @@ class sendPacket(object):
         checksum = sum(data)
         checksum %= 256
         return checksum
-    
+
     @property
     def cmdStr(self):
         return pack('>BBBBIB', self.moduleAddress, self.cmd, self.ctype, self.motorAddress, self.data, self.checksum)
@@ -125,11 +111,11 @@ class TMCM(object):
         if self.ser is None:
 
             s = serial.Serial(port=self.port,
-                                  baudrate=9600,
-                                  bytesize=serial.EIGHTBITS,
-                                  parity=serial.PARITY_NONE,
-                                  stopbits=serial.STOPBITS_ONE,
-                                  timeout=2.)
+                              baudrate=9600,
+                              bytesize=serial.EIGHTBITS,
+                              parity=serial.PARITY_NONE,
+                              stopbits=serial.STOPBITS_ONE,
+                              timeout=2.)
 
             if not s.isOpen():
                 s.open()
@@ -202,10 +188,13 @@ class TMCM(object):
         if ret.status != 100:
             raise Exception(TMCM.controllerStatus[ret.status])
 
-
         return ret.data
 
-    def stop(self, temp=0):
+    def init(self):
+        self.stepIdx = self.gap(140)
+        self.pulseDivisor = np.uint32(self.gap(154))
+
+    def stop(self):
         """fonction stop  controleur
         """
         packet = sendPacket(moduleAddress=TMCM.MODULE_ADDRESS,
@@ -214,27 +203,24 @@ class TMCM(object):
                             motorAddress=TMCM.MOTOR_ADDRESS)
 
         ret = self.sendOneCommand(packet.cmdStr, doClose=False)
-        time.sleep(temp)
 
     def mm2counts(self, val):
 
-        stepIdx = self.gap(140)
         screwStep = 5.0  # mm
-        step = 1 << stepIdx  # nombre de micro pas par pas moteur
+        step = 1 << self.stepIdx  # nombre de micro pas par pas moteur
         nbStepByRev = 200.0  # nombre de pas moteur dans un tour moteur
         reducer = 12.0  # nombre de tours moteur pour 1 tour en sortie du reducteur
 
         return np.float64(val / screwStep * reducer * nbStepByRev * step)
 
     def counts2mm(self, counts):
-
         return np.float64(counts / self.mm2counts(1.0))
 
     def MVP(self, direction, distance, speed, type="relative", doClose=False):
         # set moving speed
-        pulseDivisor = np.uint32(self.gap(154))
+
         speed = self.minmax(speed, 0, TMCM.SPEED_MAX)
-        freq = self.mm2counts(speed) * ((2 ** pulseDivisor) * 2048 * 32) / 16.0e6
+        freq = self.mm2counts(speed) * ((2 ** self.pulseDivisor) * 2048 * 32) / 16.0e6
         self.sap(4, freq)
 
         cMax = np.int32(1 << 23)
@@ -250,6 +236,10 @@ class TMCM(object):
                             data=-counts if direction == TMCM.DIRECTION_A else counts)
 
         ret = self.sendOneCommand(packet.cmdStr, doClose=doClose)
+
+    def getSpeed(self):
+        velocity = self.gap(3, fmtRet='>BBBBiB')  # velocity
+        return velocity / (2 ** self.pulseDivisor * (65536 / 16e6))  # speed in ustep/sec
 
     def sap(self, paramId, data, doClose=False):
         """fonction set axis parameter du manuel du controleur

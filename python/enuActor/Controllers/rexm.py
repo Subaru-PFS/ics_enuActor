@@ -34,7 +34,6 @@ class rexm(FSMDev, QThread):
         self.addStateCB('MOVING', self.moveTo)
 
         self.EOL = '\n'
-        self.position = 'undef'
         self.serial = None
         self.switchA = 0
         self.switchB = 0
@@ -52,6 +51,10 @@ class rexm(FSMDev, QThread):
             return False
         else:
             raise ValueError('unknown mode')
+
+    @property
+    def position(self):
+        return rexm.switch[self.switchA, self.switchB]
 
     def start(self, cmd=None, doInit=False, mode=None):
         FSMDev.start(self, cmd=cmd, doInit=doInit, mode=mode)
@@ -101,6 +104,7 @@ class rexm(FSMDev, QThread):
         :param cmd: on going command
         :raise: Exception if a command fail, user is warned with error ret.
         """
+        self.myTMCM.init()
 
         cmd.inform('text="seeking home ..."')
         self._moveAccurate(cmd, rexm.toDir['low'])
@@ -122,9 +126,7 @@ class rexm(FSMDev, QThread):
 
         if self.states.current == 'ONLINE':
             try:
-                self._checkStatus(cmd=cmd, doClose=True)
-                self._checkPosition(cmd=cmd)
-
+                self._checkStatus(cmd=cmd, doClose=True, doShow=True)
             except:
                 cmd.warn('rexm=undef')
                 raise
@@ -145,7 +147,8 @@ class rexm(FSMDev, QThread):
             cmd.inform('text="stopping rexm motion"')
 
             while self.isMoving:
-                self.myTMCM.stop(temp=1)
+                self.myTMCM.stop()
+                time.sleep(1)
                 self._checkStatus(cmd)
 
                 if (time.time() - start) > 5:
@@ -179,7 +182,7 @@ class rexm(FSMDev, QThread):
 
         self.substates.idle()
 
-    def _checkStatus(self, cmd, doClose=False):
+    def _checkStatus(self, cmd, doClose=False, doShow=False):
         """| Check current status from controller and publish rexmInfo keywords
 
         - rexmInfo = switchA state, switchB state, speed, position(ustep from origin)
@@ -194,17 +197,13 @@ class rexm(FSMDev, QThread):
 
         self.switchA = self.myTMCM.gap(11)
         self.switchB = self.myTMCM.gap(10)
-        self.speed = self.myTMCM.gap(3, fmtRet='>BBBBiB')
+        self.speed = self.myTMCM.getSpeed()
         self.stepCount = self.myTMCM.gap(1, doClose=doClose, fmtRet='>BBBBiB')
 
-        if (time.time() - self.samptime) > 2:
+        if (time.time() - self.samptime) > 2 or doShow:
             self.samptime = time.time()
             cmd.inform('rexmInfo=%i,%i,%i,%i' % (self.switchA, self.switchB, self.speed, self.stepCount))
-
-    def _checkPosition(self, cmd):
-
-        self.position = rexm.switch[self.switchA, self.switchB]
-        cmd.inform('rexm=%s' % self.position)
+            cmd.inform('rexm=%s' % self.position)
 
     def _moveAccurate(self, cmd, direction):
         """| Move accurately to the required direction.
