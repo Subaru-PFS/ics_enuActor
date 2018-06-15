@@ -25,6 +25,8 @@ class enuActor(actorcore.ICC.ICC):
 
         self.statusLoopCB = self.statusLoop
 
+        reactor.callLater(2, self.monitorDevices)
+
     @property
     def state(self):
         states = ['OFF', 'LOADED', 'ONLINE']
@@ -51,6 +53,12 @@ class enuActor(actorcore.ICC.ICC):
 
         return substate
 
+    def monitorDevices(self):
+        self.callCommand("status all")
+        for controller in self.controllers.keys():
+            self.monitor(controller=controller, period=60)
+
+
     def reloadConfiguration(self, cmd):
         cmd.inform('sections=%08x,%r' % (id(self.config),
                                          self.config))
@@ -76,6 +84,8 @@ class enuActor(actorcore.ICC.ICC):
                               controller)
 
     def monitor(self, controller, period, cmd=None):
+        cmd = self.bcast if cmd is None else cmd
+
         if controller not in self.monitors:
             self.monitors[controller] = 0
 
