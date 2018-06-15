@@ -139,6 +139,7 @@ class rexm(FSMDev, QThread):
         :raise: Timeout if the command takes too long.
         """
         start = time.time()
+        self._checkStatus(cmd)
 
         try:
             cmd.inform('text="stopping rexm motion"')
@@ -273,9 +274,12 @@ class rexm(FSMDev, QThread):
         ok = self.myTMCM.MVP(direction, distance, speed)
 
         start = time.time()
+        self._checkStatus(cmd)
 
-        if (time.time() - start) > 5 and not self.isMoving:
-            raise TimeoutError('Rexm is not moving')
+        while not self.isMoving:
+            self._checkStatus(cmd)
+            if (time.time() - start) > 5:
+                raise TimeoutError('Rexm is not moving')
 
         endOfMotion = partial(self.switchOn, direction) if hitSwitch else partial(self.switchOff, direction)
 
@@ -312,9 +316,9 @@ class rexm(FSMDev, QThread):
         :return: limit switch state
         """
         if direction == 0:
-            return self.switchB
+            return not self.switchB
         elif direction == 1:
-            return self.switchA
+            return not self.switchA
         else:
             raise ValueError('unknown direction')
 

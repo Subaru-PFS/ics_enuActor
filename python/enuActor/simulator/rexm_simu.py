@@ -62,14 +62,16 @@ class RexmSim(object):
         self.ser = None
         self.port = port
         self.currSpeed = 0.
-        self.currPos = 210.
+        self.realPos = 50.
+        self.currPos = 0.
         self.safeStop = False
 
     def stop(self, temp):
         """fonction stop  controleur
         """
-        time.sleep(temp)
         self.safeStop = True
+        self.currSpeed = 0
+        time.sleep(temp)
 
     def mm2counts(self, val):
 
@@ -85,27 +87,40 @@ class RexmSim(object):
 
         return np.float64(counts, self.mm2counts(1.0))
 
-    def fakeMove(self, direction, distance, speed):
-
-        self.currSpeed = speed
-        tempo = 0.1
+    def fakeMove(self, direction, distance, speed, tempo=0.1):
         if self.safeStop:
             self.safeStop = False
 
         if direction == RexmSim.DIRECTION_A:
-            goal = self.currPos - distance
-            while (self.currPos > goal) and not self.safeStop:
-                if self.currPos < 0: break
-                time.sleep(tempo)
-                self.currPos -= tempo * speed
-        elif direction == RexmSim.DIRECTION_B:
-            goal = self.currPos + distance
-            while (self.currPos < goal) and not self.safeStop:
-                if self.currPos > self.DISTANCE_MAX - 10: break
-                time.sleep(tempo)
-                self.currPos += tempo * speed
+            speed *= -1
+            distance *= -1
 
-        self.currSpeed = 0
+        goal = self.currPos + distance
+        self.currSpeed = speed
+
+        if direction == RexmSim.DIRECTION_A:
+            while self.currPos > goal:
+                if self.safeStop:
+                    break
+                if self.realPos < 0:
+                    self.currSpeed = 0
+                    break
+
+                time.sleep(tempo)
+                self.currPos += tempo * self.currSpeed
+                self.realPos += tempo * self.currSpeed
+
+        elif direction == RexmSim.DIRECTION_B:
+            while self.currPos < goal:
+                if self.safeStop:
+                    break
+                if self.realPos > (self.DISTANCE_MAX - 10):
+                    self.currSpeed = 0
+                    break
+
+                time.sleep(tempo)
+                self.currPos += tempo * self.currSpeed
+                self.realPos += tempo * self.currSpeed
 
     def MVP(self, direction, distance, speed, type="relative", doClose=False):
         # set moving speed
@@ -130,9 +145,9 @@ class RexmSim(object):
         elif paramId == 3:
             ret = self.mm2counts(self.currSpeed)
         elif paramId == 11:
-            ret = 1 if self.currPos <= 0 else 0
+            ret = 1 if self.realPos <= 0 else 0
         elif paramId == 10:
-            ret = 1 if self.currPos >= self.DISTANCE_MAX - 10 else 0
+            ret = 1 if self.realPos >= (self.DISTANCE_MAX - 10) else 0
         else:
             raise Exception('Unknown Parameter')
 
