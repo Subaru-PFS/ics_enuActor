@@ -65,10 +65,6 @@ class slit(FSMDev, QThread):
         FSMDev.stop(self, cmd=cmd)
         self.exit()
 
-    def stop(self, cmd=None):
-        FSMDev.stop(self, cmd=cmd)
-        self.exit()
-
     def loadCfg(self, cmd, mode=None):
         """| Load Configuration file. called by device.loadDevice().
         | Convert to world tool and home.

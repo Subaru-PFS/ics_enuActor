@@ -19,6 +19,7 @@ class BshCmd(object):
         self.vocab = [
             ('bsh', 'ping', self.ping),
             ('bsh', 'status', self.status),
+            ('bsh', 'init', self.initialise),
             ('bsh', '<raw>', self.rawCommand),
             ('bia', '@(on|off)', self.biaSwitch),
             ('bia', '@(strobe) @(on|off)', self.biaStrobe),
@@ -55,6 +56,13 @@ class BshCmd(object):
     def status(self, cmd):
         """Report state, mode, position"""
 
+        self.controller.getStatus(cmd)
+
+    @threaded
+    def initialise(self, cmd):
+        """Initialise Bsh, call fsm startInit event """
+
+        self.controller.substates.init(cmd=cmd)
         self.controller.getStatus(cmd)
 
     @threaded
@@ -146,7 +154,7 @@ class BshCmd(object):
 
         try:
             reply = self.controller.sendOneCommand(cmdStr, doClose=False, cmd=cmd)
-
+            cmd.inform('text=%s' % reply)
         except Exception as e:
             cmd.warn('text=%s' % self.actor.strTraceback(e))
 
