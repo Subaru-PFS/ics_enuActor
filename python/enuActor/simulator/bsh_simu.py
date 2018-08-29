@@ -76,6 +76,9 @@ class BshSim(socket.socket):
             if cmdStr == "shut_open\r\n":
                 bia_mode = 20
                 cmdOk = True
+            if cmdStr == "shut_close\r\n":
+                bia_mode = 0
+                cmdOk = True
             elif cmdStr == "red_open\r\n":
                 bia_mode = 20
                 cmdOk = True
@@ -92,6 +95,9 @@ class BshSim(socket.socket):
         elif bia_mode == 40:  # RED SHUTTER OPEN
             if cmdStr == "shut_open\r\n":
                 bia_mode = 20
+                cmdOk = True
+            if cmdStr == "shut_close\r\n":
+                bia_mode = 0
                 cmdOk = True
             elif cmdStr == "blue_open\r\n":
                 bia_mode = 20

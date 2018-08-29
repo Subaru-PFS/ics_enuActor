@@ -89,7 +89,7 @@ class RexmSim(object):
         return np.float64(val / screwStep * reducer * nbStepByRev * step)
 
     def counts2mm(self, counts):
-        return np.float64(counts, self.mm2counts(1.0))
+        return np.float64(counts / self.mm2counts(1.0))
 
     def fakeMove(self, direction, distance, speed, tempo=0.1):
         if self.safeStop:
