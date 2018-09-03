@@ -1,8 +1,10 @@
-import select
 import logging
+import select
 import socket
 import time
+
 from opscore.utility.qstr import qstr
+
 
 class EthComm(object):
     def __init__(self):
@@ -42,7 +44,7 @@ class EthComm(object):
 
         self.sock = None
 
-    def sendOneCommand(self, cmdStr, doClose=True, cmd=None, tempo=0.1):
+    def sendOneCommand(self, cmdStr, doClose=True, cmd=None):
         """| Send one command and return one response.
 
         :param cmdStr: (str) The command to send.
@@ -66,7 +68,6 @@ class EthComm(object):
             self.closeSock()
             raise
 
-        time.sleep(tempo)
         reply = self.getOneResponse(sock=s, cmd=cmd)
 
         if doClose:
@@ -93,7 +94,6 @@ class EthComm(object):
         return reply
 
 
-
 class BufferedSocket(object):
     """ Buffer the input from a socket and block it into lines. """
 
@@ -110,7 +110,7 @@ class BufferedSocket(object):
 
     def getOutput(self, sock=None, timeout=None, cmd=None):
         """ Block/timeout for input, then return all (<=1kB) available input. """
-        
+
         if sock is None:
             sock = self.sock
         if timeout is None:
@@ -126,7 +126,7 @@ class BufferedSocket(object):
 
         return sock.recv(1024).decode('utf8', 'ignore')
 
-    def getOneResponse(self, sock=None, timeout=None, cmd=None):
+    def getOneResponse(self, sock=None, timeout=3, cmd=None, tempo=0.1):
         """ Return the next available complete line. Fetch new input if necessary. 
 
         Args
@@ -141,25 +141,29 @@ class BufferedSocket(object):
         str or None : a single line of response text, with EOL character(s) stripped.
 
         """
-
+        start = time.time()
         while self.buffer.find(self.EOL) == -1:
+            if (time.time() - start) > timeout:
+                if cmd:
+                    cmd.warn('text=%s' % (qstr(self.buffer)))
+                raise TimeoutError('EOL not found')
+
+            time.sleep(tempo)
             try:
                 more = self.getOutput(sock=sock, timeout=timeout, cmd=cmd)
             except IOError:
                 return ''
-            
-            msg = '%s added: %r' % (self.name, more)
-            self.logger.debug(msg)
-            if cmd:
-                cmd.diag('text=%s' % (qstr(msg)))
-            self.buffer += more
+
+            if more:
+                msg = '%s added: %r' % (self.name, more)
+                self.logger.debug(msg)
+                if cmd:
+                    cmd.diag('text=%s' % (qstr(msg)))
+                self.buffer += more
 
         eolAt = self.buffer.find(self.EOL)
         ret = self.buffer[:eolAt]
 
-        self.buffer = self.buffer[eolAt+len(self.EOL):]
+        self.buffer = self.buffer[eolAt + len(self.EOL):]
 
         return ret
-
-
-
