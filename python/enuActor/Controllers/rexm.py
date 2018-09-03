@@ -91,8 +91,8 @@ class rexm(FSMDev, QThread):
         """
         self.sim = RexmSim()  # Create new simulator
         self.myTMCM = self.createSock()
+        self.myTMCM.init()
 
-        ret = self.myTMCM.gap(11)
 
     def init(self, cmd):
         """| Initialise rexm controller, called y device.initDevice().
@@ -104,7 +104,7 @@ class rexm(FSMDev, QThread):
         :param cmd: on going command
         :raise: Exception if a command fail, user is warned with error ret.
         """
-        self.myTMCM.init()
+
 
         cmd.inform('text="seeking home ..."')
         self._moveAccurate(cmd, rexm.toDir['low'])
@@ -124,7 +124,7 @@ class rexm(FSMDev, QThread):
         cmd.inform('rexmFSM=%s,%s' % (self.states.current, self.substates.current))
         cmd.inform('rexmMode=%s' % self.mode)
 
-        if self.states.current == 'ONLINE':
+        if self.states.current in ['LOADED', 'ONLINE']:
             try:
                 self._checkStatus(cmd=cmd, doClose=True, doShow=True)
             except:
