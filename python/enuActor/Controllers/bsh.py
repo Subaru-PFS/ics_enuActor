@@ -219,11 +219,11 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
             ilockState = self._ilockStat(cmd)
             statword = self._shutstat(cmd)
 
-            cmd.inform('shb=%s,%s,%s' % (statword[3], statword[4], statword[5]))
-            cmd.inform('shr=%s,%s,%s' % (statword[0], statword[1], statword[2]))
+            cmd.inform('shb=%s,%s,%s' % (statword[0], statword[1], statword[2]))
+            cmd.inform('shr=%s,%s,%s' % (statword[3], statword[4], statword[5]))
 
             if bsh.in_position[ilockState] != statword:
-                cmd.warn('text="shutters not in position"')
+                raise UserWarning('shutters not in position')
 
             self.shState, self.biaState = bsh.ilockFSM[ilockState]
 
@@ -275,7 +275,7 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
 
         self.biaStrobe, self.biaPeriod, self.biaDuty = self.getBiaConfig(cmd, doClose=doClose)
 
-    def checkInterlock(self, shState, biaState, cmdStr):
+    def checkInterlock(self, cmdStr, shState=False, biaState=False):
         """| Check transition and raise Exception if cmdStr is violating shutters/bia interlock.
 
         :param shState: shutter state,
@@ -286,6 +286,8 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
         :type cmdStr: str
         :raise: Exception("Transition not allowed")
         """
+        shState = shState if shState else self.shState
+        biaState = biaState if biaState else self.biaState
 
         transition = {
             (('close', 'off'), 'shut_open'): '',
@@ -379,7 +381,7 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
         """
 
         try:
-            self.checkInterlock(self.shState, self.biaState, cmdStr)
+            self.checkInterlock(cmdStr)
             self._sendOrder(cmd, cmdStr)
 
         except UserWarning as e:

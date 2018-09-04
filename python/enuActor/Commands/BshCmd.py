@@ -52,7 +52,6 @@ class BshCmd(object):
 
         cmd.finish("text='%s controller Present and (probably) well'" % self.name)
 
-    @threaded
     def status(self, cmd):
         """Report state, mode, position"""
 
@@ -88,7 +87,6 @@ class BshCmd(object):
         cmd.finish()
 
 
-    @threaded
     def biaStrobe(self, cmd):
         """Activate|desactivate bia strobe mode  """
         cmdKeys = cmd.cmd.keywords
@@ -98,7 +96,6 @@ class BshCmd(object):
         cmd.finish()
 
 
-    @threaded
     def biaSwitch(self, cmd):
         """Switch bia on/off, optional keyword force to force transition (without breaking interlock)"""
         cmdKeys = cmd.cmd.keywords
