@@ -219,11 +219,11 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
             ilockState = self._ilockStat(cmd)
             statword = self._shutstat(cmd)
 
+            cmd.inform('shb=%s,%s,%s' % (statword[3], statword[4], statword[5]))
+            cmd.inform('shr=%s,%s,%s' % (statword[0], statword[1], statword[2]))
+
             if bsh.in_position[ilockState] != statword:
                 cmd.warn('text="shutters not in position"')
-                for i, shutter in enumerate(['shr', 'shb']):
-                    cmd.warn('%s=%s' % (
-                        shutter, ','.join([bsh.shut_stat[j % 3][int(statword[j])] for j in range(i * 3, (i + 1) * 3)])))
 
             self.shState, self.biaState = bsh.ilockFSM[ilockState]
 
