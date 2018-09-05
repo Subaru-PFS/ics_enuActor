@@ -53,13 +53,13 @@ class XPS(object):
                 return -1
         else:
             return -1
-
+        print ('socketId=',socketId)
         XPS.__usedSockets[socketId] = 1
         XPS.__nbSockets += 1
         try:
             XPS.__sockets[socketId] = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            XPS.__sockets[socketId].connect((IP, port))
             XPS.__sockets[socketId].settimeout(timeOut)
+            XPS.__sockets[socketId].connect((IP, port))
             XPS.__sockets[socketId].setblocking(1)
         except socket.error:
             return -1
