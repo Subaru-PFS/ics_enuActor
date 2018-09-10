@@ -67,6 +67,10 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
         else:
             raise ValueError('unknown mode')
 
+    @property
+    def shuttersClosed(self):
+        return self.shState == 'close'
+
     def start(self, cmd=None, doInit=True, mode=None):
         FSMDev.start(self, cmd=cmd, doInit=doInit, mode=mode)
         QThread.start(self)
@@ -159,15 +163,18 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
             if stopExposure:
                 raise UserWarning('expose aborted by user')
 
-            transientTime2 = dt.utcnow()
+            if not self.shuttersClosed:
+                transientTime2 = dt.utcnow()
+                self._safeSwitch(cmd, '%s_close' % shutter)
 
-            self._safeSwitch(cmd, '%s_close' % shutter)
+                end = dt.utcnow()
+                transientTime2 = (end - transientTime2).total_seconds()
+                self.checkStatus(cmd)
+            else:
+                end = dt.utcnow()
+                transientTime2 = transientTime1
 
-            end = dt.utcnow()
-            transientTime2 = (end - transientTime2).total_seconds()
-
-            self.checkStatus(cmd)
-            if self.shState not in ['close']:
+            if not self.shuttersClosed:
                 raise Exception('CLOSE failed')
 
             cmd.inform('dateobs=%s' % start.isoformat())
@@ -185,7 +192,6 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
             self.substates.fail()
             raise
 
-
     def getStatus(self, cmd, doClose=True):
         """| Call bsh._checkStatus() and publish shutters, bia keywords:
 
@@ -200,12 +206,11 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
         cmd.inform('bshMode=%s' % self.mode)
 
         if self.states.current == 'ONLINE':
-            self.checkStatus(cmd)
-            self.getBiaConfig(cmd, doClose=doClose)
+            self.checkStatus(cmd, doClose=doClose)
 
         cmd.finish()
 
-    def checkStatus(self, cmd):
+    def checkStatus(self, cmd, doClose=False):
         """| Get status from bsh board and update controller's attributes.
         | Warn the user if the shutters limits switch state does not match with interlock state machine
 
@@ -217,7 +222,7 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
 
         try:
             ilockState = self._ilockStat(cmd)
-            statword = self._shutstat(cmd)
+            statword = self._shutstat(cmd, doClose=doClose)
 
             cmd.inform('shb=%s,%s,%s' % (statword[0], statword[1], statword[2]))
             cmd.inform('shr=%s,%s,%s' % (statword[3], statword[4], statword[5]))
@@ -293,47 +298,47 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
             (('close', 'off'), 'shut_open'): '',
             (('close', 'off'), 'red_open'): '',
             (('close', 'off'), 'blue_open'): '',
-            (('close', 'off'), 'shut_close'):  'shutters already closed',
-            (('close', 'off'), 'red_close'):  'red shutter already closed',
-            (('close', 'off'), 'blue_close'):  'blue shutter already closed',
-            (('close', 'off'), 'bia_off'):  'bia already off',
+            (('close', 'off'), 'shut_close'): 'shutters already closed',
+            (('close', 'off'), 'red_close'): 'red shutter already closed',
+            (('close', 'off'), 'blue_close'): 'blue shutter already closed',
+            (('close', 'off'), 'bia_off'): 'bia already off',
             (('close', 'off'), 'bia_on'): '',
 
-            (('close', 'on'), 'shut_open'):  'Interlock !',
-            (('close', 'on'), 'red_open'):  'Interlock !',
-            (('close', 'on'), 'blue_open'):  'Interlock !',
-            (('close', 'on'), 'shut_close'):  'shutters already closed',
-            (('close', 'on'), 'red_close'):  'red shutter already closed',
-            (('close', 'on'), 'blue_close'):  'blue shutter already closed',
+            (('close', 'on'), 'shut_open'): 'Interlock !',
+            (('close', 'on'), 'red_open'): 'Interlock !',
+            (('close', 'on'), 'blue_open'): 'Interlock !',
+            (('close', 'on'), 'shut_close'): 'shutters already closed',
+            (('close', 'on'), 'red_close'): 'red shutter already closed',
+            (('close', 'on'), 'blue_close'): 'blue shutter already closed',
             (('close', 'on'), 'bia_off'): '',
-            (('close', 'on'), 'bia_on'):  'bia already on',
+            (('close', 'on'), 'bia_on'): 'bia already on',
 
-            (('open', 'off'), 'shut_open'):  'shutters already open',
-            (('open', 'off'), 'red_open'):  'shutters already open',
-            (('open', 'off'), 'blue_open'):  'shutters already open',
+            (('open', 'off'), 'shut_open'): 'shutters already open',
+            (('open', 'off'), 'red_open'): 'shutters already open',
+            (('open', 'off'), 'blue_open'): 'shutters already open',
             (('open', 'off'), 'shut_close'): '',
             (('open', 'off'), 'red_close'): '',
             (('open', 'off'), 'blue_close'): '',
-            (('open', 'off'), 'bia_off'):  'bia already off',
-            (('open', 'off'), 'bia_on'):  'Interlock !',
+            (('open', 'off'), 'bia_off'): 'bia already off',
+            (('open', 'off'), 'bia_on'): 'Interlock !',
 
             (('openred', 'off'), 'shut_open'): '',
-            (('openred', 'off'), 'red_open'):  'shutter red already open',
+            (('openred', 'off'), 'red_open'): 'shutter red already open',
             (('openred', 'off'), 'blue_open'): '',
             (('openred', 'off'), 'shut_close'): '',
             (('openred', 'off'), 'red_close'): '',
-            (('openred', 'off'), 'blue_close'):  'shutter blue already closed',
-            (('openred', 'off'), 'bia_off'):  'bia already off',
-            (('openred', 'off'), 'bia_on'):  'Interlock !',
+            (('openred', 'off'), 'blue_close'): 'shutter blue already closed',
+            (('openred', 'off'), 'bia_off'): 'bia already off',
+            (('openred', 'off'), 'bia_on'): 'Interlock !',
 
             (('openblue', 'off'), 'shut_open'): '',
             (('openblue', 'off'), 'red_open'): '',
-            (('openblue', 'off'), 'blue_open'):  'shutter blue already open',
+            (('openblue', 'off'), 'blue_open'): 'shutter blue already open',
             (('openblue', 'off'), 'shut_close'): '',
-            (('openblue', 'off'), 'red_close'):  'shutter red already closed',
+            (('openblue', 'off'), 'red_close'): 'shutter red already closed',
             (('openblue', 'off'), 'blue_close'): '',
-            (('openblue', 'off'), 'bia_off'):  'bia already off',
-            (('openblue', 'off'), 'bia_on'):  'Interlock !',
+            (('openblue', 'off'), 'bia_off'): 'bia already off',
+            (('openblue', 'off'), 'bia_on'): 'Interlock !',
 
         }
 
@@ -358,7 +363,7 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
         inform = dt.utcnow()
 
         while dt.utcnow() < tlim:
-            if self.stopExposure:
+            if self.stopExposure or self.shuttersClosed:
                 break
             if (dt.utcnow() - inform).total_seconds() > 2:
                 cmd.inform("elapsedTime=%.2f" % (dt.utcnow() - t0).total_seconds())
@@ -398,13 +403,13 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
 
         return int(ilockState)
 
-    def _shutstat(self, cmd):
+    def _shutstat(self, cmd, doClose=False):
         """| check and return shutter status word .
 
         :param cmd: current command,
         :raise: Exception if a command has failed
         """
-        statword = self.sendOneCommand("statword", doClose=False, cmd=cmd)
+        statword = self.sendOneCommand("statword", doClose=doClose, cmd=cmd)
 
         return bin(int(statword))[-6:]
 
@@ -425,7 +430,6 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
 
         if reply != "":
             raise Exception("%s  %s cmd has replied nok" % (cmdStr, self.name))
-
 
     def createSock(self):
         if self.simulated:

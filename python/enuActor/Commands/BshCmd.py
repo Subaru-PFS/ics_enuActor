@@ -24,7 +24,7 @@ class BshCmd(object):
             ('bia', '@(on|off)', self.biaSwitch),
             ('bia', '@(strobe) @(on|off)', self.biaStrobe),
             ('bia', 'config [<duty>] [<period>]', self.sendConfig),
-            ('shutters', '@(open|close) [blue|red]', self.shutterSwitch),
+            ('shutters', '@(open|close) [blue|red] [force]', self.shutterSwitch),
             ('shutters', '@(expose) <exptime> [blue|red]', self.shutterExpose),
             ('shutters', 'abort', self.abort),
 
@@ -54,7 +54,7 @@ class BshCmd(object):
 
     def status(self, cmd):
         """Report state, mode, position"""
-
+        self.controller.getBiaConfig(cmd)
         self.controller.getStatus(cmd)
 
     @threaded
@@ -64,7 +64,6 @@ class BshCmd(object):
         self.controller.substates.init(cmd=cmd)
         self.controller.getStatus(cmd)
 
-    @threaded
     def sendConfig(self, cmd):
         """Update bia parameters """
 
@@ -86,7 +85,6 @@ class BshCmd(object):
         self.controller.setBiaConfig(cmd, period, duty, doClose=True)
         cmd.finish()
 
-
     def biaStrobe(self, cmd):
         """Activate|desactivate bia strobe mode  """
         cmdKeys = cmd.cmd.keywords
@@ -94,7 +92,6 @@ class BshCmd(object):
 
         self.controller.setBiaConfig(cmd, biaStrobe=state, doClose=True)
         cmd.finish()
-
 
     def biaSwitch(self, cmd):
         """Switch bia on/off, optional keyword force to force transition (without breaking interlock)"""
@@ -106,7 +103,6 @@ class BshCmd(object):
 
         self.controller.getStatus(cmd)
 
-    @threaded
     def shutterSwitch(self, cmd):
         """Open/close , optional keyword force to force transition (without breaking interlock)"""
         cmdKeys = cmd.cmd.keywords
@@ -114,6 +110,10 @@ class BshCmd(object):
         shutter = 'red' if 'red' in cmdKeys else shutter
         shutter = 'blue' if 'blue' in cmdKeys else shutter
         move = "open" if "open" in cmdKeys else "close"
+        force = True if 'force' in cmdKeys else False
+
+        if self.controller.substates.current == 'EXPOSING' and not force:
+            raise UserWarning('shutter cant be operated during an exposure unless keyword force is added')
 
         cmdStr = "%s_%s" % (shutter, move)
 
@@ -142,7 +142,6 @@ class BshCmd(object):
                                          shutter=shutter)
         self.controller.getStatus(cmd)
 
-    @threaded
     def rawCommand(self, cmd):
         """Send a raw command to the bsh board """
         cmdKeys = cmd.cmd.keywords
