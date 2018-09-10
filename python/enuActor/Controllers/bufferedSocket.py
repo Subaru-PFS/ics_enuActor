@@ -13,6 +13,7 @@ class EthComm(object):
         self.port = None
         self.sock = None
         self.EOL = '\r\n'
+        self.isBusy = False
 
     def connectSock(self):
         """| Connect socket if self.sock is None.
@@ -21,7 +22,7 @@ class EthComm(object):
         """
         if self.sock is None:
             s = self.createSock()
-            s.settimeout(2.0)
+            s.settimeout(3.0)
             s.connect((self.host, self.port))
 
             self.sock = s
@@ -44,7 +45,7 @@ class EthComm(object):
 
         self.sock = None
 
-    def sendOneCommand(self, cmdStr, doClose=True, cmd=None):
+    def sendOneCommand(self, cmdStr, doClose=True, cmd=None, i=0):
         """| Send one command and return one response.
 
         :param cmdStr: (str) The command to send.
@@ -53,6 +54,14 @@ class EthComm(object):
         :return: reply : the single response string, with EOLs stripped.
         :raise: IOError : from any communication errors.
         """
+        if self.isBusy:
+            if i > 20:
+                raise RuntimeError('Socket is busy')
+            time.sleep(0.1)
+            return self.sendOneCommand(cmdStr=cmdStr, doClose=doClose, cmd=cmd, i=i + 1)
+        else:
+            self.isBusy = True
+
         if cmd is None:
             cmd = self.actor.bcast
 
@@ -73,6 +82,7 @@ class EthComm(object):
         if doClose:
             self.closeSock()
 
+        self.isBusy = False
         return reply
 
     def getOneResponse(self, sock=None, cmd=None):
@@ -97,7 +107,7 @@ class EthComm(object):
 class BufferedSocket(object):
     """ Buffer the input from a socket and block it into lines. """
 
-    def __init__(self, name, sock=None, loggerName=None, EOL='\n', timeout=5.0,
+    def __init__(self, name, sock=None, loggerName=None, EOL='\n', timeout=3.0,
                  logLevel=logging.INFO):
         self.EOL = EOL
         self.sock = sock
@@ -126,7 +136,7 @@ class BufferedSocket(object):
 
         return sock.recv(1024).decode('utf8', 'ignore')
 
-    def getOneResponse(self, sock=None, timeout=3, cmd=None, tempo=0.1):
+    def getOneResponse(self, sock=None, timeout=3.0, cmd=None, tempo=0.1):
         """ Return the next available complete line. Fetch new input if necessary. 
 
         Args
