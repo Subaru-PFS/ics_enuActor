@@ -53,7 +53,7 @@ class XPS(object):
                 return -1
         else:
             return -1
-        print ('socketId=',socketId)
+
         XPS.__usedSockets[socketId] = 1
         XPS.__nbSockets += 1
         try:
