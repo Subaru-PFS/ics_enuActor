@@ -25,7 +25,7 @@ class enuActor(actorcore.ICC.ICC):
 
         self.statusLoopCB = self.statusLoop
 
-        reactor.callLater(2, self.monitorDevices)
+        reactor.callLater(5, self.monitorDevices)
 
     @property
     def state(self):
