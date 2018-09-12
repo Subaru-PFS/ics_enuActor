@@ -1,10 +1,7 @@
 import logging
 import select
 import socket
-import time
-
-from opscore.utility.qstr import qstr
-
+from enuActor.utils.wrap import busy
 
 class EthComm(object):
     def __init__(self):
@@ -45,7 +42,8 @@ class EthComm(object):
 
         self.sock = None
 
-    def sendOneCommand(self, cmdStr, doClose=True, cmd=None, i=0):
+    @busy
+    def sendOneCommand(self, cmdStr, doClose=True, cmd=None):
         """| Send one command and return one response.
 
         :param cmdStr: (str) The command to send.
@@ -54,13 +52,6 @@ class EthComm(object):
         :return: reply : the single response string, with EOLs stripped.
         :raise: IOError : from any communication errors.
         """
-        if self.isBusy:
-            if i > 20:
-                raise RuntimeError('Socket is busy')
-            time.sleep(0.1)
-            return self.sendOneCommand(cmdStr=cmdStr, doClose=doClose, cmd=cmd, i=i + 1)
-        else:
-            self.isBusy = True
 
         if cmd is None:
             cmd = self.actor.bcast
@@ -82,7 +73,6 @@ class EthComm(object):
         if doClose:
             self.closeSock()
 
-        self.isBusy = False
         return reply
 
     def getOneResponse(self, sock=None, cmd=None):
@@ -133,11 +123,10 @@ class BufferedSocket(object):
             if cmd is not None:
                 cmd.warn('text="%s"' % msg)
             raise IOError(msg)
-
         return sock.recv(1024).decode('utf8', 'ignore')
 
-    def getOneResponse(self, sock=None, timeout=3.0, cmd=None, tempo=0.1):
-        """ Return the next available complete line. Fetch new input if necessary. 
+    def getOneResponse(self, sock=None, timeout=None, cmd=None):
+        """ Return the next available complete line. Fetch new input if necessary.
 
         Args
         ----
@@ -151,25 +140,18 @@ class BufferedSocket(object):
         str or None : a single line of response text, with EOL character(s) stripped.
 
         """
-        start = time.time()
-        while self.buffer.find(self.EOL) == -1:
-            if (time.time() - start) > timeout:
-                if cmd:
-                    cmd.warn('text=%s' % (qstr(self.buffer)))
-                raise TimeoutError('EOL not found')
 
-            time.sleep(tempo)
+        while self.buffer.find(self.EOL) == -1:
             try:
                 more = self.getOutput(sock=sock, timeout=timeout, cmd=cmd)
+                if not more:
+                    raise IOError
+
             except IOError:
                 return ''
-
-            if more:
-                msg = '%s added: %r' % (self.name, more)
-                self.logger.debug(msg)
-                if cmd:
-                    cmd.diag('text=%s' % (qstr(msg)))
-                self.buffer += more
+            msg = '%s added: %r' % (self.name, more)
+            self.logger.debug(msg)
+            self.buffer += more
 
         eolAt = self.buffer.find(self.EOL)
         ret = self.buffer[:eolAt]
