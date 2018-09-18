@@ -116,6 +116,7 @@ class slit(FSMDev, QThread):
         if self.socketId == -1:
             raise socket.error('Connection to Hexapod failed check IP & Port')
 
+        self.getPosition(cmd=cmd)
 
     def init(self, cmd):
         """| Initialise hexapod, called y device.initDevice().
@@ -161,7 +162,7 @@ class slit(FSMDev, QThread):
         cmd.inform('slitFSM=%s,%s' % (self.states.current, self.substates.current))
         cmd.inform('slitMode=%s' % self.mode)
 
-        if self.states.current == 'ONLINE':
+        if self.states.current in ['LOADED', 'ONLINE']:
             self.getPosition(cmd=cmd)
 
             cmd.inform('slitInfo="%s"' % self._getHxpStatusString(self._getHxpStatus()))

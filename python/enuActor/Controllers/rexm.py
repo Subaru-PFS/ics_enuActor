@@ -91,8 +91,8 @@ class rexm(FSMDev, QThread):
         """
         self.sim = RexmSim()  # Create new simulator
         self.myTMCM = self.createSock()
-        self.myTMCM.init()
 
+        self._checkStatus(cmd=cmd, doClose=True)
 
     def init(self, cmd):
         """| Initialise rexm controller, called y device.initDevice().
@@ -104,7 +104,6 @@ class rexm(FSMDev, QThread):
         :param cmd: on going command
         :raise: Exception if a command fail, user is warned with error ret.
         """
-
 
         cmd.inform('text="seeking home ..."')
         self._moveAccurate(cmd, rexm.toDir['low'])
@@ -125,11 +124,7 @@ class rexm(FSMDev, QThread):
         cmd.inform('rexmMode=%s' % self.mode)
 
         if self.states.current in ['LOADED', 'ONLINE']:
-            try:
-                self._checkStatus(cmd=cmd, doClose=True, doShow=True)
-            except:
-                cmd.warn('rexm=undef')
-                raise
+            self._checkStatus(cmd, doClose=True)
 
         cmd.finish()
 
@@ -182,7 +177,7 @@ class rexm(FSMDev, QThread):
 
         self.substates.idle()
 
-    def _checkStatus(self, cmd, doClose=False, doShow=False):
+    def _checkStatus(self, cmd, doClose=False):
         """| Check current status from controller and publish rexmInfo keywords
 
         - rexmInfo = switchA state, switchB state, speed, position(ustep from origin)
@@ -195,12 +190,17 @@ class rexm(FSMDev, QThread):
         """
         time.sleep(0.01)
 
-        self.switchA = self.myTMCM.gap(11)
-        self.switchB = self.myTMCM.gap(10)
-        self.speed = self.myTMCM.getSpeed()
-        self.stepCount = self.myTMCM.gap(1, doClose=doClose, fmtRet='>BBBBiB')
+        try:
+            self.switchA = self.myTMCM.gap(11)
+            self.switchB = self.myTMCM.gap(10)
+            self.speed = self.myTMCM.getSpeed()
+            self.stepCount = self.myTMCM.gap(1, doClose=doClose, fmtRet='>BBBBiB')
 
-        if (time.time() - self.samptime) > 2 or doShow:
+        except:
+            cmd.warn('rexm=undef')
+            raise
+
+        if (time.time() - self.samptime) > 2:
             self.samptime = time.time()
             cmd.inform('rexmInfo=%i,%i,%i,%i' % (self.switchA, self.switchB, self.speed, self.stepCount))
             cmd.inform('rexm=%s' % self.position)

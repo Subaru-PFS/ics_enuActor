@@ -64,11 +64,10 @@ class RexmSim(object):
         self.currSpeed = 0.
         self.realPos = 50.
         self.currPos = 0.
-        self.safeStop = False
-
-    def init(self):
         self.stepIdx = 2
         self.pulseDivisor = 5
+        self.safeStop = False
+
 
     def getSpeed(self):
         return self.mm2counts(self.currSpeed)

@@ -107,6 +107,9 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
         self.sim = BshSim()  # Create new simulator
         s = self.connectSock()
 
+        self.checkStatus(cmd=cmd, doClose=True)
+
+
     def init(self, cmd):
         """| Initialise the interlock board, called y device.initDevice().
 

@@ -100,6 +100,7 @@ class TMCM(object):
         self.ser = None
         self.port = port
         self.name = "rexm"
+        self.init()
 
     def openSerial(self):
         """ Connect serial if self.ser is None
