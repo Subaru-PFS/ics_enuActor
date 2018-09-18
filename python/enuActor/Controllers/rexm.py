@@ -57,8 +57,8 @@ class rexm(FSMDev, QThread):
         return rexm.switch[self.switchA, self.switchB]
 
     def start(self, cmd=None, doInit=False, mode=None):
-        FSMDev.start(self, cmd=cmd, doInit=doInit, mode=mode)
         QThread.start(self)
+        FSMDev.start(self, cmd=cmd, doInit=doInit, mode=mode)
 
     def stop(self, cmd=None):
         self.exit()

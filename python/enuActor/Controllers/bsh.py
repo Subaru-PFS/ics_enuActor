@@ -72,8 +72,8 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
         return self.shState == 'close'
 
     def start(self, cmd=None, doInit=True, mode=None):
-        FSMDev.start(self, cmd=cmd, doInit=doInit, mode=mode)
         QThread.start(self)
+        FSMDev.start(self, cmd=cmd, doInit=doInit, mode=mode)
 
     def stop(self, cmd=None):
         FSMDev.stop(self, cmd=cmd)
@@ -108,7 +108,6 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
         s = self.connectSock()
 
         self.checkStatus(cmd=cmd, doClose=True)
-
 
     def init(self, cmd):
         """| Initialise the interlock board, called y device.initDevice().

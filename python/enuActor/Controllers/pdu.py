@@ -40,8 +40,8 @@ class pdu(FSMDev, QThread, bufferedSocket.EthComm):
             raise ValueError('unknown mode')
 
     def start(self, cmd=None, doInit=True, mode=None):
-        FSMDev.start(self, cmd=cmd, doInit=doInit, mode=mode)
         QThread.start(self)
+        FSMDev.start(self, cmd=cmd, doInit=doInit, mode=mode)
 
     def stop(self, cmd=None):
         FSMDev.stop(self, cmd=cmd)
