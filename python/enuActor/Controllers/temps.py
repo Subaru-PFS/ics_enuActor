@@ -31,6 +31,8 @@ class temps(FSMDev, QThread, bufferedSocket.EthComm):
         self.logger = logging.getLogger(self.name)
         self.logger.setLevel(loglevel)
 
+        self.defaultSamptime = 15
+
     @property
     def simulated(self):
         if self.mode == 'simulation':
