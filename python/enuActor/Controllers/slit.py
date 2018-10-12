@@ -1,12 +1,12 @@
 __author__ = 'alefur'
 import logging
+import socket
 
 import numpy as np
 from actorcore.FSM import FSMDev
 from actorcore.QThread import QThread
 from enuActor.drivers import hxp_drivers
 from enuActor.simulator.slit_simu import SlitSim
-import socket
 
 
 class slit(FSMDev, QThread):
@@ -80,7 +80,7 @@ class slit(FSMDev, QThread):
         self.mode = self.actor.config.get('slit', 'mode') if mode is None else mode
         self.host = self.actor.config.get('slit', 'host')
         self.port = int(self.actor.config.get('slit', 'port'))
-        self.home = [float(val) for val in self.actor.config.get('slit', 'home').split(',')]
+        self.homeHexa = [float(val) for val in self.actor.config.get('slit', 'home').split(',')]
         self.slit_position = [float(val) for val in self.actor.config.get('slit', 'slit_position').split(',')]
         self.dither_axis = [float(val) for val in self.actor.config.get('slit', 'dither_axis').split(',')]
         self.focus_axis = [float(val) for val in self.actor.config.get('slit', 'focus_axis').split(',')]
@@ -89,16 +89,15 @@ class slit(FSMDev, QThread):
         self.lowerBounds = [float(val) for val in self.actor.config.get('slit', 'lowerBounds').split(',')]
         self.upperBounds = [float(val) for val in self.actor.config.get('slit', 'upperBounds').split(',')]
 
-        self.homeHexa = self.home
-        self.home = slit.convertToWorld([sum(i) for i in zip(self.homeHexa[:3],
-                                                             self.slit_position[:3])] + self.homeHexa[3:])
+        self.workSystem = slit.convertToWorld([sum(i) for i in zip(self.homeHexa[:3],
+                                                                   self.slit_position[:3])] + self.homeHexa[3:])
 
         # Set Tool to slit home coord instead of center of hexa
 
-        tool_value = self.slit_position[:3] + self.home[3:]
-        tool_value = slit.convertToWorld(tool_value)[:3] + self.slit_position[3:]
+        tool = self.slit_position[:3] + self.workSystem[3:]
+        tool = slit.convertToWorld(tool)[:3] + self.slit_position[3:]
         # Tool z = 21 + z_slit with 21 height of upper carriage
-        self.tool_value = [sum(i) for i in zip(tool_value, [0, 0, self.thicknessCarriage, 0, 0, 0])]
+        self.toolSystem = [sum(i) for i in zip(tool, [0, 0, self.thicknessCarriage, 0, 0, 0])]
 
     def startComm(self, cmd):
         """| Start socket with the hexapod controller or simulate it.
@@ -140,11 +139,11 @@ class slit(FSMDev, QThread):
         cmd.inform("text='seeking home ...'")
         self._homeSearch()
 
-        self._hexapodCoordinateSysSet('Work', self.home)
-        cmd.inform("slitHome=%s" % ','.join(["%.5f" % p for p in self.home]))
+        self._hexapodCoordinateSysSet('Work', self.workSystem)
+        cmd.inform("slitWork=%s" % ','.join(["%.5f" % p for p in self.workSystem]))
 
-        self._hexapodCoordinateSysSet('Tool', self.tool_value)
-        cmd.inform("slitTool=%s" % ','.join(["%.5f" % p for p in self.tool_value]))
+        self._hexapodCoordinateSysSet('Tool', self.toolSystem)
+        cmd.inform("slitTool=%s" % ','.join(["%.5f" % p for p in self.toolSystem]))
 
         cmd.inform("text='going to home ...'")
         self._hexapodMoveAbsolute([0, 0, 0, 0, 0, 0])
@@ -221,9 +220,11 @@ class slit(FSMDev, QThread):
         """
         ret = self._hexapodCoordinateSysGet(system)
         if system == "Work":
-            self.home = ret
+            self.workSystem = ret
         elif system == "Tool":
-            self.tool_value = ret
+            self.toolSystem = ret
+        elif system == "Base":
+            pass
         else:
             raise ValueError("system : %s does not exist" % system)
 

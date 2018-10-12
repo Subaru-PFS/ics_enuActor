@@ -22,8 +22,8 @@ class SlitCmd(object):
             ('slit', 'init', self.initialise),
             ('slit', 'abort', self.abort),
             ('slit', '@(disable|enable)', self.shutdown),
-            ('slit', '@(get) @(home|tool)', self.getSystem),
-            ('slit', '@(set) @(home|tool) [<X>] [<Y>] [<Z>] [<U>] [<V>] [<W>]', self.setSystem),
+            ('slit', '@(get) @(work|tool|base)', self.getSystem),
+            ('slit', '@(set) @(work|tool) [<X>] [<Y>] [<Z>] [<U>] [<V>] [<W>]', self.setSystem),
             ('slit', 'move home', self.goHome),
             ('slit', 'move absolute <X> <Y> <Z> <U> <V> <W>', self.moveTo),
             ('slit', 'move relative [<X>] [<Y>] [<Z>] [<U>] [<V>] [<W>]', self.moveTo),
@@ -97,25 +97,30 @@ class SlitCmd(object):
 
     @threaded
     def getSystem(self, cmd):
-        """ Return system coordinate value position (Home or Tool)"""
+        """ Return system coordinate value position (Work or Tool)"""
 
         cmdKeys = cmd.cmd.keywords
-        system, keyword = ("Work", "slitHome") if "home" in cmdKeys else ("Tool", "slitTool")
+        if "work" in cmdKeys:
+            system, keyword = ("Work", "slitWork")
+        elif 'tool' in cmdKeys:
+            system, keyword = ("Tool", "slitTool")
+        else:
+            system, keyword = ("Base", "slitBase")
 
         ret = self.controller.getSystem(system)
         cmd.finish("%s=%s" % (keyword, ','.join(["%.5f" % p for p in ret])))
 
     @threaded
     def setSystem(self, cmd):
-        """ set new system coordinate value position (Home or Tool)"""
+        """ set new system coordinate value position (Work or Tool)"""
 
         cmdKeys = cmd.cmd.keywords
         coords = ['X', 'Y', 'Z', 'U', 'V', 'W']
 
-        if "home" in cmdKeys:
-            system, keyword, vec = ("Work", "slitHome", self.controller.home)
+        if "work" in cmdKeys:
+            system, keyword, vec = ("Work", "slitWork", self.controller.workSystem)
         else:
-            system, keyword, vec = ("Tool", "slitTool", self.controller.tool_value)
+            system, keyword, vec = ("Tool", "slitTool", self.controller.toolSystem)
 
         posCoord = [cmdKeys[coord].values[0] if coord in cmdKeys else vec[i] for i, coord in enumerate(coords)]
 
