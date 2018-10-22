@@ -57,6 +57,14 @@ class slit(FSMDev, QThread):
         else:
             raise ValueError('unknown mode')
 
+    @property
+    def location(self):
+        delta = np.sum(np.abs(np.zeros(6) - self.coords))
+        if delta > 0.001:
+            return 'undef'
+        else:
+            return 'home'
+
     def start(self, cmd=None, doInit=False, mode=None):
         QThread.start(self)
         FSMDev.start(self, cmd=cmd, doInit=doInit, mode=mode)
@@ -82,10 +90,7 @@ class slit(FSMDev, QThread):
         self.port = int(self.actor.config.get('slit', 'port'))
         self.homeHexa = [float(val) for val in self.actor.config.get('slit', 'home').split(',')]
         self.slit_position = [float(val) for val in self.actor.config.get('slit', 'slit_position').split(',')]
-        self.dither_axis = [float(val) for val in self.actor.config.get('slit', 'dither_axis').split(',')]
-        self.focus_axis = [float(val) for val in self.actor.config.get('slit', 'focus_axis').split(',')]
         self.thicknessCarriage = float(self.actor.config.get('slit', 'thicknessCarriage'))
-        self.magnification = float(self.actor.config.get('slit', 'magnification'))
         self.lowerBounds = [float(val) for val in self.actor.config.get('slit', 'lowerBounds').split(',')]
         self.upperBounds = [float(val) for val in self.actor.config.get('slit', 'upperBounds').split(',')]
 
@@ -268,27 +273,6 @@ class slit(FSMDev, QThread):
 
         cmd.inform("text='aborting move..._'")
         self._kill()
-
-    def compute(self, type, pix):
-        """| Compute array for moveTo relative to input parameters.
-
-        :param type: focus|dither
-        :param pix: number of pixel
-        :type type: str
-        :type pix: int
-        :rtype: list
-        :return: magnification*pix*[x, y, z, 0, 0, 0]
-        """
-        array = np.array(self.focus_axis) if type == "focus" else np.array(self.dither_axis)
-        return list(self.magnification * pix * array)
-
-    @property
-    def location(self):
-        delta = np.sum(np.abs(np.zeros(6) - self.coords))
-        if delta > 0.001:
-            return 'undef'
-        else:
-            return 'home'
 
     def _getCurrentPosition(self):
         """| Get current position.

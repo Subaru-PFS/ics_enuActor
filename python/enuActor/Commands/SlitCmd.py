@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import numpy as np
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
 from enuActor.utils.wrap import threaded
@@ -27,8 +28,8 @@ class SlitCmd(object):
             ('slit', 'move home', self.goHome),
             ('slit', 'move absolute <X> <Y> <Z> <U> <V> <W>', self.moveTo),
             ('slit', 'move relative [<X>] [<Y>] [<Z>] [<U>] [<V>] [<W>]', self.moveTo),
-            ('slit', 'focus <pix>', self.goFocus),
-            ('slit', 'dither <pix>', self.goDither),
+            ('slit', 'move <focus> [@(microns)]', self.goFocus),
+            ('slit', 'move <dither> [@(pixels|microns)]', self.goDither),
             ('slit', 'convert <X> <Y> <Z> <U> <V> <W>', self.convert),
 
         ]
@@ -41,7 +42,8 @@ class SlitCmd(object):
                                         keys.Key("U", types.Float(), help="U coordinate"),
                                         keys.Key("V", types.Float(), help="V coordinate"),
                                         keys.Key("W", types.Float(), help="W coordinate"),
-                                        keys.Key("pix", types.Float(), help="Number of pixel"),
+                                        keys.Key("focus", types.Float(), help="move along focus axis"),
+                                        keys.Key("dither", types.Float(), help="move along dither axis")
                                         )
 
     @property
@@ -160,9 +162,19 @@ class SlitCmd(object):
     @threaded
     def goDither(self, cmd):
         """ Move along dither."""
+        cmdKeys = cmd.cmd.keywords
+        shift = cmd.cmd.keywords["dither"].values[0]
 
-        pix = cmd.cmd.keywords["pix"].values[0]
-        coords = self.controller.compute("dither", pix)
+        if "pixels" in cmdKeys:
+            fact = float(self.actor.config.get('slit', 'pix_to_mm'))
+        elif "microns" in cmdKeys:
+            fact = 0.001
+        else:
+            fact = 1
+
+        dither_axis = np.array([float(val) for val in self.actor.config.get('slit', 'dither_axis').split(',')])
+
+        coords = dither_axis * fact * shift
 
         self.controller.substates.move(cmd=cmd,
                                        reference='relative',
@@ -173,9 +185,13 @@ class SlitCmd(object):
     @threaded
     def goFocus(self, cmd):
         """ Move along focus."""
+        cmdKeys = cmd.cmd.keywords
+        shift = cmd.cmd.keywords["focus"].values[0]
 
-        pix = cmd.cmd.keywords["pix"].values[0]
-        coords = self.controller.compute("focus", pix)
+        fact = 0.001 if "microns" in cmdKeys else 1
+        focus_axis = np.array([float(val) for val in self.actor.config.get('slit', 'focus_axis').split(',')])
+
+        coords = focus_axis * fact * shift
 
         self.controller.substates.move(cmd=cmd,
                                        reference='relative',
