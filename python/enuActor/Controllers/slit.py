@@ -253,14 +253,12 @@ class slit(FSMDev, QThread):
         :raise: if a command fail, user if warned with error
         """
         if enable:
+            cmd.inform("text='Enabling Slit controller..._'")
             ret = self._hexapodEnable()
-            cmd.inform("text='loading Slit controller..._'")
-            self.fsm.startLoading()
+
         else:
+            cmd.inform("text='Disabling Slit controller..._'")
             ret = self._hexapodDisable()
-            # cmd.inform("text='killing existing socket..._'")
-            # self._kill()
-            self.fsm.shutdown()
 
         return ret
 
