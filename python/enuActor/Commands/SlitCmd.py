@@ -10,7 +10,7 @@ class SlitCmd(object):
     def __init__(self, actor):
         # This lets us access the rest of the actor.
         self.actor = actor
-        self.name = "slit"
+        self.name = 'slit'
 
         # Declare the commands we implement. When the actor is started
         # these are registered with the parser, which will call the
@@ -36,16 +36,16 @@ class SlitCmd(object):
         ]
 
         # Define typed command arguments for the above commands.
-        self.keys = keys.KeysDictionary("enu__slit", (1, 1),
-                                        keys.Key("X", types.Float(), help="X coordinate"),
-                                        keys.Key("Y", types.Float(), help="Y coordinate"),
-                                        keys.Key("Z", types.Float(), help="Z coordinate"),
-                                        keys.Key("U", types.Float(), help="U coordinate"),
-                                        keys.Key("V", types.Float(), help="V coordinate"),
-                                        keys.Key("W", types.Float(), help="W coordinate"),
-                                        keys.Key("focus", types.Float(), help="move along focus axis"),
-                                        keys.Key("dither", types.Float(), help="move along dither axis"),
-                                        keys.Key("shift", types.Float(), help="move along shift axis")
+        self.keys = keys.KeysDictionary('enu__slit', (1, 1),
+                                        keys.Key('X', types.Float(), help='X coordinate'),
+                                        keys.Key('Y', types.Float(), help='Y coordinate'),
+                                        keys.Key('Z', types.Float(), help='Z coordinate'),
+                                        keys.Key('U', types.Float(), help='U coordinate'),
+                                        keys.Key('V', types.Float(), help='V coordinate'),
+                                        keys.Key('W', types.Float(), help='W coordinate'),
+                                        keys.Key('focus', types.Float(), help='move along focus axis'),
+                                        keys.Key('dither', types.Float(), help='move along dither axis'),
+                                        keys.Key('shift', types.Float(), help='move along shift axis')
                                         )
 
     @property
@@ -59,7 +59,7 @@ class SlitCmd(object):
     def ping(self, cmd):
         """Query the actor for liveness/happiness."""
 
-        cmd.finish("text='%s controller Present and (probably) well'" % self.name)
+        cmd.finish('text="%s controller Present and (probably) well"' % self.name)
 
     @threaded
     def status(self, cmd):
@@ -80,7 +80,7 @@ class SlitCmd(object):
                 else if relative then incremental move. NB: In relative move parameters are optional.
         """
         cmdKeys = cmd.cmd.keywords
-        reference = "absolute" if "absolute" in cmdKeys else "relative"
+        reference = 'absolute' if 'absolute' in cmdKeys else 'relative'
         allCoords = ['X', 'Y', 'Z', 'U', 'V', 'W']
         coords = [cmdKeys[coord].values[0] if coord in cmdKeys else 0.0 for coord in allCoords]
 
@@ -104,15 +104,15 @@ class SlitCmd(object):
         """ Return system coordinate value position (Work or Tool)"""
 
         cmdKeys = cmd.cmd.keywords
-        if "work" in cmdKeys:
-            system, keyword = ("Work", "slitWork")
+        if 'work' in cmdKeys:
+            system, keyword = ('Work', 'slitWork')
         elif 'tool' in cmdKeys:
-            system, keyword = ("Tool", "slitTool")
+            system, keyword = ('Tool', 'slitTool')
         else:
-            system, keyword = ("Base", "slitBase")
+            system, keyword = ('Base', 'slitBase')
 
         ret = self.controller.getSystem(system)
-        cmd.finish("%s=%s" % (keyword, ','.join(["%.5f" % p for p in ret])))
+        cmd.finish('%s=%s' % (keyword, ','.join(['%.5f' % p for p in ret])))
 
     @threaded
     def setSystem(self, cmd):
@@ -121,17 +121,17 @@ class SlitCmd(object):
         cmdKeys = cmd.cmd.keywords
         coords = ['X', 'Y', 'Z', 'U', 'V', 'W']
 
-        if "work" in cmdKeys:
-            system, keyword, vec = ("Work", "slitWork", self.controller.workSystem)
+        if 'work' in cmdKeys:
+            system, keyword, vec = ('Work', 'slitWork', self.controller.workSystem)
         else:
-            system, keyword, vec = ("Tool", "slitTool", self.controller.toolSystem)
+            system, keyword, vec = ('Tool', 'slitTool', self.controller.toolSystem)
 
         posCoord = [cmdKeys[coord].values[0] if coord in cmdKeys else vec[i] for i, coord in enumerate(coords)]
 
         try:
             self.controller.setSystem(system, posCoord)
             ret = self.controller.getSystem(system)
-            cmd.inform("%s=%s" % (keyword, ','.join(["%.5f" % p for p in ret])))
+            cmd.inform('%s=%s' % (keyword, ','.join(['%.5f' % p for p in ret])))
         except Exception as e:
             cmd.warn('text=%s' % self.actor.strTraceback(e))
 
@@ -141,7 +141,8 @@ class SlitCmd(object):
     def shutdown(self, cmd):
         """ Not implemented yet. It should stop movement."""
         cmdKeys = cmd.cmd.keywords
-        enable = True if "enable" in cmdKeys else False
+        enable = True if 'enable' in cmdKeys else False
+
         try:
             self.controller.shutdown(cmd, enable)
         except Exception as e:
@@ -165,9 +166,9 @@ class SlitCmd(object):
     def focus(self, cmd):
         """ Move along focus."""
         cmdKeys = cmd.cmd.keywords
-        shift = cmd.cmd.keywords["focus"].values[0]
+        shift = cmd.cmd.keywords['focus'].values[0]
 
-        fact = 0.001 if "microns" in cmdKeys else 1
+        fact = 0.001 if 'microns' in cmdKeys else 1
         focus_axis = np.array([float(val) for val in self.actor.config.get('slit', 'focus_axis').split(',')])
 
         coords = focus_axis * fact * shift
@@ -182,11 +183,11 @@ class SlitCmd(object):
     def dither(self, cmd):
         """ Move along dither."""
         cmdKeys = cmd.cmd.keywords
-        shift = cmd.cmd.keywords["dither"].values[0]
+        shift = cmd.cmd.keywords['dither'].values[0]
 
-        if "pixels" in cmdKeys:
+        if 'pixels' in cmdKeys:
             fact = float(self.actor.config.get('slit', 'pix_to_mm'))
-        elif "microns" in cmdKeys:
+        elif 'microns' in cmdKeys:
             fact = 0.001
         else:
             fact = 1
@@ -205,11 +206,11 @@ class SlitCmd(object):
     def shift(self, cmd):
         """ Move along shift."""
         cmdKeys = cmd.cmd.keywords
-        shift = cmd.cmd.keywords["shift"].values[0]
+        shift = cmd.cmd.keywords['shift'].values[0]
 
-        if "pixels" in cmdKeys:
+        if 'pixels' in cmdKeys:
             fact = float(self.actor.config.get('slit', 'pix_to_mm'))
-        elif "microns" in cmdKeys:
+        elif 'microns' in cmdKeys:
             fact = 0.001
         else:
             fact = 1
@@ -230,4 +231,4 @@ class SlitCmd(object):
         cmdKeys = cmd.cmd.keywords
         posCoord = [cmdKeys[coord].values[0] for coord in ['X', 'Y', 'Z', 'U', 'V', 'W']]
 
-        cmd.finish("system=%s" % str(self.controller.convertToWorld(posCoord)))
+        cmd.finish('system=%s' % str(self.controller.convertToWorld(posCoord)))

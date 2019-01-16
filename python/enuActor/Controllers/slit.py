@@ -135,22 +135,22 @@ class slit(FSMDev, QThread):
         :raise: Exception if a command fail, user if warned with error
         """
 
-        cmd.inform("text='killing existing socket..._'")
+        cmd.inform('text="killing existing socket..."')
         self._kill()
 
-        cmd.inform("text='initialising hxp..._'")
+        cmd.inform('text="initialising hxp..."')
         self._initialize()
 
-        cmd.inform("text='seeking home ...'")
+        cmd.inform('text="seeking home ..."')
         self._homeSearch()
 
         self._hexapodCoordinateSysSet('Work', self.workSystem)
-        cmd.inform("slitWork=%s" % ','.join(["%.5f" % p for p in self.workSystem]))
+        cmd.inform('slitWork=%s' % ','.join(['%.5f' % p for p in self.workSystem]))
 
         self._hexapodCoordinateSysSet('Tool', self.toolSystem)
-        cmd.inform("slitTool=%s" % ','.join(["%.5f" % p for p in self.toolSystem]))
+        cmd.inform('slitTool=%s' % ','.join(['%.5f' % p for p in self.toolSystem]))
 
-        cmd.inform("text='going to home ...'")
+        cmd.inform('text="going to home ..."')
         self._hexapodMoveAbsolute([0, 0, 0, 0, 0, 0])
 
     def getStatus(self, cmd):
@@ -179,11 +179,11 @@ class slit(FSMDev, QThread):
             self.coords = self._getCurrentPosition()
         except:
             self.coords = np.nan * np.ones(6)
-            cmd.warn("slit=%s" % ','.join(["%.5f" % p for p in self.coords]))
+            cmd.warn('slit=%s' % ','.join(['%.5f' % p for p in self.coords]))
             cmd.warn('slitLocation=undef')
             raise
 
-        cmd.inform("slit=%s" % ','.join(["%.5f" % p for p in self.coords]))
+        cmd.inform('slit=%s' % ','.join(['%.5f' % p for p in self.coords]))
 
     def moveTo(self, e):
         """|
@@ -224,14 +224,14 @@ class slit(FSMDev, QThread):
         :raise: Exception if the coordinate system does not exist
         """
         ret = self._hexapodCoordinateSysGet(system)
-        if system == "Work":
+        if system == 'Work':
             self.workSystem = ret
-        elif system == "Tool":
+        elif system == 'Tool':
             self.toolSystem = ret
-        elif system == "Base":
+        elif system == 'Base':
             pass
         else:
-            raise ValueError("system : %s does not exist" % system)
+            raise ValueError('system : %s does not exist' % system)
 
         return ret
 
@@ -253,11 +253,11 @@ class slit(FSMDev, QThread):
         :raise: if a command fail, user if warned with error
         """
         if enable:
-            cmd.inform("text='Enabling Slit controller..._'")
+            cmd.inform('text="Enabling Slit controller..._"')
             ret = self._hexapodEnable()
 
         else:
-            cmd.inform("text='Disabling Slit controller..._'")
+            cmd.inform('text="Disabling Slit controller..._"')
             ret = self._hexapodDisable()
 
         return ret
@@ -269,7 +269,7 @@ class slit(FSMDev, QThread):
         :raise: if a command fail, user if warned with error
         """
 
-        cmd.inform("text='aborting move..._'")
+        cmd.inform('text="aborting move..._"')
         self._kill()
 
     def _getCurrentPosition(self):
@@ -418,7 +418,7 @@ class slit(FSMDev, QThread):
             else:
                 [errorCode, errorString] = self.myxps.ErrorStringGet(self.socketId, buf[0])
                 if buf[0] == -17:
-                    raise UserWarning("[X, Y, Z, U, V, W] exceed : %s" % errorString)
+                    raise UserWarning('[X, Y, Z, U, V, W] exceed : %s' % errorString)
                 elif errorCode != 0:
                     raise Exception(func.__name__ + ' : ERROR ' + str(errorCode))
                 else:
