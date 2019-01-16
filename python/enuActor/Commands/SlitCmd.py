@@ -7,6 +7,8 @@ from enuActor.utils.wrap import threaded
 
 
 class SlitCmd(object):
+    coordsName = ['X', 'Y', 'Z', 'U', 'V', 'W']
+
     def __init__(self, actor):
         # This lets us access the rest of the actor.
         self.actor = actor
@@ -32,7 +34,6 @@ class SlitCmd(object):
             ('slit', '<dither> [@(pixels|microns)]', self.dither),
             ('slit', '<shift> [@(pixels|microns)]', self.shift),
             ('slit', 'convert <X> <Y> <Z> <U> <V> <W>', self.convert),
-
         ]
 
         # Define typed command arguments for the above commands.
@@ -81,8 +82,7 @@ class SlitCmd(object):
         """
         cmdKeys = cmd.cmd.keywords
         reference = 'absolute' if 'absolute' in cmdKeys else 'relative'
-        allCoords = ['X', 'Y', 'Z', 'U', 'V', 'W']
-        coords = [cmdKeys[coord].values[0] if coord in cmdKeys else 0.0 for coord in allCoords]
+        coords = [cmdKeys[coord].values[0] if coord in cmdKeys else 0.0 for coord in self.coordsName]
 
         self.controller.substates.move(cmd=cmd,
                                        reference=reference,
@@ -119,17 +119,16 @@ class SlitCmd(object):
         """ set new system coordinate value position (Work or Tool)"""
 
         cmdKeys = cmd.cmd.keywords
-        coords = ['X', 'Y', 'Z', 'U', 'V', 'W']
 
         if 'work' in cmdKeys:
             system, keyword, vec = ('Work', 'slitWork', self.controller.workSystem)
         else:
             system, keyword, vec = ('Tool', 'slitTool', self.controller.toolSystem)
 
-        posCoord = [cmdKeys[coord].values[0] if coord in cmdKeys else vec[i] for i, coord in enumerate(coords)]
+        coords = [cmdKeys[coord].values[0] if coord in cmdKeys else vec[i] for i, coord in enumerate(self.coordsName)]
 
         try:
-            self.controller.setSystem(system, posCoord)
+            self.controller.setSystem(system, coords)
             ret = self.controller.getSystem(system)
             cmd.inform('%s=%s' % (keyword, ','.join(['%.5f' % p for p in ret])))
         except Exception as e:
@@ -229,6 +228,6 @@ class SlitCmd(object):
         """ Convert measure in the slit coordinate system to the world coordinate"""
 
         cmdKeys = cmd.cmd.keywords
-        posCoord = [cmdKeys[coord].values[0] for coord in ['X', 'Y', 'Z', 'U', 'V', 'W']]
-
-        cmd.finish('system=%s' % str(self.controller.convertToWorld(posCoord)))
+        coords = [cmdKeys[coord].values[0] for coord in self.coordsName]
+        coordsWorld = self.controller.convertToWorld(coords)
+        cmd.finish('system=%s' % ','.join(['%.5f' % coord for coord in coordsWorld]))

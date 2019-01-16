@@ -10,6 +10,7 @@ class SlitSim(object):
         self.home = [0 for i in range(6)]
         self.tool = [0 for i in range(6)]
         self.pos = [0 for i in range(6)]
+        self.base = [0.00000, 0.00000, 25.00000, 0.00000, 0.00000, 0.00000]
         self.intStatus = 12
 
     def TCP_ConnectToServer(self, host, port, timeout):
@@ -48,6 +49,8 @@ class SlitSim(object):
             res.extend(self.home)
         elif CoordinateSystem == "Tool":
             res.extend(self.tool)
+        elif CoordinateSystem == "Base":
+            res.extend(self.base)
         return res
 
     def HexapodCoordinateSystemSet(self, socketId, GroupName, CoordinateSystem, X, Y, Z, U, V, W):
