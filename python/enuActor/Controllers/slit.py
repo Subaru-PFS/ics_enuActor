@@ -98,7 +98,6 @@ class slit(FSMDev, QThread):
                                                                    self.slit_position[:3])] + self.homeHexa[3:])
 
         # Set Tool to slit home coord instead of center of hexa
-
         tool = self.slit_position[:3] + self.workSystem[3:]
         tool = slit.convertToWorld(tool)[:3] + self.slit_position[3:]
         # Tool z = 21 + z_slit with 21 height of upper carriage
@@ -246,21 +245,17 @@ class slit(FSMDev, QThread):
         """
         return self._hexapodCoordinateSysSet(system, coords)
 
-    def shutdown(self, cmd, enable):
-        """| Prepared controller for shutdown, fsm (IDLE => OFF).
-        
-        :param cmd: on going command:
-        :raise: if a command fail, user if warned with error
+    def motionEnable(self, cmd):
         """
-        if enable:
-            cmd.inform('text="Enabling Slit controller..._"')
-            ret = self._hexapodEnable()
+        """
+        cmd.inform('text="Enabling Slit controller..._"')
+        self._hexapodEnable()
 
-        else:
-            cmd.inform('text="Disabling Slit controller..._"')
-            ret = self._hexapodDisable()
-
-        return ret
+    def motionDisable(self, cmd):
+        """
+        """
+        cmd.inform('text="Disabling Slit controller..._"')
+        self._hexapodDisable()
 
     def abort(self, cmd):
         """| Aborting current move, fsm (BUSY -> ?).
