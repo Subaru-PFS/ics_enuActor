@@ -24,7 +24,8 @@ class SlitCmd(object):
             ('slit', 'status', self.status),
             ('slit', 'init', self.initialise),
             ('slit', 'abort', self.abort),
-            ('slit', '@(disable|enable)', self.shutdown),
+            ('slit', 'enable', self.motionEnable),
+            ('slit', 'disable', self.motionDisable),
             ('slit', '@(get) @(work|tool|base)', self.getSystem),
             ('slit', '@(set) @(work|tool) [<X>] [<Y>] [<Z>] [<U>] [<V>] [<W>]', self.setSystem),
             ('slit', 'move home', self.goHome),
@@ -137,19 +138,24 @@ class SlitCmd(object):
         self.controller.getStatus(cmd)
 
     @threaded
-    def shutdown(self, cmd):
+    def motionEnable(self, cmd):
         """ Not implemented yet. It should stop movement."""
-        cmdKeys = cmd.cmd.keywords
-        enable = True if 'enable' in cmdKeys else False
-
         try:
-            self.controller.shutdown(cmd, enable)
+            self.controller.motionEnable(cmd=cmd)
         except Exception as e:
             cmd.warn('text=%s' % self.actor.strTraceback(e))
 
         self.controller.getStatus(cmd)
 
-        # pdu should do something at this point
+    @threaded
+    def motionDisable(self, cmd):
+        """ Not implemented yet. It should stop movement."""
+        try:
+            self.controller.motionDisable(cmd=cmd)
+        except Exception as e:
+            cmd.warn('text=%s' % self.actor.strTraceback(e))
+
+        self.controller.getStatus(cmd)
 
     def abort(self, cmd):
         """ Stop current motion."""
