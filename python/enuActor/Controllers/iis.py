@@ -3,7 +3,7 @@ import logging
 import enuActor.Controllers.bufferedSocket as bufferedSocket
 from actorcore.FSM import FSMDev
 from actorcore.QThread import QThread
-from enuActor.simulator.iis_simu import IisSim
+from enuActor.Simulators.iis import IisSim
 
 
 class iis(FSMDev, QThread, bufferedSocket.EthComm):

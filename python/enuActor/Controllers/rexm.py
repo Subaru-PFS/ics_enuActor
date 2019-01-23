@@ -4,7 +4,7 @@ from functools import partial
 import enuActor.Controllers.bufferedSocket as bufferedSocket
 from actorcore.FSM import FSMDev
 from actorcore.QThread import QThread
-from enuActor.simulator.rexm_simu import RexmSim
+from enuActor.Simulators.rexm import RexmSim
 from enuActor.drivers import rexm_drivers
 
 

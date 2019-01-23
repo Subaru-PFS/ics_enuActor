@@ -6,7 +6,7 @@ import numpy as np
 from actorcore.FSM import FSMDev
 from actorcore.QThread import QThread
 from enuActor.drivers import hxp_drivers
-from enuActor.simulator.slit_simu import SlitSim
+from enuActor.Simulators.slit import SlitSim
 
 
 class slit(FSMDev, QThread):

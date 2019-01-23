@@ -7,7 +7,7 @@ from datetime import datetime as dt
 import enuActor.Controllers.bufferedSocket as bufferedSocket
 from actorcore.FSM import FSMDev
 from actorcore.QThread import QThread
-from enuActor.simulator.bsh_simu import BshSim
+from enuActor.Simulators.bsh import BshSim
 
 
 class bsh(FSMDev, QThread, bufferedSocket.EthComm):

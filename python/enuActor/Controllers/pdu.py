@@ -5,7 +5,7 @@ import time
 import enuActor.Controllers.bufferedSocket as bufferedSocket
 from actorcore.FSM import FSMDev
 from actorcore.QThread import QThread
-from enuActor.simulator.pdu_simu import PduSim
+from enuActor.Simulators.pdu import PduSim
 
 
 class pdu(FSMDev, QThread, bufferedSocket.EthComm):

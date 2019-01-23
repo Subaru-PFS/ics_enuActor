@@ -6,7 +6,7 @@ import enuActor.Controllers.bufferedSocket as bufferedSocket
 import numpy as np
 from actorcore.FSM import FSMDev
 from actorcore.QThread import QThread
-from enuActor.simulator.temps_simu import TempsSim
+from enuActor.Simulators.temps import TempsSim
 
 
 class temps(FSMDev, QThread, bufferedSocket.EthComm):
