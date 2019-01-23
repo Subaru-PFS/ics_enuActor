@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-import random
-import time
 import socket
+import time
+
 import numpy as np
 
 
@@ -21,15 +21,24 @@ class TempsSim(socket.socket):
 
     def sendall(self, cmdStr, flags=None):
         cmdStr = cmdStr.decode()
+        if 'MEAS:TEMP' in cmdStr:
+            temps = np.random.normal(20, 0.035, size=10)
+            self.buf.append('%s\n' % ','.join(['%.3f' % t for t in temps]))
+        elif 'MEAS:FRES' in cmdStr:
+            res = np.random.normal(110, 0.035, size=10)
+            self.buf.append('%s\n' % ','.join(['%.3f' % t for t in res]))
+        elif 'SYST:CTYP' in cmdStr:
+            self.buf.append('Agilent Technologies,34901A,0,2.3\n')
+        elif 'SYST:ERR?' in cmdStr:
+            self.buf.append('+0,"No error"\n')
+        elif 'SYST:VERS?' in cmdStr:
+            self.buf.append('1994.0\n')
 
-        temps = 20 * np.ones(4) + np.array([random.gauss(mu=0, sigma=0.2) for i in range(4)])
-        self.buf.append('%s\r\n' % ','.join(['%.2f' % t for t in temps]))
 
     def recv(self, buffersize, flags=None):
         ret = self.buf[0]
         self.buf = self.buf[1:]
         return str(ret).encode()
-
 
     def close(self):
         pass
