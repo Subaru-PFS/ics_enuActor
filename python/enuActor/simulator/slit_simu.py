@@ -10,6 +10,7 @@ class SlitSim(object):
         self.home = [0 for i in range(6)]
         self.tool = [0 for i in range(6)]
         self.pos = [0 for i in range(6)]
+        self.base = [0.00000, 0.00000, 25.00000, 0.00000, 0.00000, 0.00000]
         self.intStatus = 12
 
     def TCP_ConnectToServer(self, host, port, timeout):
@@ -48,6 +49,8 @@ class SlitSim(object):
             res.extend(self.home)
         elif CoordinateSystem == "Tool":
             res.extend(self.tool)
+        elif CoordinateSystem == "Base":
+            res.extend(self.base)
         return res
 
     def HexapodCoordinateSystemSet(self, socketId, GroupName, CoordinateSystem, X, Y, Z, U, V, W):
@@ -78,7 +81,8 @@ class SlitSim(object):
         enum = {7: 'Not initialized state due to a GroupKill or KillAll command',
                 11: "Ready state from homing", 12: "Ready state from motion",
                 13: "Ready State due to a MotionEnable command",
-                20: "Disabled state", 42: 'Not referenced state'}
+                20: "Disabled state", 42: 'Not referenced state'
+                }
         return [0, enum[GroupStatusCode]]
 
     def GroupMotionEnable(self, socketId, GroupName):
@@ -87,4 +91,12 @@ class SlitSim(object):
 
     def GroupMotionDisable(self, socketId, GroupName):
         self.intStatus = 20
+        return [0, '']
+
+    def TCLScriptExecuteAndWait(self, socketId, TCLFileName, TaskName, ParametersList):
+        if TCLFileName =='KillWithRegistration.tcl':
+            self.intStatus = 7
+        elif TCLFileName == 'InitializeFromRegistration.tcl':
+            self.intStatus = 12
+
         return [0, '']

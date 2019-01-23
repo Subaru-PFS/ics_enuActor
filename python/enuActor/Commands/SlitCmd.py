@@ -7,10 +7,12 @@ from enuActor.utils.wrap import threaded
 
 
 class SlitCmd(object):
+    coordsName = ['X', 'Y', 'Z', 'U', 'V', 'W']
+
     def __init__(self, actor):
         # This lets us access the rest of the actor.
         self.actor = actor
-        self.name = "slit"
+        self.name = 'slit'
 
         # Declare the commands we implement. When the actor is started
         # these are registered with the parser, which will call the
@@ -20,9 +22,11 @@ class SlitCmd(object):
         self.vocab = [
             ('slit', 'ping', self.ping),
             ('slit', 'status', self.status),
-            ('slit', 'init', self.initialise),
+            ('slit', 'init [@(skipHoming)]', self.initialise),
             ('slit', 'abort', self.abort),
-            ('slit', '@(disable|enable)', self.shutdown),
+            ('slit', 'enable', self.motionEnable),
+            ('slit', 'disable', self.motionDisable),
+            ('slit', 'shutdown', self.shutdown),
             ('slit', '@(get) @(work|tool|base)', self.getSystem),
             ('slit', '@(set) @(work|tool) [<X>] [<Y>] [<Z>] [<U>] [<V>] [<W>]', self.setSystem),
             ('slit', 'move home', self.goHome),
@@ -32,21 +36,27 @@ class SlitCmd(object):
             ('slit', '<dither> [@(pixels|microns)]', self.dither),
             ('slit', '<shift> [@(pixels|microns)]', self.shift),
             ('slit', 'convert <X> <Y> <Z> <U> <V> <W>', self.convert),
-
         ]
 
         # Define typed command arguments for the above commands.
-        self.keys = keys.KeysDictionary("enu__slit", (1, 1),
-                                        keys.Key("X", types.Float(), help="X coordinate"),
-                                        keys.Key("Y", types.Float(), help="Y coordinate"),
-                                        keys.Key("Z", types.Float(), help="Z coordinate"),
-                                        keys.Key("U", types.Float(), help="U coordinate"),
-                                        keys.Key("V", types.Float(), help="V coordinate"),
-                                        keys.Key("W", types.Float(), help="W coordinate"),
-                                        keys.Key("focus", types.Float(), help="move along focus axis"),
-                                        keys.Key("dither", types.Float(), help="move along dither axis"),
-                                        keys.Key("shift", types.Float(), help="move along shift axis")
+        self.keys = keys.KeysDictionary('enu__slit', (1, 1),
+                                        keys.Key('X', types.Float(), help='X coordinate'),
+                                        keys.Key('Y', types.Float(), help='Y coordinate'),
+                                        keys.Key('Z', types.Float(), help='Z coordinate'),
+                                        keys.Key('U', types.Float(), help='U coordinate'),
+                                        keys.Key('V', types.Float(), help='V coordinate'),
+                                        keys.Key('W', types.Float(), help='W coordinate'),
+                                        keys.Key('focus', types.Float(), help='move along focus axis'),
+                                        keys.Key('dither', types.Float(), help='move along dither axis'),
+                                        keys.Key('shift', types.Float(), help='move along shift axis')
                                         )
+
+    @property
+    def pdu(self):
+        try:
+            return self.actor.controllers['pdu']
+        except KeyError:
+            raise RuntimeError('pdu controller is not connected.')
 
     @property
     def controller(self):
@@ -59,7 +69,7 @@ class SlitCmd(object):
     def ping(self, cmd):
         """Query the actor for liveness/happiness."""
 
-        cmd.finish("text='%s controller Present and (probably) well'" % self.name)
+        cmd.finish('text="%s controller Present and (probably) well"' % self.name)
 
     @threaded
     def status(self, cmd):
@@ -70,8 +80,8 @@ class SlitCmd(object):
     @threaded
     def initialise(self, cmd):
         """Initialise Slit, call fsm startInit event """
-
-        self.controller.substates.init(cmd=cmd)
+        doHome = 'skipHoming' not in cmd.cmd.keywords
+        self.controller.substates.init(cmd=cmd, doHome=doHome)
         self.controller.getStatus(cmd)
 
     @threaded
@@ -80,9 +90,8 @@ class SlitCmd(object):
                 else if relative then incremental move. NB: In relative move parameters are optional.
         """
         cmdKeys = cmd.cmd.keywords
-        reference = "absolute" if "absolute" in cmdKeys else "relative"
-        allCoords = ['X', 'Y', 'Z', 'U', 'V', 'W']
-        coords = [cmdKeys[coord].values[0] if coord in cmdKeys else 0.0 for coord in allCoords]
+        reference = 'absolute' if 'absolute' in cmdKeys else 'relative'
+        coords = [cmdKeys[coord].values[0] if coord in cmdKeys else 0.0 for coord in self.coordsName]
 
         self.controller.substates.move(cmd=cmd,
                                        reference=reference,
@@ -104,58 +113,53 @@ class SlitCmd(object):
         """ Return system coordinate value position (Work or Tool)"""
 
         cmdKeys = cmd.cmd.keywords
-        if "work" in cmdKeys:
-            system, keyword = ("Work", "slitWork")
+        if 'work' in cmdKeys:
+            system, keyword = ('Work', 'slitWork')
         elif 'tool' in cmdKeys:
-            system, keyword = ("Tool", "slitTool")
+            system, keyword = ('Tool', 'slitTool')
         else:
-            system, keyword = ("Base", "slitBase")
+            system, keyword = ('Base', 'slitBase')
 
         ret = self.controller.getSystem(system)
-        cmd.finish("%s=%s" % (keyword, ','.join(["%.5f" % p for p in ret])))
+        cmd.finish('%s=%s' % (keyword, ','.join(['%.5f' % p for p in ret])))
 
     @threaded
     def setSystem(self, cmd):
         """ set new system coordinate value position (Work or Tool)"""
 
         cmdKeys = cmd.cmd.keywords
-        coords = ['X', 'Y', 'Z', 'U', 'V', 'W']
 
-        if "work" in cmdKeys:
-            system, keyword, vec = ("Work", "slitWork", self.controller.workSystem)
+        if 'work' in cmdKeys:
+            system, keyword, vec = ('Work', 'slitWork', self.controller.workSystem)
         else:
-            system, keyword, vec = ("Tool", "slitTool", self.controller.toolSystem)
+            system, keyword, vec = ('Tool', 'slitTool', self.controller.toolSystem)
 
-        posCoord = [cmdKeys[coord].values[0] if coord in cmdKeys else vec[i] for i, coord in enumerate(coords)]
+        coords = [cmdKeys[coord].values[0] if coord in cmdKeys else vec[i] for i, coord in enumerate(self.coordsName)]
 
         try:
-            self.controller.setSystem(system, posCoord)
+            self.controller.setSystem(system, coords)
             ret = self.controller.getSystem(system)
-            cmd.inform("%s=%s" % (keyword, ','.join(["%.5f" % p for p in ret])))
+            cmd.inform('%s=%s' % (keyword, ','.join(['%.5f' % p for p in ret])))
         except Exception as e:
             cmd.warn('text=%s' % self.actor.strTraceback(e))
 
         self.controller.getStatus(cmd)
 
     @threaded
-    def shutdown(self, cmd):
+    def motionEnable(self, cmd):
         """ Not implemented yet. It should stop movement."""
-        cmdKeys = cmd.cmd.keywords
-        enable = True if "enable" in cmdKeys else False
         try:
-            self.controller.shutdown(cmd, enable)
+            self.controller.motionEnable(cmd=cmd)
         except Exception as e:
             cmd.warn('text=%s' % self.actor.strTraceback(e))
 
         self.controller.getStatus(cmd)
 
-        # pdu should do something at this point
-
-    def abort(self, cmd):
-        """ Stop current motion."""
-
+    @threaded
+    def motionDisable(self, cmd):
+        """ Not implemented yet. It should stop movement."""
         try:
-            self.controller.abort(cmd)
+            self.controller.motionDisable(cmd=cmd)
         except Exception as e:
             cmd.warn('text=%s' % self.actor.strTraceback(e))
 
@@ -165,9 +169,9 @@ class SlitCmd(object):
     def focus(self, cmd):
         """ Move along focus."""
         cmdKeys = cmd.cmd.keywords
-        shift = cmd.cmd.keywords["focus"].values[0]
+        shift = cmd.cmd.keywords['focus'].values[0]
 
-        fact = 0.001 if "microns" in cmdKeys else 1
+        fact = 0.001 if 'microns' in cmdKeys else 1
         focus_axis = np.array([float(val) for val in self.actor.config.get('slit', 'focus_axis').split(',')])
 
         coords = focus_axis * fact * shift
@@ -182,11 +186,11 @@ class SlitCmd(object):
     def dither(self, cmd):
         """ Move along dither."""
         cmdKeys = cmd.cmd.keywords
-        shift = cmd.cmd.keywords["dither"].values[0]
+        shift = cmd.cmd.keywords['dither'].values[0]
 
-        if "pixels" in cmdKeys:
+        if 'pixels' in cmdKeys:
             fact = float(self.actor.config.get('slit', 'pix_to_mm'))
-        elif "microns" in cmdKeys:
+        elif 'microns' in cmdKeys:
             fact = 0.001
         else:
             fact = 1
@@ -205,11 +209,11 @@ class SlitCmd(object):
     def shift(self, cmd):
         """ Move along shift."""
         cmdKeys = cmd.cmd.keywords
-        shift = cmd.cmd.keywords["shift"].values[0]
+        shift = cmd.cmd.keywords['shift'].values[0]
 
-        if "pixels" in cmdKeys:
+        if 'pixels' in cmdKeys:
             fact = float(self.actor.config.get('slit', 'pix_to_mm'))
-        elif "microns" in cmdKeys:
+        elif 'microns' in cmdKeys:
             fact = 0.001
         else:
             fact = 1
@@ -224,10 +228,32 @@ class SlitCmd(object):
 
         self.controller.getStatus(cmd)
 
+    @threaded
+    def shutdown(self, cmd):
+        """ shut down hexapod controller along shift."""
+
+        self.controller.substates.shutdown(cmd=cmd)
+        self.pdu.substates.switch(cmd=cmd,
+                                  switchOn=[],
+                                  switchOff=['slit'])
+        self.controller.disconnect()
+
+        cmd.finish()
+
+    def abort(self, cmd):
+        """ Stop current motion."""
+
+        try:
+            self.controller.abort(cmd)
+        except Exception as e:
+            cmd.warn('text=%s' % self.actor.strTraceback(e))
+
+        self.controller.getStatus(cmd)
+
     def convert(self, cmd):
         """ Convert measure in the slit coordinate system to the world coordinate"""
 
         cmdKeys = cmd.cmd.keywords
-        posCoord = [cmdKeys[coord].values[0] for coord in ['X', 'Y', 'Z', 'U', 'V', 'W']]
-
-        cmd.finish("system=%s" % str(self.controller.convertToWorld(posCoord)))
+        coords = [cmdKeys[coord].values[0] for coord in self.coordsName]
+        coordsWorld = self.controller.convertToWorld(coords)
+        cmd.finish('system=%s' % ','.join(['%.5f' % coord for coord in coordsWorld]))
