@@ -29,16 +29,18 @@ class slit(FSMDev, QThread):
         :param name: controller name
         :type name: str
         """
-        substates = ['IDLE', 'MOVING', 'FAILED']
+        substates = ['IDLE', 'MOVING', 'SHUTDOWN', 'FAILED']
         events = [{'name': 'move', 'src': 'IDLE', 'dst': 'MOVING'},
-                  {'name': 'idle', 'src': ['MOVING'], 'dst': 'IDLE'},
-                  {'name': 'fail', 'src': ['MOVING'], 'dst': 'FAILED'},
+                  {'name': 'idle', 'src': ['MOVING', 'SHUTDOWN'], 'dst': 'IDLE'},
+                  {'name': 'fail', 'src': ['MOVING', 'SHUTDOWN'], 'dst': 'FAILED'},
+                  {'name': 'shutdown', 'src': ['IDLE'], 'dst': 'SHUTDOWN'},
                   ]
 
         QThread.__init__(self, actor, name)
         FSMDev.__init__(self, actor, name, events=events, substates=substates)
 
         self.addStateCB('MOVING', self.moveTo)
+        self.addStateCB('SHUTDOWN', self.shutdown)
 
         # Hexapod Attributes
         self.groupName = 'HEXAPOD'
@@ -65,6 +67,9 @@ class slit(FSMDev, QThread):
         else:
             return 'home'
 
+    def disconnect(self):
+        self.actor.callCommand('disconnect controller=%s' % self.name)
+
     def start(self, cmd=None, doInit=False, mode=None):
         QThread.start(self)
         FSMDev.start(self, cmd=cmd, doInit=doInit, mode=mode)
@@ -72,6 +77,25 @@ class slit(FSMDev, QThread):
     def stop(self, cmd=None):
         FSMDev.stop(self, cmd=cmd)
         self.exit()
+
+    def initDevice(self, args):
+        """| Load Configuration file. called by device.loadDevice().
+               | Convert to world tool and home.
+
+               :param cmd: on going command
+               :param mode: operation|simulation, loaded from config file if None
+               :type mode: str
+               :raise: Exception Config file badly formatted
+               """
+
+        try:
+            self.init(cmd=args.cmd, doHome=args.doHome)
+
+            self.states.toOnline()
+            self.substates.idle(cmd=args.cmd)
+        except:
+            self.substates.fail(cmd=args.cmd)
+            raise
 
     def loadCfg(self, cmd, mode=None):
         """| Load Configuration file. called by device.loadDevice().
@@ -121,7 +145,7 @@ class slit(FSMDev, QThread):
 
         self.getPosition(cmd=cmd)
 
-    def init(self, cmd):
+    def init(self, cmd, doHome):
         """| Initialise hexapod, called y device.initDevice().
 
         - kill socket
@@ -137,11 +161,16 @@ class slit(FSMDev, QThread):
         cmd.inform('text="killing existing socket..."')
         self._kill()
 
-        cmd.inform('text="initialising hxp..."')
-        self._initialize()
+        if doHome:
+            cmd.inform('text="initialising hxp..."')
+            self._initialize()
 
-        cmd.inform('text="seeking home ..."')
-        self._homeSearch()
+            cmd.inform('text="seeking home ..."')
+            self._homeSearch()
+
+        else:
+            cmd.inform('text="initializing from saved position..."')
+            self._initializeFromRegistration()
 
         self._hexapodCoordinateSysSet('Work', self.workSystem)
         cmd.inform('slitWork=%s' % ','.join(['%.5f' % p for p in self.workSystem]))
@@ -149,8 +178,9 @@ class slit(FSMDev, QThread):
         self._hexapodCoordinateSysSet('Tool', self.toolSystem)
         cmd.inform('slitTool=%s' % ','.join(['%.5f' % p for p in self.toolSystem]))
 
-        cmd.inform('text="going to home ..."')
-        self._hexapodMoveAbsolute([0, 0, 0, 0, 0, 0])
+        if doHome:
+            cmd.inform('text="going to home ..."')
+            self._hexapodMoveAbsolute([0, 0, 0, 0, 0, 0])
 
     def getStatus(self, cmd):
         """| Get status from the controller and publish slit keywords.
@@ -184,7 +214,7 @@ class slit(FSMDev, QThread):
 
         cmd.inform('slit=%s' % ','.join(['%.5f' % p for p in self.coords]))
 
-    def moveTo(self, e):
+    def moveTo(self, args):
         """|
         | Move to coords in the reference,
 
@@ -197,7 +227,7 @@ class slit(FSMDev, QThread):
                  - False if the command fail,fsm (BUSY => FAILED)
         """
 
-        cmd, reference, coords = e.cmd, e.reference, e.coords
+        cmd, reference, coords = args.cmd, args.reference, args.coords
         try:
             if reference == 'absolute':
                 ret = self._hexapodMoveAbsolute(coords)
@@ -205,8 +235,23 @@ class slit(FSMDev, QThread):
             elif reference == 'relative':
                 ret = self._hexapodMoveIncremental('Work', coords)
 
-        except UserWarning:
+        except UserWarning as e:
             cmd.warn('text=%s' % self.actor.strTraceback(e))
+
+        except:
+            self.substates.fail()
+            raise
+
+        self.substates.idle()
+
+    def shutdown(self, args):
+
+        try:
+            args.cmd.inform('text="Kill and save hexapod position..."')
+            self._TCLScriptExecute('KillWithRegistration.tcl')
+
+        except UserWarning as e:
+            args.cmd.warn('text=%s' % self.actor.strTraceback(e))
 
         except:
             self.substates.fail()
@@ -248,13 +293,13 @@ class slit(FSMDev, QThread):
     def motionEnable(self, cmd):
         """
         """
-        cmd.inform('text="Enabling Slit controller..._"')
+        cmd.inform('text="Enabling Slit controller..."')
         self._hexapodEnable()
 
     def motionDisable(self, cmd):
         """
         """
-        cmd.inform('text="Disabling Slit controller..._"')
+        cmd.inform('text="Disabling Slit controller..."')
         self._hexapodDisable()
 
     def abort(self, cmd):
@@ -265,7 +310,7 @@ class slit(FSMDev, QThread):
         """
 
         cmd.inform('text="aborting move..._"')
-        self._kill()
+        return self.errorChecker(self.myxps.GroupMoveAbort, self.socketId, self.groupName)
 
     def _getCurrentPosition(self):
         """| Get current position.
@@ -393,6 +438,12 @@ class slit(FSMDev, QThread):
         :raise: Exception if an error occured
         """
         return self.errorChecker(self.myxps.GroupMotionEnable, self.socketId, self.groupName)
+
+    def _initializeFromRegistration(self):
+        return self._TCLScriptExecute('InitializeFromRegistration.tcl')
+
+    def _TCLScriptExecute(self, fileName, taskName='0', parametersList='0'):
+        return self.errorChecker(self.myxps.TCLScriptExecuteAndWait, self.socketId, fileName, taskName, parametersList)
 
     def errorChecker(self, func, *args):
         """| Decorator for slit lower level functions.
