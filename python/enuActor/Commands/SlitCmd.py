@@ -22,10 +22,11 @@ class SlitCmd(object):
         self.vocab = [
             ('slit', 'ping', self.ping),
             ('slit', 'status', self.status),
-            ('slit', 'init', self.initialise),
+            ('slit', 'init [@(skipHoming)]', self.initialise),
             ('slit', 'abort', self.abort),
             ('slit', 'enable', self.motionEnable),
             ('slit', 'disable', self.motionDisable),
+            ('slit', 'shutdown', self.shutdown),
             ('slit', '@(get) @(work|tool|base)', self.getSystem),
             ('slit', '@(set) @(work|tool) [<X>] [<Y>] [<Z>] [<U>] [<V>] [<W>]', self.setSystem),
             ('slit', 'move home', self.goHome),
@@ -51,6 +52,13 @@ class SlitCmd(object):
                                         )
 
     @property
+    def pdu(self):
+        try:
+            return self.actor.controllers['pdu']
+        except KeyError:
+            raise RuntimeError('pdu controller is not connected.')
+
+    @property
     def controller(self):
         try:
             return self.actor.controllers[self.name]
@@ -72,8 +80,8 @@ class SlitCmd(object):
     @threaded
     def initialise(self, cmd):
         """Initialise Slit, call fsm startInit event """
-
-        self.controller.substates.init(cmd=cmd)
+        doHome = 'skipHoming' not in cmd.cmd.keywords
+        self.controller.substates.init(cmd=cmd, doHome=doHome)
         self.controller.getStatus(cmd)
 
     @threaded
@@ -157,16 +165,6 @@ class SlitCmd(object):
 
         self.controller.getStatus(cmd)
 
-    def abort(self, cmd):
-        """ Stop current motion."""
-
-        try:
-            self.controller.abort(cmd)
-        except Exception as e:
-            cmd.warn('text=%s' % self.actor.strTraceback(e))
-
-        self.controller.getStatus(cmd)
-
     @threaded
     def focus(self, cmd):
         """ Move along focus."""
@@ -227,6 +225,28 @@ class SlitCmd(object):
         self.controller.substates.move(cmd=cmd,
                                        reference='relative',
                                        coords=coords)
+
+        self.controller.getStatus(cmd)
+
+    @threaded
+    def shutdown(self, cmd):
+        """ shut down hexapod controller along shift."""
+
+        self.controller.substates.shutdown(cmd=cmd)
+        self.pdu.substates.switch(cmd=cmd,
+                                  switchOn=[],
+                                  switchOff=['slit'])
+        self.controller.disconnect()
+
+        cmd.finish()
+
+    def abort(self, cmd):
+        """ Stop current motion."""
+
+        try:
+            self.controller.abort(cmd)
+        except Exception as e:
+            cmd.warn('text=%s' % self.actor.strTraceback(e))
 
         self.controller.getStatus(cmd)
 
