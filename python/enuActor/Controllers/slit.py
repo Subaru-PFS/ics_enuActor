@@ -62,7 +62,7 @@ class slit(FSMDev, QThread):
     @property
     def location(self):
         delta = np.sum(np.abs(np.zeros(6) - self.coords))
-        if delta > 0.001:
+        if delta > 0.005:
             return 'undef'
         else:
             return 'home'
