@@ -46,8 +46,8 @@ class temps(FSMDev, QThread, bufferedSocket.EthComm):
         else:
             raise ValueError('unknown mode')
 
-    def pt100Temp(self, R, R0=100, a=0.00385):
-        return (R / R0 - 1) / a
+    def getProbeCoeff(self, probe):
+        return np.array([float(c) for c in self.actor.config.get('temps', probe).split(',')])
 
     def start(self, cmd=None, doInit=True, mode=None):
         QThread.start(self)
@@ -69,8 +69,9 @@ class temps(FSMDev, QThread, bufferedSocket.EthComm):
         self.mode = self.actor.config.get('temps', 'mode') if mode is None else mode
         self.host = self.actor.config.get('temps', 'host')
         self.port = int(self.actor.config.get('temps', 'port'))
-        self.offsets = {1: np.array([float(off) for off in self.actor.config.get('temps', 'offsets1').split(',')]),
-                        2: np.array([float(off) for off in self.actor.config.get('temps', 'offsets2').split(',')])}
+
+        self.calib = {1: np.array([self.getProbeCoeff(str(probe)) for probe in range(101, 111)]),
+                      2: np.array([self.getProbeCoeff(str(probe)) for probe in range(201, 211)])}
 
     def startComm(self, cmd):
         """| Start socket with the interlock board or simulate it.
@@ -97,7 +98,7 @@ class temps(FSMDev, QThread, bufferedSocket.EthComm):
         self.fetchTemps(cmd, slot=1, doClose=False)
         self.fetchTemps(cmd, slot=2)
 
-    def getStatus(self, cmd, doRaw=True):
+    def getStatus(self, cmd):
         """getStatus
         temperature is nan if the controller is unreachable
         :param cmd,
@@ -125,12 +126,14 @@ class temps(FSMDev, QThread, bufferedSocket.EthComm):
         :return True, 8*temperature
                  False, 8*nan if not initialised or an error had occured
         """
-        offsets = self.offsets[slot]
+        calib = self.calib[slot]
         channels = self.channels[slot]
 
         try:
             ret = self.sendOneCommand('MEAS:TEMP? FRTD, (@%s)' % channels, doClose=doClose)
-            temps = np.array([float(temp) for temp in ret.split(',')]) + offsets
+            temps = np.array([float(temp) for temp in ret.split(',')])
+            offsets = np.array([np.polyval(calib[i], temps[i]) for i in range(10)])
+            temps += offsets
             cmd.inform('temps%d=%s' % (slot, ','.join(['%.3f' % float(temp) for temp in temps])))
 
         except:
