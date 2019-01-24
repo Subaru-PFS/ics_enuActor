@@ -42,6 +42,11 @@ class SlitSim(object):
         self.intStatus = 12
         return [0, '']
 
+    def GroupMoveAbort(self, socketId, GroupName):
+        time.sleep(1.)
+        self.intStatus = 12
+        return [0, '']
+
     def HexapodCoordinateSystemGet(self, socketId, GroupName, CoordinateSystem):
         time.sleep(0.5)
         res = [0]

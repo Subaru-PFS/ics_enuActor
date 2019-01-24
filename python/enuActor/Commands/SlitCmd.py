@@ -147,7 +147,7 @@ class SlitCmd(object):
 
     @threaded
     def motionEnable(self, cmd):
-        """ Not implemented yet. It should stop movement."""
+        """ Enable hexapod actuators"""
         try:
             self.controller.motionEnable(cmd=cmd)
         except Exception as e:
@@ -157,7 +157,7 @@ class SlitCmd(object):
 
     @threaded
     def motionDisable(self, cmd):
-        """ Not implemented yet. It should stop movement."""
+        """ Disable hexapod actuators"""
         try:
             self.controller.motionDisable(cmd=cmd)
         except Exception as e:
@@ -167,7 +167,7 @@ class SlitCmd(object):
 
     @threaded
     def focus(self, cmd):
-        """ Move along focus."""
+        """ Move wrt focus axis."""
         cmdKeys = cmd.cmd.keywords
         shift = cmd.cmd.keywords['focus'].values[0]
 
@@ -184,7 +184,7 @@ class SlitCmd(object):
 
     @threaded
     def dither(self, cmd):
-        """ Move along dither."""
+        """ Move wrt dither axis."""
         cmdKeys = cmd.cmd.keywords
         shift = cmd.cmd.keywords['dither'].values[0]
 
@@ -207,7 +207,7 @@ class SlitCmd(object):
 
     @threaded
     def shift(self, cmd):
-        """ Move along shift."""
+        """ Move wrt shift axis."""
         cmdKeys = cmd.cmd.keywords
         shift = cmd.cmd.keywords['shift'].values[0]
 
@@ -230,7 +230,7 @@ class SlitCmd(object):
 
     @threaded
     def shutdown(self, cmd):
-        """ shut down hexapod controller along shift."""
+        """ save hexapod position, turn power off and disconnect"""
 
         self.controller.substates.shutdown(cmd=cmd)
         self.pdu.substates.switch(cmd=cmd,

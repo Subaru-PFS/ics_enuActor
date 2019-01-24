@@ -5,8 +5,8 @@ import socket
 import numpy as np
 from actorcore.FSM import FSMDev
 from actorcore.QThread import QThread
-from enuActor.drivers import hxp_drivers
 from enuActor.Simulators.slit import SlitSim
+from enuActor.drivers import hxp_drivers
 
 
 class slit(FSMDev, QThread):
@@ -79,15 +79,13 @@ class slit(FSMDev, QThread):
         self.exit()
 
     def initDevice(self, args):
-        """| Load Configuration file. called by device.loadDevice().
-               | Convert to world tool and home.
+        """| init callback triggered entering INITIALISING state
+        | Convert to world tool and home.
 
-               :param cmd: on going command
-               :param mode: operation|simulation, loaded from config file if None
-               :type mode: str
-               :raise: Exception Config file badly formatted
-               """
-
+        :param cmd: on going command
+        :param doHome: requesting homeSearch
+        :raise: Exception if init function fails
+        """
         try:
             self.init(cmd=args.cmd, doHome=args.doHome)
 
@@ -98,7 +96,7 @@ class slit(FSMDev, QThread):
             raise
 
     def loadCfg(self, cmd, mode=None):
-        """| Load Configuration file. called by device.loadDevice().
+        """| Load Configuration file. called by FSMDev.loadDevice().
         | Convert to world tool and home.
 
         :param cmd: on going command
@@ -106,7 +104,6 @@ class slit(FSMDev, QThread):
         :type mode: str
         :raise: Exception Config file badly formatted
         """
-
         self.coords = np.nan * np.ones(6)
 
         self.mode = self.actor.config.get('slit', 'mode') if mode is None else mode
@@ -129,12 +126,11 @@ class slit(FSMDev, QThread):
 
     def startComm(self, cmd):
         """| Start socket with the hexapod controller or simulate it.
-        | Called by device.loadDevice()
+        | Called by FSMDev.loadDevice()
 
         :param cmd: on going command,
         :raise: Exception if the communication has failed with the controller
         """
-
         self.sim = SlitSim()  # Create new simulator
 
         self.myxps = self.createSock()
@@ -146,7 +142,7 @@ class slit(FSMDev, QThread):
         self.getPosition(cmd=cmd)
 
     def init(self, cmd, doHome):
-        """| Initialise hexapod, called y device.initDevice().
+        """| Initialise hexapod, called by self.initDevice().
 
         - kill socket
         - init hxp
@@ -155,9 +151,10 @@ class slit(FSMDev, QThread):
         - go home
 
         :param cmd: on going command
+        :param doHome: requesting homeSearch
+        :type doHome:bool
         :raise: Exception if a command fail, user if warned with error
         """
-
         cmd.inform('text="killing existing socket..."')
         self._kill()
 
@@ -183,15 +180,13 @@ class slit(FSMDev, QThread):
             self._hexapodMoveAbsolute([0, 0, 0, 0, 0, 0])
 
     def getStatus(self, cmd):
-        """| Get status from the controller and publish slit keywords.
+        """| Get status from the controller and generates slit keywords.
 
         - slit = state, mode, pos_x, pos_y, pos_z, pos_u, pos_v, pos_w
         - slitInfo = str : *an interpreted status returned by the controller*
 
         :param cmd: on going command
-        :param doFinish: if True finish the command
         """
-
         cmd.inform('slitFSM=%s,%s' % (self.states.current, self.substates.current))
         cmd.inform('slitMode=%s' % self.mode)
 
@@ -204,6 +199,10 @@ class slit(FSMDev, QThread):
         cmd.finish()
 
     def getPosition(self, cmd):
+        """| Get current coordinates from the controller and generate slit position.
+
+        :param cmd: on going command
+        """
         try:
             self.coords = self._getCurrentPosition()
         except:
@@ -215,18 +214,15 @@ class slit(FSMDev, QThread):
         cmd.inform('slit=%s' % ','.join(['%.5f' % p for p in self.coords]))
 
     def moveTo(self, args):
-        """|
-        | Move to coords in the reference,
+        """| Move to coords in the reference,
 
         :param cmd: on going command
         :param reference: 'absolute' or 'relative'
         :param coords: [x, y, z, u, v, w]
         :type reference: str
         :type coords: list
-        :return: - True if the command raise no error, fsm (BUSY => IDLE)
-                 - False if the command fail,fsm (BUSY => FAILED)
+        :raise Exception if move command fails
         """
-
         cmd, reference, coords = args.cmd, args.reference, args.coords
         try:
             if reference == 'absolute':
@@ -245,7 +241,11 @@ class slit(FSMDev, QThread):
         self.substates.idle()
 
     def shutdown(self, args):
+        """| Save current controller position
 
+        :param cmd: on going command
+        :raise: Exception if TCLScriptExecute fails
+                """
         try:
             args.cmd.inform('text="Kill and save hexapod position..."')
             self._TCLScriptExecute('KillWithRegistration.tcl')
@@ -262,7 +262,7 @@ class slit(FSMDev, QThread):
     def getSystem(self, system):
         """| Get system from the controller and update the actor's current value.
 
-        :param system: Work|Tool
+        :param system: Work|Tool|Base
         :type system: str
         :return:  [x, y, z, u, v, w] coordinate system definition
         :raise: Exception if the coordinate system does not exist
@@ -291,24 +291,29 @@ class slit(FSMDev, QThread):
         return self._hexapodCoordinateSysSet(system, coords)
 
     def motionEnable(self, cmd):
-        """
+        """| Enabling controller actuators
+
+        :param cmd: on going command:
+        :raise: Exception if an error is raised by errorChecker
         """
         cmd.inform('text="Enabling Slit controller..."')
         self._hexapodEnable()
 
     def motionDisable(self, cmd):
-        """
+        """| Disabling controller actuators
+
+        :param cmd: on going command:
+        :raise: Exception if an error is raised by errorChecker
         """
         cmd.inform('text="Disabling Slit controller..."')
         self._hexapodDisable()
 
     def abort(self, cmd):
-        """| Aborting current move, fsm (BUSY -> ?).
+        """| Aborting current move
 
         :param cmd: on going command:
-        :raise: if a command fail, user if warned with error
+        :raise: Exception if an error is raised by errorChecker
         """
-
         cmd.inform('text="aborting move..._"')
         return self.errorChecker(self.myxps.GroupMoveAbort, self.socketId, self.groupName)
 
@@ -317,7 +322,7 @@ class slit(FSMDev, QThread):
 
         :return: position [x, y, z, u, v, w]
         :rtype: list
-        :raise: Exception if an error occured
+        :raise: Exception if an error is raised by errorChecker
         """
         return self.errorChecker(self.myxps.GroupPositionCurrentGet, self.socketId, self.groupName, 6)
 
@@ -326,7 +331,7 @@ class slit(FSMDev, QThread):
 
         :return: error code
         :rtype: int
-        :raise: Exception if an error occured
+        :raise: Exception if an error is raised by errorChecker
         """
         return self.errorChecker(self.myxps.GroupStatusGet, self.socketId, self.groupName)
 
@@ -336,7 +341,7 @@ class slit(FSMDev, QThread):
         :param code: error code
         :return: status_string
         :rtype: str
-        :raise: Exception if an error occured
+        :raise: Exception if an error is raised by errorChecker
         """
         return self.errorChecker(self.myxps.GroupStatusStringGet, self.socketId, code)
 
@@ -344,7 +349,7 @@ class slit(FSMDev, QThread):
         """| Kill socket.
 
         :return: ''
-        :raise: Exception if an error occured
+        :raise: Exception if an error is raised by errorChecker
         """
         return self.errorChecker(self.myxps.GroupKill, self.socketId, self.groupName)
 
@@ -352,7 +357,7 @@ class slit(FSMDev, QThread):
         """| Initialize communication.
 
         :return: ''
-        :raise: Exception if an error occured
+        :raise: Exception if an error is raised by errorChecker
         """
         return self.errorChecker(self.myxps.GroupInitialize, self.socketId, self.groupName)
 
@@ -360,7 +365,7 @@ class slit(FSMDev, QThread):
         """| Home searching.
 
         :return: ''
-        :raise: Exception if an error occured
+        :raise: Exception if an error is raised by errorChecker
         """
         return self.errorChecker(self.myxps.GroupHomeSearch, self.socketId, self.groupName)
 
@@ -371,7 +376,7 @@ class slit(FSMDev, QThread):
         :type coordSystem: str
         :rtype: list
         :return: coordSystem [x, y, z, u, v, w]
-        :raise: Exception if an error occured
+        :raise: Exception if an error is raised by errorChecker
         """
         return self.errorChecker(self.myxps.HexapodCoordinateSystemGet, self.socketId, self.groupName, coordSystem)
 
@@ -382,9 +387,8 @@ class slit(FSMDev, QThread):
         :param coords: [x, y, z, u, v, w]
         :type coords: list
         :return: ''
-        :raise: Exception if an error occured
+        :raise: Exception if an error is raised by errorChecker
         """
-
         return self.errorChecker(self.myxps.HexapodCoordinateSystemSet, self.socketId, self.groupName, coordSystem,
                                  *coords)
 
@@ -396,9 +400,8 @@ class slit(FSMDev, QThread):
         :param coords: [x, y, z, u, v, w].
         :type coords: list
         :return: ''
-        :raise: Exception if an error occured
+        :raise: Exception if an error is raised by errorChecker
         """
-
         for lim_inf, lim_sup, coord in zip(self.lowerBounds, self.upperBounds, absCoords):
             if not lim_inf <= coord <= lim_sup:
                 raise UserWarning("[X, Y, Z, U, V, W] exceed : %.5f not permitted" % coord)
@@ -408,14 +411,13 @@ class slit(FSMDev, QThread):
     def _hexapodMoveIncremental(self, coordSystem, relCoords):
         """| Move hexapod in relative.
         | In our application, hexapod has a smaller range of motion due to the mechanical interfaces.
-        | Therefore software limit are set to prevent any risk of collision.
+        | Therefore software limits are set to prevent any risk of collision.
 
         :param coords: [x, y, z, u, v, w]
         :type coords: list
         :return: ''
-        :raise: Exception if an error occured
+        :raise: Exception if an error is raised by errorChecker
         """
-
         for lim_inf, lim_sup, relCoord, coord in zip(self.lowerBounds, self.upperBounds, relCoords, self.coords):
             if not lim_inf <= relCoord + coord <= lim_sup:
                 raise UserWarning("[X, Y, Z, U, V, W] exceed : %.5f not permitted" % (relCoord + coord))
@@ -425,24 +427,30 @@ class slit(FSMDev, QThread):
 
     def _hexapodDisable(self):
         """| Disable hexapod.
-
         :return: ''
-        :raise: Exception if an error occured
+        :raise: Exception if an error is raised by errorChecker
         """
         return self.errorChecker(self.myxps.GroupMotionDisable, self.socketId, self.groupName)
 
     def _hexapodEnable(self):
         """| Enable hexapod.
-
         :return: ''
-        :raise: Exception if an error occured
+        :raise: Exception if an error is raised by errorChecker
         """
         return self.errorChecker(self.myxps.GroupMotionEnable, self.socketId, self.groupName)
 
     def _initializeFromRegistration(self):
+        """| Initialize hexapod from saved position
+        :return: ''
+        :raise: Exception if an error is raised by errorChecker
+        """
         return self._TCLScriptExecute('InitializeFromRegistration.tcl')
 
     def _TCLScriptExecute(self, fileName, taskName='0', parametersList='0'):
+        """| Execute TCL Script and wait for return
+        :return: ''
+        :raise: Exception if an error is raised by errorChecker
+        """
         return self.errorChecker(self.myxps.TCLScriptExecuteAndWait, self.socketId, fileName, taskName, parametersList)
 
     def errorChecker(self, func, *args):
