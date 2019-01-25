@@ -1,25 +1,66 @@
 __author__ = 'alefur'
+import socket
 import time
 from random import randint
 
 
 class SlitSim(object):
+    MAX_NB_SOCKETS = 100
+
+    # Global variables
+    __sockets = {}
+    __usedSockets = {}
+    __nbSockets = 0
+
     def __init__(self):
         object.__init__(self)
+        SlitSim.__nbSockets = 0
+        for socketId in range(self.MAX_NB_SOCKETS):
+            SlitSim.__usedSockets[socketId] = 0
 
         self.home = [0 for i in range(6)]
         self.tool = [0 for i in range(6)]
         self.pos = [0 for i in range(6)]
         self.base = [0.00000, 0.00000, 25.00000, 0.00000, 0.00000, 0.00000]
         self.intStatus = 12
+        self.emergencyStop = False
 
-    def TCP_ConnectToServer(self, host, port, timeout):
-        if type(host) is not str:
+    def TCP_ConnectToServer(self, IP, port, timeOut):
+        if type(IP) is not str:
             raise TypeError
         if type(port) is not int:
             raise TypeError
 
-        return 1
+        socketId = 0
+        if (SlitSim.__nbSockets < self.MAX_NB_SOCKETS):
+            while (SlitSim.__usedSockets[socketId] == 1 and socketId < self.MAX_NB_SOCKETS):
+                socketId += 1
+            if (socketId == self.MAX_NB_SOCKETS):
+                return -1
+        else:
+            return -1
+
+        SlitSim.__usedSockets[socketId] = 1
+        SlitSim.__nbSockets += 1
+        try:
+            pass
+            # SlitSim.__sockets[socketId] = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            # SlitSim.__sockets[socketId].settimeout(timeOut)
+            # SlitSim.__sockets[socketId].connect((IP, port))
+            # SlitSim.__sockets[socketId].setblocking(1)
+        except socket.error:
+            return -1
+
+        return socketId
+
+    def TCP_CloseSocket(self, socketId):
+        if (socketId >= 0 and socketId < self.MAX_NB_SOCKETS):
+            try:
+                # SlitSim.__sockets[socketId].close()
+                SlitSim.__usedSockets[socketId] = 0
+                SlitSim.__nbSockets -= 1
+            except socket.error:
+                pass
 
     def GroupPositionCurrentGet(self, socketId, GroupName, nbElement):
         time.sleep(0.5)
@@ -43,8 +84,8 @@ class SlitSim(object):
         return [0, '']
 
     def GroupMoveAbort(self, socketId, GroupName):
-        time.sleep(1.)
         self.intStatus = 12
+        self.emergencyStop = True
         return [0, '']
 
     def HexapodCoordinateSystemGet(self, socketId, GroupName, CoordinateSystem):
@@ -67,13 +108,25 @@ class SlitSim(object):
         return [0, '']
 
     def HexapodMoveAbsolute(self, socketId, GroupName, CoordinateSystem, X, Y, Z, U, V, W):
+        self.emergencyStop = False
         self.pos = [X, Y, Z, U, V, W]
-        time.sleep(1)
+        t0 = time.time()
+
+        while not self.emergencyStop and (time.time() - t0) < 2:
+            time.sleep(0.1)
+            if self.emergencyStop:
+                return [-22, 'EMERGENCY STOP']
         return [0, '']
 
     def HexapodMoveIncremental(self, socketId, GroupName, CoordinateSystem, dX, dY, dZ, dU, dV, dW):
+        self.emergencyStop = False
         self.pos = [sum(i) for i in zip(self.pos, [dX, dY, dZ, dU, dV, dW])]
-        time.sleep(1)
+        t0 = time.time()
+
+        while not self.emergencyStop and (time.time() - t0) < 2:
+            time.sleep(0.1)
+            if self.emergencyStop:
+                return [-22, 'EMERGENCY STOP']
         return [0, '']
 
     def ErrorStringGet(self, socketId, err):
@@ -99,7 +152,7 @@ class SlitSim(object):
         return [0, '']
 
     def TCLScriptExecuteAndWait(self, socketId, TCLFileName, TaskName, ParametersList):
-        if TCLFileName =='KillWithRegistration.tcl':
+        if TCLFileName == 'KillWithRegistration.tcl':
             self.intStatus = 7
         elif TCLFileName == 'InitializeFromRegistration.tcl':
             self.intStatus = 12
