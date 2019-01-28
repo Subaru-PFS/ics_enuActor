@@ -154,10 +154,11 @@ class slit(FSMDev, QThread):
         :type doHome:bool
         :raise: RuntimeError if a command fail, user if warned with error
         """
-        cmd.inform('text="killing existing socket..."')
-        self._kill()
-
+        hxpStatus = int(self._getHxpStatus())
         if doHome:
+            cmd.inform('text="killing existing socket..."')
+            self._kill()
+
             cmd.inform('text="initialising hxp..."')
             self._initialize()
 
@@ -165,8 +166,18 @@ class slit(FSMDev, QThread):
             self._homeSearch()
 
         else:
-            cmd.inform('text="initializing from saved position..."')
-            self._initializeFromRegistration()
+            if hxpStatus in [0, 7]:
+                cmd.inform('text="initializing from saved position..."')
+                self._initializeFromRegistration()
+
+            elif hxpStatus in [10, 11, 12, 13, 14, 15, 16, 17, 18]:
+                cmd.inform('text="hxp is ready..."')
+
+            elif hxpStatus == 20:
+                self.motionEnable(cmd=cmd)
+
+            else:
+                raise RuntimeError('hxp needs to be fully initialize')
 
         self._hexapodCoordinateSysSet('Work', self.workSystem)
         cmd.inform('slitWork=%s' % ','.join(['%.5f' % p for p in self.workSystem]))
@@ -174,9 +185,11 @@ class slit(FSMDev, QThread):
         self._hexapodCoordinateSysSet('Tool', self.toolSystem)
         cmd.inform('slitTool=%s' % ','.join(['%.5f' % p for p in self.toolSystem]))
 
-        if doHome:
-            cmd.inform('text="going to home ..."')
-            self._hexapodMoveAbsolute([0, 0, 0, 0, 0, 0])
+        if int(self._getHxpStatus()) not in [10, 11, 12, 13, 14, 15, 16, 17, 18]:
+            raise RuntimeError('hexapod not in ready state, going home aborted ...')
+
+        cmd.inform('text="going to home ..."')
+        self._hexapodMoveAbsolute([0, 0, 0, 0, 0, 0])
 
     def getStatus(self, cmd):
         """| Get status from the controller and generates slit keywords.
@@ -191,8 +204,8 @@ class slit(FSMDev, QThread):
 
         if self.states.current in ['LOADED', 'ONLINE']:
             self.getPosition(cmd=cmd)
-
-            cmd.inform('slitInfo="%s"' % self._getHxpStatusString(self._getHxpStatus()))
+            hxpStatus = self._getHxpStatus()
+            cmd.inform('slitStatus=%d,"%s' % (int(hxpStatus), self._getHxpStatusString(hxpStatus)))
             cmd.inform('slitLocation=%s' % self.location)
 
         cmd.finish()

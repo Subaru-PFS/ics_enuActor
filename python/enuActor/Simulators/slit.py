@@ -22,7 +22,7 @@ class SlitSim(object):
         self.tool = [0 for i in range(6)]
         self.pos = [0 for i in range(6)]
         self.base = [0.00000, 0.00000, 25.00000, 0.00000, 0.00000, 0.00000]
-        self.intStatus = 12
+        self.intStatus = 7
         self.emergencyStop = False
 
     def TCP_ConnectToServer(self, IP, port, timeOut):
@@ -80,11 +80,11 @@ class SlitSim(object):
 
     def GroupHomeSearch(self, socketId, GroupName):
         time.sleep(8.)
-        self.intStatus = 12
+        self.intStatus = 11
         return [0, '']
 
     def GroupMoveAbort(self, socketId, GroupName):
-        self.intStatus = 12
+        self.intStatus = 10
         self.emergencyStop = True
         return [0, '']
 
@@ -136,7 +136,9 @@ class SlitSim(object):
         return [0, self.intStatus]
 
     def GroupStatusStringGet(self, socketId, GroupStatusCode):
-        enum = {7: 'Not initialized state due to a GroupKill or KillAll command',
+        enum = {0: 'Not initialized state',
+                7: 'Not initialized state due to a GroupKill or KillAll command',
+                10: 'Ready state due to an AbortMove command',
                 11: "Ready state from homing", 12: "Ready state from motion",
                 13: "Ready State due to a MotionEnable command",
                 20: "Disabled state", 42: 'Not referenced state'
