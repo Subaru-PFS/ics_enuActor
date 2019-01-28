@@ -40,20 +40,24 @@ class TempsCmd(object):
 
     @threaded
     def status(self, cmd):
-        """Report state, mode, position"""
+        """Report state, substate, mode, temperatures"""
         self.controller.getStatus(cmd)
 
     @threaded
     def getResistance(self, cmd):
-        """Report state, mode, position"""
-        self.controller.fetchResistance(cmd, slot=1, doClose=False)
-        self.controller.fetchResistance(cmd, slot=2)
+        """Report resistance value for all sensors"""
+        try:
+            self.controller.getResistance(cmd, slot=1, doClose=False)
+        except:
+            raise
+        finally:
+            self.controller.getResistance(cmd, slot=2)
 
         cmd.finish()
 
     @threaded
     def rawCommand(self, cmd):
-        """Report state, mode, position"""
+        """send a raw command to the controller"""
         cmdKeys = cmd.cmd.keywords
         cmdStr = cmdKeys["raw"].values[0]
 
@@ -61,14 +65,14 @@ class TempsCmd(object):
 
     @threaded
     def getError(self, cmd):
-        """Report state, mode, position"""
+        """Report controller error"""
         self.controller.getError(cmd)
 
         cmd.finish()
 
     @threaded
     def getInfo(self, cmd):
-        """Report state, mode, position"""
+        """Report controller info"""
         self.controller.getInfo(cmd)
 
         cmd.finish()
