@@ -8,13 +8,14 @@
 
 #  See Programmer's manual for more information on XPS function calls
 
+import select
 import socket
 
 
 class XPS(object):
     # Defines
     MAX_NB_SOCKETS = 100
-
+    hangLimit = 45
     # Global variables
     __sockets = {}
     __usedSockets = {}
@@ -32,16 +33,24 @@ class XPS(object):
             XPS.__sockets[socketId].send(command.encode())
             ret = ''
             while (ret.find(',EndOfAPI') == -1):
-                ret += XPS.__sockets[socketId].recv(1024).decode()
+                ret += self.getOutput(XPS.__sockets[socketId])
         except socket.timeout:
             return [-2, '']
         except socket.error:
-            print('Socket error : ')
             return [-2, '']
 
         for i in range(len(ret)):
             if (ret[i] == ','):
                 return [int(ret[0:i]), ret[i + 1:-9]]
+
+    def getOutput(self, sock):
+        """ Block/timeout for input, then return all (<=1kB) available input. """
+
+        readers, writers, broken = select.select([sock.fileno()], [], [], self.hangLimit)
+        if len(readers) == 0:
+            raise socket.timeout('Timed out reading character from hxp')
+
+        return sock.recv(1024).decode()
 
     # TCP_ConnectToServer
     def TCP_ConnectToServer(self, IP, port, timeOut):
