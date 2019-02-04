@@ -4,13 +4,14 @@ import socket
 from enuActor.utils.wrap import busy
 
 class EthComm(object):
-    def __init__(self):
+    def __init__(self, host, port, EOL='\r\n', timeout=3.0):
         object.__init__(self)
-        self.host = None
-        self.port = None
         self.sock = None
-        self.EOL = '\r\n'
         self.isBusy = False
+        self.host = host
+        self.port = port
+        self.EOL = EOL
+        self.timeout = timeout
 
     def connectSock(self):
         """| Connect socket if self.sock is None.
@@ -19,7 +20,7 @@ class EthComm(object):
         """
         if self.sock is None:
             s = self.createSock()
-            s.settimeout(3.0)
+            s.settimeout(self.timeout)
             s.connect((self.host, self.port))
 
             self.sock = s
@@ -34,7 +35,6 @@ class EthComm(object):
 
         :raise: Exception if closing socket has failed
         """
-
         try:
             self.sock.close()
         except:
@@ -64,7 +64,7 @@ class EthComm(object):
         try:
             s.sendall(fullCmd)
 
-        except Exception as e:
+        except:
             self.closeSock()
             raise
 
