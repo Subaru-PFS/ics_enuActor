@@ -1,82 +1,170 @@
 #!/usr/bin/env python
+import socket
 import time
+from struct import pack, unpack
 from threading import Thread
 
 import numpy as np
+from enuActor.drivers.rexm_drivers import TMCM
 
 
-class RexmSim(object):
-    controllerStatus = {100: "Successfully executed, no error",
-                        101: "Command loaded into TMCL program EEPROM",
-                        1: "Wrong checksum",
-                        2: "Invalid command",
-                        3: "Wrong type",
-                        4: "Invalid value",
-                        5: "Configuration EEPROM locked",
-                        6: "Command not available"}
-    MODULE_ADDRESS = 1
-    MOTOR_ADDRESS = 0
+class recvFake(object):
+    def __init__(self, moduleAddress, cmd, ctype, motorAddress, data, checksum):
+        object.__init__(self)
+        self.moduleAddress = moduleAddress
+        self.cmd = cmd
+        self.ctype = ctype
+        self.motorAddress = motorAddress
+        self.data = data
+        self.checksum = checksum
 
-    DIRECTION_A = 0
-    DIRECTION_B = 1
 
-    # unit : mm/s
-    SPEED_MAX = 1000
+class sendFake(object):
+    def __init__(self, cmd, data, fmtRet='>BBBBIB', status=100):
+        data = np.uint32(data) if fmtRet == '>BBBBIB' else np.int32(data)
+        self.replyAddress = 2
+        self.moduleAddress = 1
+        self.status = status
+        self.cmd = cmd
+        self.data = data
+        self.fmtRet = fmtRet
 
-    g_speed = 3.2  # mm/s
-    g_pauseDelay = 60.0  # secondes
+    @property
+    def checksum(self):
+        data = pack(self.fmtRet[:-1], self.replyAddress, self.moduleAddress, self.status, self.cmd, self.data)
+        checksum = sum(data)
+        checksum %= 256
+        return checksum
 
-    # 410mm + 10mm de marge
-    DISTANCE_MAX = 420.0
+    @property
+    def cmdBytes(self):
+        return pack(self.fmtRet, self.replyAddress, self.moduleAddress, self.status, self.cmd, self.data, self.checksum)
 
-    TMCL_ROR = 1
-    TMCL_ROL = 2
-    TMCL_MST = 3
-    TMCL_MVP = 4
-    TMCL_SAP = 5
-    TMCL_GAP = 6
-    TMCL_STAP = 7
-    TMCL_RSAP = 8
-    TMCL_SGP = 9
-    TMCL_GGP = 10
-    TMCL_STGP = 11
-    TMCL_RSGP = 12
-    TMCL_RFS = 13
-    TMCL_SIO = 14
-    TMCL_GIO = 15
-    TMCL_SCO = 30
-    TMCL_GCO = 31
-    TMCL_CCO = 32
 
-    TMCL_APPL_STOP = 128
-    TMCL_APPL_RUN = 129
-    TMCL_APPL_RESET = 131
+class RexmSim(socket.socket):
+    DISTANCE_MAX = 420
 
-    # Options for MVP commandds
-    MVP_ABS = 0
-    MVP_REL = 1
-    MVP_COORD = 2
+    def __init__(self):
+        socket.socket.__init__(self, socket.AF_INET, socket.SOCK_STREAM)
 
-    def __init__(self, port="/dev/ttyACM0"):
-        self.name = "rexm"
-        self.ser = None
-        self.port = port
         self.currSpeed = 0.
+        self.maxSpeed = 0
         self.realPos = 50.
         self.currPos = 0.
-        self.stepIdx = 2
-        self.pulseDivisor = 5
+        self.stepIdx = 0
+        self.direction = 1
+        self.pulseDivisor = 7
         self.safeStop = False
 
+        self.buf = []
 
-    def getSpeed(self):
-        return self.mm2counts(self.currSpeed)
+    def connect(self, server):
+        (ip, port) = server
+        time.sleep(0.2)
+        if type(ip) is not str:
+            raise TypeError
+        if type(port) is not int:
+            raise TypeError
 
-    def stop(self):
-        """fonction stop  controleur
-        """
-        self.safeStop = True
-        self.currSpeed = 0
+    @property
+    def speedStep(self):
+        return self.currSpeed / (2 ** self.pulseDivisor * (65536 / 16e6))
+
+    def sendall(self, cmdBytes, flags=None):
+        time.sleep(0.01)
+        packet = recvFake(*unpack('>BBBBIB', cmdBytes))
+        if packet.cmd == TMCM.TMCL_MST:
+            self.safeStop = True
+            self.currSpeed = 0
+            self.buf.append(sendFake(cmd=TMCM.TMCL_GAP, data=0))
+
+        elif packet.cmd == TMCM.TMCL_SAP:
+            if packet.ctype == 1:
+                self.currPos = packet.data
+            elif packet.ctype == 4:
+                self.maxSpeed = packet.data
+            elif packet.ctype == 140:
+                self.stepIdx = packet.data
+            elif packet.ctype == 154:
+                self.pulseDivisor = packet.data
+
+            self.buf.append(sendFake(cmd=TMCM.TMCL_SAP, data=packet.data))
+
+        elif packet.cmd == TMCM.TMCL_GAP:
+            if packet.ctype == 1:
+                ret = self.currPos
+                self.buf.append(sendFake(cmd=TMCM.TMCL_GAP, data=ret, fmtRet='>BBBBiB'))
+
+            elif packet.ctype == 3:
+                ret = self.currSpeed * self.direction
+                self.buf.append(sendFake(cmd=TMCM.TMCL_GAP, data=ret, fmtRet='>BBBBiB'))
+
+            elif packet.ctype == 10:
+                ret = 1 if self.realPos >= self.mm2counts(self.DISTANCE_MAX - 10) else 0
+                self.buf.append(sendFake(cmd=TMCM.TMCL_GAP, data=ret))
+
+            elif packet.ctype == 11:
+                ret = 1 if self.realPos <= 0 else 0
+                self.buf.append(sendFake(cmd=TMCM.TMCL_GAP, data=ret))
+
+            elif packet.ctype == 140:
+                ret = self.stepIdx
+                self.buf.append(sendFake(cmd=TMCM.TMCL_GAP, data=ret))
+
+            elif packet.ctype == 154:
+                ret = self.pulseDivisor
+                self.buf.append(sendFake(cmd=TMCM.TMCL_GAP, data=ret))
+
+        elif packet.cmd == TMCM.TMCL_MVP:
+            self.MVP(distance=np.int32(packet.data))
+            self.buf.append(sendFake(cmd=TMCM.TMCL_MVP, data=packet.data))
+
+        else:
+            self.buf.append(sendFake(cmd=TMCM.TMCL_GAP, data=0, status=2))
+
+    def fakeMove(self, distance, tempo=0.01):
+        if self.safeStop:
+            self.safeStop = False
+
+        self.direction = -1 if distance < 0 else 1
+        dmin = 0
+        dmax = self.mm2counts(self.DISTANCE_MAX - 10)
+
+        goal = self.realPos + distance
+        self.currSpeed = self.maxSpeed
+        step = tempo * self.direction * self.speedStep
+
+        if self.direction == -1:
+            while self.realPos > goal:
+                if self.safeStop:
+                    break
+
+                if self.realPos + step <= dmin:
+                    self.currSpeed = 0
+                    step = dmin - self.realPos
+                    self.moveRelative(tempo, step)
+                    break
+
+                self.moveRelative(tempo, step)
+
+        elif self.direction == 1:
+            while self.realPos < goal:
+                if self.safeStop:
+                    break
+                if self.realPos + step >= dmax:
+                    self.currSpeed = 0
+                    step = dmax - self.realPos
+                    self.moveRelative(tempo, step)
+                    break
+
+                self.moveRelative(tempo, step)
+
+    def MVP(self, distance):
+        # set moving speed
+        f1 = Thread(target=self.fakeMove, args=(distance,))
+        f1.start()
+
+        return 0
 
     def mm2counts(self, val):
 
@@ -87,79 +175,17 @@ class RexmSim(object):
 
         return np.float64(val / screwStep * reducer * nbStepByRev * step)
 
-    def counts2mm(self, counts):
-        return np.float64(counts / self.mm2counts(1.0))
+    def moveRelative(self, tempo, step):
+        time.sleep(tempo)
 
-    def fakeMove(self, direction, distance, speed, tempo=0.1):
-        if self.safeStop:
-            self.safeStop = False
+        self.realPos += step
+        self.currPos += step
 
-        if direction == RexmSim.DIRECTION_A:
-            speed *= -1
-            distance *= -1
+    def recv(self, buffersize, flags=None):
+        time.sleep(0.01)
+        ret = self.buf[0]
+        self.buf = self.buf[1:]
+        return ret.cmdBytes
 
-        goal = self.currPos + distance
-        self.currSpeed = speed
-
-        if direction == RexmSim.DIRECTION_A:
-            while self.currPos > goal:
-                if self.safeStop:
-                    break
-                if self.realPos < 0:
-                    self.currSpeed = 0
-                    break
-
-                time.sleep(tempo)
-                self.currPos += tempo * self.currSpeed
-                self.realPos += tempo * self.currSpeed
-
-        elif direction == RexmSim.DIRECTION_B:
-            while self.currPos < goal:
-                if self.safeStop:
-                    break
-                if self.realPos > (self.DISTANCE_MAX - 10):
-                    self.currSpeed = 0
-                    break
-
-                time.sleep(tempo)
-                self.currPos += tempo * self.currSpeed
-                self.realPos += tempo * self.currSpeed
-
-    def MVP(self, direction, distance, speed, type="relative", doClose=False):
-        # set moving speed
-        f1 = Thread(target=self.fakeMove, args=(direction, distance, speed))
-        f1.start()
-
-        return 0
-
-    def sap(self, paramId, data, doClose=False):
-        """fonction set axis parameter du manuel du controleur
-
-        """
-        if paramId == 1:
-            self.currPos = data
-        return 0
-
-    def gap(self, paramId, doClose=False, fmtRet='>BBBBIB'):
-        """fonction get axis parameter du manuel du controleur
-        """
-        if paramId == 1:
-            ret = self.mm2counts(self.currPos)
-        elif paramId == 3:
-            ret = self.mm2counts(self.currSpeed)
-        elif paramId == 11:
-            ret = 1 if self.realPos <= 0 else 0
-        elif paramId == 10:
-            ret = 1 if self.realPos >= (self.DISTANCE_MAX - 10) else 0
-        else:
-            raise Exception('Unknown Parameter')
-
-        return ret
-
-    def minmax(self, x, a, b):
-        if x < a:
-            return a
-        elif x > b:
-            return b
-        else:
-            return x
+    def close(self):
+        pass
