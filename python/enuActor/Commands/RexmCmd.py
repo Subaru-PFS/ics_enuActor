@@ -2,7 +2,6 @@
 
 
 import opscore.protocols.keys as keys
-
 from enuActor.utils.wrap import threaded
 
 
@@ -55,6 +54,7 @@ class RexmCmd(object):
         cmdKeys = cmd.cmd.keywords
         position = "low" if "low" in cmdKeys else "mid"
 
+        self.controller.abortMotion = False
         self.controller.substates.move(cmd=cmd,
                                        position=position)
 
@@ -63,7 +63,6 @@ class RexmCmd(object):
     def abort(self, cmd):
         """ Abort current motion """
 
-        self.controller.stopMotion = True
+        self.controller.abortMotion = True
 
-        self.controller.abort(cmd)
-        self.controller.getStatus(cmd)
+        cmd.finish()
