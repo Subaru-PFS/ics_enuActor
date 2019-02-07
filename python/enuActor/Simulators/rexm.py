@@ -42,7 +42,7 @@ class sendFake(object):
 
 
 class RexmSim(socket.socket):
-    DISTANCE_MAX = 420
+    DISTANCE_MAX = 414.39
 
     def __init__(self):
         socket.socket.__init__(self, socket.AF_INET, socket.SOCK_STREAM)
@@ -73,6 +73,7 @@ class RexmSim(socket.socket):
     def sendall(self, cmdBytes, flags=None):
         time.sleep(0.01)
         packet = recvFake(*unpack('>BBBBIB', cmdBytes))
+
         if packet.cmd == TMCM.TMCL_MST:
             self.safeStop = True
             self.currSpeed = 0
@@ -91,6 +92,9 @@ class RexmSim(socket.socket):
             self.buf.append(sendFake(cmd=TMCM.TMCL_SAP, data=packet.data))
 
         elif packet.cmd == TMCM.TMCL_GAP:
+            dmin = 0
+            dmax = TMCM.mm2counts(stepIdx=self.stepIdx, valueMm=self.DISTANCE_MAX)
+
             if packet.ctype == 1:
                 ret = self.currPos
                 self.buf.append(sendFake(cmd=TMCM.TMCL_GAP, data=ret, fmtRet='>BBBBiB'))
@@ -100,11 +104,11 @@ class RexmSim(socket.socket):
                 self.buf.append(sendFake(cmd=TMCM.TMCL_GAP, data=ret, fmtRet='>BBBBiB'))
 
             elif packet.ctype == 10:
-                ret = 1 if self.realPos >= self.mm2counts(self.DISTANCE_MAX - 10) else 0
+                ret = 1 if self.realPos >= dmax else 0
                 self.buf.append(sendFake(cmd=TMCM.TMCL_GAP, data=ret))
 
             elif packet.ctype == 11:
-                ret = 1 if self.realPos <= 0 else 0
+                ret = 1 if self.realPos <= dmin else 0
                 self.buf.append(sendFake(cmd=TMCM.TMCL_GAP, data=ret))
 
             elif packet.ctype == 140:
@@ -128,7 +132,7 @@ class RexmSim(socket.socket):
 
         self.direction = -1 if distance < 0 else 1
         dmin = 0
-        dmax = self.mm2counts(self.DISTANCE_MAX - 10)
+        dmax = TMCM.mm2counts(stepIdx=self.stepIdx, valueMm=self.DISTANCE_MAX)
 
         goal = self.realPos + distance
         self.currSpeed = self.maxSpeed
@@ -140,24 +144,25 @@ class RexmSim(socket.socket):
                     break
 
                 if self.realPos + step <= dmin:
-                    self.currSpeed = 0
                     step = dmin - self.realPos
                     self.moveRelative(tempo, step)
                     break
 
                 self.moveRelative(tempo, step)
 
+            self.currSpeed = 0
+
         elif self.direction == 1:
             while self.realPos < goal:
                 if self.safeStop:
                     break
                 if self.realPos + step >= dmax:
-                    self.currSpeed = 0
                     step = dmax - self.realPos
                     self.moveRelative(tempo, step)
                     break
 
                 self.moveRelative(tempo, step)
+            self.currSpeed = 0
 
     def MVP(self, distance):
         # set moving speed
@@ -165,15 +170,6 @@ class RexmSim(socket.socket):
         f1.start()
 
         return 0
-
-    def mm2counts(self, val):
-
-        screwStep = 5.0  # mm
-        step = 1 << self.stepIdx  # nombre de micro pas par pas moteur
-        nbStepByRev = 200.0  # nombre de pas moteur dans un tour moteur
-        reducer = 12.0  # nombre de tours moteur pour 1 tour en sortie du reducteur
-
-        return np.float64(val / screwStep * reducer * nbStepByRev * step)
 
     def moveRelative(self, tempo, step):
         time.sleep(tempo)

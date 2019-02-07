@@ -51,6 +51,12 @@ class TMCM(object):
                         4: "Invalid value",
                         5: "Configuration EEPROM locked",
                         6: "Command not available"}
+
+    SPEED_MAX = 10.0 # mm/s
+    DISTANCE_MAX = 420.0  # 410mm + 10mm margin
+
+    g_speed = 3.2 # mm/s
+
     MODULE_ADDRESS = 1
     MOTOR_ADDRESS = 0
 
@@ -87,7 +93,7 @@ class TMCM(object):
 
     @staticmethod
     def stop():
-        """fonction stop  controleur
+        """stop function
         """
         packet = sendPacket(moduleAddress=TMCM.MODULE_ADDRESS,
                             cmd=TMCM.TMCL_MST,
@@ -97,7 +103,7 @@ class TMCM(object):
 
     @staticmethod
     def MVP(direction, counts):
-        # set moving speed
+        # mvp function
         data = -counts if direction == TMCM.DIRECTION_A else counts
 
         packet = sendPacket(moduleAddress=TMCM.MODULE_ADDRESS,
@@ -109,7 +115,7 @@ class TMCM(object):
 
     @staticmethod
     def sap(paramId, data):
-        """fonction set axis parameter du manuel du controleur
+        """set axis function
         """
         packet = sendPacket(moduleAddress=TMCM.MODULE_ADDRESS,
                             cmd=TMCM.TMCL_SAP,
@@ -120,7 +126,7 @@ class TMCM(object):
 
     @staticmethod
     def gap(paramId):
-        """fonction get axis parameter du manuel du controleur
+        """get axis parameter function
         """
         packet = sendPacket(moduleAddress=TMCM.MODULE_ADDRESS,
                             cmd=TMCM.TMCL_GAP,
@@ -130,7 +136,7 @@ class TMCM(object):
 
     @staticmethod
     def sgp(paramId, data):
-        """fonction set global parameter du manuel du controleur
+        """set global parameter function
         """
         packet = sendPacket(moduleAddress=TMCM.MODULE_ADDRESS,
                             cmd=TMCM.TMCL_SGP,
@@ -141,10 +147,35 @@ class TMCM(object):
 
     @staticmethod
     def ggp(paramId):
-        """fonction get global parameter du manuel du controleur
+        """get global parameter function
         """
         packet = sendPacket(moduleAddress=TMCM.MODULE_ADDRESS,
                             cmd=TMCM.TMCL_GGP,
                             ctype=paramId,
                             motorAddress=TMCM.MOTOR_ADDRESS)
         return packet.cmdBytes
+
+    @staticmethod
+    def mm2counts(stepIdx, valueMm):
+        """| Convert mm to counts
+
+        :param valueMm: value in mm
+        :type valueMm:float
+        :rtype:float
+        """
+        screwStep = 5.0  # mm #
+        step = 1 << stepIdx  # ustep per motorstep
+        nbStepByRev = 200.0  # motorstep per motor revolution
+        reducer = 12.0  # motor revolution for 1 reducer revolution
+
+        return np.float64(valueMm / screwStep * reducer * nbStepByRev * step)
+
+    @staticmethod
+    def counts2mm(stepIdx, counts):
+        """| Convert counts to mm
+
+        :param counts: count value
+        :type counts:float
+        :rtype:float
+        """
+        return np.float64(counts / TMCM.mm2counts(stepIdx, 1.0))

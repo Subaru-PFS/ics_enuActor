@@ -1,6 +1,6 @@
+import copy
 import logging
 import time
-from functools import partial
 
 import enuActor.Controllers.bufferedSocket as bufferedSocket
 import numpy as np
@@ -11,24 +11,9 @@ from enuActor.drivers.rexm_drivers import recvPacket, TMCM
 
 
 class rexm(FSMDev, QThread, bufferedSocket.EthComm):
-    controllerStatus = {100: "Successfully executed, no error",
-                        101: "Command loaded into TMCL program EEPROM",
-                        0: "Unkown Error",
-                        1: "Wrong checksum",
-                        2: "Invalid command",
-                        3: "Wrong type",
-                        4: "Invalid value",
-                        5: "Configuration EEPROM locked",
-                        6: "Command not available"}
-
-    travellingTimeout = 200
+    travellingTimeout = 150
     stoppingTimeout = 5
-    startingTimeout = 5
-    # unit : mm/s
-    SPEED_MAX = 10
-    DISTANCE_MAX = 420.0  # 410mm + 10mm margin
-
-    g_speed = 3.2  # mm/s
+    startingTimeout = 3
 
     switch = {(1, 0): 'low', (0, 1): 'mid', (0, 0): 'undef', (1, 1): 'error'}
     toPos = {0: 'low', 1: 'mid'}
@@ -76,6 +61,10 @@ class rexm(FSMDev, QThread, bufferedSocket.EthComm):
     def position(self):
         return rexm.switch[self.switchA, self.switchB]
 
+    @property
+    def isMoving(self):
+        return 1 if abs(self.speed) > 0 else 0
+
     def start(self, cmd=None, doInit=False, mode=None):
         QThread.start(self)
         FSMDev.start(self, cmd=cmd, doInit=doInit, mode=mode)
@@ -83,10 +72,6 @@ class rexm(FSMDev, QThread, bufferedSocket.EthComm):
     def stop(self, cmd=None):
         self.exit()
         FSMDev.stop(self, cmd=cmd)
-
-    @property
-    def isMoving(self):
-        return 1 if abs(self.speed) > 0 else 0
 
     def loadCfg(self, cmd, mode=None):
         """| Load Configuration file, called by device.loadDevice().
@@ -102,7 +87,7 @@ class rexm(FSMDev, QThread, bufferedSocket.EthComm):
                                         port=int(self.actor.config.get('rexm', 'port')))
 
     def startComm(self, cmd):
-        """ Start socket with the hexapod controller or simulate it.
+        """ Start socket with the rexm controller or simulate it.
         | Called by FSMDev.loadDevice()
         try to get controller statuses
 
@@ -126,10 +111,11 @@ class rexm(FSMDev, QThread, bufferedSocket.EthComm):
         """
         cmd.inform('text="setting motor config ..."')
         self._setConfig(cmd)
+        self.checkConfig(cmd)
 
-        cmd.inform('text="seeking home ..."')
-        self._moveAccurate(cmd, position='low')
+        self._goToPosition(cmd, position='low')
 
+        cmd.inform('text="setting origin at 0..."')
         self._setHome(cmd=cmd)
 
     def getStatus(self, cmd):
@@ -158,7 +144,7 @@ class rexm(FSMDev, QThread, bufferedSocket.EthComm):
 
         while self.isMoving:
             if (time.time() - start) > rexm.stoppingTimeout:
-                raise TimeoutError('fail to stop rexm motion')
+                raise TimeoutError('failed to stop rexm motion')
 
             self.stopMotion(cmd=cmd)
 
@@ -174,7 +160,7 @@ class rexm(FSMDev, QThread, bufferedSocket.EthComm):
         self.checkStatus(cmd)
 
     def moveTo(self, e):
-        """| Move to desired position (low|mid).
+        """| Go to desired position (low|mid), or relative move
 
         :param cmd: on going command
         :param position: (low|mid)
@@ -184,8 +170,13 @@ class rexm(FSMDev, QThread, bufferedSocket.EthComm):
         cmd, position = e.cmd, e.position
 
         try:
-            self._moveAccurate(cmd, position)
-
+            if position:
+                self._goToPosition(cmd, position)
+            else:
+                self._moveRelative(cmd,
+                                   direction=e.direction,
+                                   distance=e.distance,
+                                   speed=TMCM.g_speed)
         except UserWarning:
             self.safeStop(cmd)
             cmd.warn('text=%s' % self.actor.strTraceback(e))
@@ -230,8 +221,28 @@ class rexm(FSMDev, QThread, bufferedSocket.EthComm):
 
         cmd.inform('rexmConfig=%d,%d' % (self.stepIdx, self.pulseDivisor))
 
-    def _moveAccurate(self, cmd, position):
-        """| Move accurately to the required position.
+    def checkParameters(self, direction, distance, speed):
+        """| Check relative move parameters
+
+        :param direction: 0 (go to low position ) 1 (go to mid position)
+        :type direction: int
+        :param distance: distance in mm
+        :type distance: float
+        :param speed: distance in mm/sec
+        :type speed: float
+        :raise: ValueError if a value is out of range
+        """
+        if direction not in [0, 1]:
+            raise ValueError('unknown direction')
+
+        if not 0 < distance <= TMCM.DISTANCE_MAX:
+            raise ValueError('requested distance out of range')
+
+        if not (0 < speed <= TMCM.SPEED_MAX):
+            raise ValueError('requested speed out of range')
+
+    def _goToPosition(self, cmd, position):
+        """| Go accurately to the required position.
 
         - go to desired position at nominal speed
         - adjusting position backward to unswitch at nominal speed/3
@@ -245,35 +256,32 @@ class rexm(FSMDev, QThread, bufferedSocket.EthComm):
         """
         direction = rexm.toDir[position]
         self.checkStatus(cmd)
-        if self.switchOn(direction):
+        if self.limitSwitch(direction):
             cmd.inform('text="already at position %s"' % position)
             return
 
-        self._moveUntilSwitch(cmd,
-                              direction=direction,
-                              distance=rexm.DISTANCE_MAX,
-                              speed=rexm.g_speed,
-                              hitSwitch=True)
+        self._moveRelative(cmd,
+                           direction=direction,
+                           distance=TMCM.DISTANCE_MAX,
+                           speed=TMCM.g_speed)
 
         cmd.inform('text="arrived at position %s"' % position)
 
         cmd.inform('text="adjusting position backward"')
-        self._moveUntilSwitch(cmd,
-                              direction=not direction,
-                              distance=10,
-                              speed=(rexm.g_speed / 3),
-                              hitSwitch=False)
+        self._moveRelative(cmd,
+                           direction=not direction,
+                           distance=5,
+                           speed=(TMCM.g_speed / 3))
 
         cmd.inform('text="adjusting position forward"')
-        self._moveUntilSwitch(cmd,
-                              direction=direction,
-                              distance=20,
-                              speed=(rexm.g_speed / 3),
-                              hitSwitch=True)
+        self._moveRelative(cmd,
+                           direction=direction,
+                           distance=10,
+                           speed=(TMCM.g_speed / 3))
 
         cmd.inform('text="arrived at desired position %s"' % position)
 
-    def _moveUntilSwitch(self, cmd, direction, distance, speed, hitSwitch=True):
+    def _moveRelative(self, cmd, direction, distance, speed):
         """| Go to specified distance, direction with desired speed.
 
         - Stop motion
@@ -290,59 +298,65 @@ class rexm(FSMDev, QThread, bufferedSocket.EthComm):
         :raise: Exception if communication error occurs
         :raise: timeout if commanding takes too long
         """
-        self.safeStop(cmd=cmd)
+        self.checkParameters(direction, distance, speed)
+        self.safeStop(cmd)
+        startCount = copy.deepcopy(self.stepCount)
 
-        cmd.inform('text="setting motor speed"')
+        if self.limitSwitch(direction):
+            cmd.inform('text="limit switch already triggered"')
+            return
+
+        cmd.inform('text="setting motor speed at %.2fmm/sec"' % speed)
         self._setSpeed(speed, cmd=cmd)
 
-        cmd.inform('text="moving to %s, %i, %.2f"' % (rexm.toPos[direction], distance, speed))
+        cmd.inform('text="moving %dmm toward %s position"' % (distance, rexm.toPos[direction]))
         self._MVP(direction, distance, cmd=cmd)
 
         start = time.time()
+        expectedTime = start + (distance / speed)
         self.checkStatus(cmd)
 
-        endOfMotion = partial(self.switchOn, direction) if hitSwitch else partial(self.switchOff, direction)
-
-        while not self.isMoving:
+        while not (self.hasStarted(startCount=startCount) and self.waitForCompletion(expectedTime=expectedTime)):
             self.checkStatus(cmd)
-            if endOfMotion():
+            elapsedTime = time.time() - start
+            if self.limitSwitch(direction):
                 break
-            if (time.time() - start) > rexm.startingTimeout:
-                raise TimeoutError('Rexm is not moving')
 
-        while not endOfMotion():
-            if (time.time() - start) > rexm.travellingTimeout:
-                raise TimeoutError("Rexm haven't reach the limit switch")
+            if elapsedTime > rexm.startingTimeout and not self.hasStarted(startCount=startCount):
+                raise TimeoutError('Rexm motion has not started')
+
+            if elapsedTime > rexm.travellingTimeout:
+                raise TimeoutError("Maximum travelling time has been reached")
 
             if self.abortMotion:
-                raise UserWarning('Motion aborted by user')
-
-            self.checkStatus(cmd)
+                raise UserWarning('Abort motion requested')
 
         self.safeStop(cmd)
 
-    def mm2counts(self, valueMm):
-        """| Convert mm to counts
+    def waitForCompletion(self, expectedTime):
+        """| wait for motion completion
 
-        :param valueMm: value in mm
-        :type valueMm:float
-        :rtype:float
+        :param expectedTime: expected time for motion completion
+        :type expectedTime: float
         """
-        screwStep = 5.0  # mm #
-        step = 1 << self.stepIdx  # ustep per motorstep
-        nbStepByRev = 200.0  # motorstep per motor revolution
-        reducer = 12.0  # motor revolution for 1 reducer revolution
+        return time.time() > expectedTime and not self.isMoving
 
-        return np.float64(valueMm / screwStep * reducer * nbStepByRev * step)
+    def hasStarted(self, startCount):
+        """| demonstrate that motion that effectively started
 
-    def counts2mm(self, counts):
-        """| Convert counts to mm
-
-        :param counts: count value
-        :type counts:float
-        :rtype:float
+        :param startCount: starting stepCount
+        :type startCount: int
         """
-        return np.float64(counts / self.mm2counts(1.0))
+        return abs(startCount - self.stepCount) > TMCM.mm2counts(stepIdx=self.stepIdx, valueMm=0.5)
+
+    def limitSwitch(self, direction):
+        """| Return limit switch state which will be reached by going in that direction.
+
+        :param direction: 0 (go to low position ) 1 (go to mid position)
+        :type direction: int
+        :return: limit switch state
+        """
+        return self.switchA if direction == 0 else self.switchB
 
     def _setConfig(self, cmd=None):
         """| Set motor parameters.
@@ -397,10 +411,7 @@ class rexm(FSMDev, QThread, bufferedSocket.EthComm):
         :param cmd: on going command
         :raise: Exception if communication error occurs
         """
-        if not (0 < speedMm < rexm.SPEED_MAX):
-            raise ValueError('rexm speed out of range')
-
-        freq = self.mm2counts(speedMm) * (2 ** self.pulseDivisor * (65536 / 16e6))
+        freq = TMCM.mm2counts(stepIdx=self.stepIdx, valueMm=speedMm) * (2 ** self.pulseDivisor * (65536 / 16e6))
         return self._setAxisParameter(paramId=4, data=freq, doClose=doClose, cmd=cmd)
 
     def _setHome(self, doClose=False, cmd=None):
@@ -422,12 +433,9 @@ class rexm(FSMDev, QThread, bufferedSocket.EthComm):
         :param cmd: on going command
         :raise: Exception if communication error occurs
         """
-        cMax = np.int32(self.mm2counts(rexm.DISTANCE_MAX))
-        counts = np.int32(self.mm2counts(distance))
-        if not (0 < counts <= cMax):
-            raise ValueError('movement out of range')
-
+        counts = np.int32(TMCM.mm2counts(stepIdx=self.stepIdx, valueMm=distance))
         cmdBytes = TMCM.MVP(direction, counts)
+
         return self.sendOneCommand(cmdBytes=cmdBytes, doClose=doClose, cmd=cmd)
 
     def _stop(self, cmd, doClose=False):
@@ -438,34 +446,6 @@ class rexm(FSMDev, QThread, bufferedSocket.EthComm):
         """
         cmdBytes = TMCM.stop()
         return self.sendOneCommand(cmdBytes=cmdBytes, doClose=doClose, cmd=cmd)
-
-    def switchOn(self, direction):
-        """| Return limit switch state which will be reached by going in that direction.
-
-        :param direction: 0 (go to low position ) 1 (go to mid position)
-        :type direction: int
-        :return: limit switch state
-        """
-        if direction == 0:
-            return self.switchA
-        elif direction == 1:
-            return self.switchB
-        else:
-            raise ValueError('unknown direction')
-
-    def switchOff(self, direction):
-        """| Return limit switch state which will be reached by going in that direction.
-
-        :param direction: 0 (go to low position ) 1 (go to mid position)
-        :type direction: int
-        :return: limit switch state
-        """
-        if direction == 0:
-            return not self.switchB
-        elif direction == 1:
-            return not self.switchA
-        else:
-            raise ValueError('unknown direction')
 
     def sendOneCommand(self, cmdBytes, doClose=False, cmd=None, fmtRet='>BBBBIB'):
         """| Send one command and return one response.
@@ -513,7 +493,7 @@ class rexm(FSMDev, QThread, bufferedSocket.EthComm):
 
         ret = recvPacket(sock.recv(9), fmtRet=fmtRet)
         if ret.status != 100:
-            raise RuntimeError(rexm.controllerStatus[ret.status])
+            raise RuntimeError(TMCM.controllerStatus[ret.status])
 
         reply = ret.data
         self.logger.debug('received %r', reply)
