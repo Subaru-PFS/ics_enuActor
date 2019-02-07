@@ -2,7 +2,8 @@
 
 
 import opscore.protocols.keys as keys
-
+import opscore.protocols.types as types
+from enuActor.drivers.rexm_drivers import TMCM
 from enuActor.utils.wrap import threaded
 
 
@@ -21,13 +22,14 @@ class RexmCmd(object):
             ('rexm', 'status', self.status),
             ('rexm', 'init', self.initialise),
             ('rexm', '@(move) @(low|mid)', self.moveTo),
+            ('rexm', '@(move) <relative>', self.moveRelative),
             ('rexm', 'abort', self.abort),
 
         ]
 
         # Define typed command arguments for the above commands.
         self.keys = keys.KeysDictionary("enu_rexm", (1, 1),
-                                        )
+                                        keys.Key('relative', types.Float(), help='relative move in mm'))
 
     @property
     def controller(self):
@@ -55,15 +57,30 @@ class RexmCmd(object):
         cmdKeys = cmd.cmd.keywords
         position = "low" if "low" in cmdKeys else "mid"
 
+        self.controller.abortMotion = False
         self.controller.substates.move(cmd=cmd,
                                        position=position)
+        self.controller.getStatus(cmd)
 
+    @threaded
+    def moveRelative(self, cmd):
+        """ Move to low|mid resolution position """
+        cmdKeys = cmd.cmd.keywords
+        direction = int(cmdKeys['relative'].values[0] > 0)
+        distance = abs(cmdKeys['relative'].values[0])
+
+        if not 1 <= distance <= TMCM.DISTANCE_MAX:
+            raise ValueError('requested distance out of range')
+
+        self.controller.abortMotion = False
+        self.controller.substates.move(cmd=cmd,
+                                       position='',
+                                       direction=direction,
+                                       distance=distance)
         self.controller.getStatus(cmd)
 
     def abort(self, cmd):
         """ Abort current motion """
 
-        self.controller.stopMotion = True
-
-        self.controller.abort(cmd)
-        self.controller.getStatus(cmd)
+        self.controller.abortMotion = True
+        cmd.finish()
