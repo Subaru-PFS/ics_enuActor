@@ -22,15 +22,11 @@ class temps(FSMDev, QThread, bufferedSocket.EthComm):
         :type name: str
         """
 
-        bufferedSocket.EthComm.__init__(self)
         QThread.__init__(self, actor, name)
         FSMDev.__init__(self, actor, name)
 
         self.sock = None
         self.sim = None
-        self.EOL = '\n'
-
-        self.ioBuffer = bufferedSocket.BufferedSocket(self.name + "IO", EOL='\n')
 
         self.logger = logging.getLogger(self.name)
         self.logger.setLevel(loglevel)
@@ -66,10 +62,12 @@ class temps(FSMDev, QThread, bufferedSocket.EthComm):
         :raise: Exception Config file badly formatted
         """
         self.mode = self.actor.config.get('temps', 'mode') if mode is None else mode
-        self.host = self.actor.config.get('temps', 'host')
-        self.port = int(self.actor.config.get('temps', 'port'))
-        self.doCalib = self.actor.config.getboolean('temps', 'doCalib')
+        bufferedSocket.EthComm.__init__(self,
+                                        host=self.actor.config.get('temps', 'host'),
+                                        port=int(self.actor.config.get('temps', 'port')),
+                                        EOL='\n')
 
+        self.doCalib = self.actor.config.getboolean('temps', 'doCalib')
         self.calib = {1: np.array([self.getProbeCoeff(str(probe)) for probe in range(101, 111)]),
                       2: np.array([self.getProbeCoeff(str(probe)) for probe in range(201, 211)])}
 
@@ -81,6 +79,8 @@ class temps(FSMDev, QThread, bufferedSocket.EthComm):
         :raise: Exception if the communication has failed with the controller
         """
         self.sim = TempsSim()  # Create new simulator
+
+        self.ioBuffer = bufferedSocket.BufferedSocket(self.name + "IO", EOL='\n')
         s = self.connectSock()
 
     def init(self, cmd):

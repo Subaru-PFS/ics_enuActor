@@ -25,7 +25,6 @@ class pdu(FSMDev, QThread, bufferedSocket.EthComm):
                   {'name': 'fail', 'src': ['SWITCHING', ], 'dst': 'FAILED'},
                   ]
 
-        bufferedSocket.EthComm.__init__(self)
         QThread.__init__(self, actor, name)
         FSMDev.__init__(self, actor, name, events=events, substates=substates)
 
@@ -33,9 +32,6 @@ class pdu(FSMDev, QThread, bufferedSocket.EthComm):
 
         self.logger = logging.getLogger(self.name)
         self.logger.setLevel(loglevel)
-
-        self.ioBuffer = bufferedSocket.BufferedSocket(self.name + 'IO', EOL='\r\n>')
-        self.EOL = '\r\n'
 
         self.mode = ''
         self.sim = None
@@ -70,9 +66,11 @@ class pdu(FSMDev, QThread, bufferedSocket.EthComm):
         :type mode: str
         :raise: Exception Config file badly formatted
         """
-        self.host = self.actor.config.get('pdu', 'host')
-        self.port = int(self.actor.config.get('pdu', 'port'))
         self.mode = self.actor.config.get('pdu', 'mode') if mode is None else mode
+        bufferedSocket.EthComm.__init__(self,
+                                        host=self.actor.config.get('pdu', 'host'),
+                                        port=int(self.actor.config.get('pdu', 'port')),
+                                        EOL='\r\n')
 
         for channel in self.powerPorts:
             self.getOutlet(channel=channel)
@@ -84,9 +82,9 @@ class pdu(FSMDev, QThread, bufferedSocket.EthComm):
         :param cmd: on going command,
         :raise: Exception if the communication has failed with the controller
         """
-        cmd.inform('pduMode=%s' % self.mode)
-
         self.sim = PduSim()
+
+        self.ioBuffer = bufferedSocket.BufferedSocket(self.name + 'IO', EOL='\r\n>')
         s = self.connectSock()
 
     def switch(self, e):

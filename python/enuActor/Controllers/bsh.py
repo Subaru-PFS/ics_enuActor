@@ -51,9 +51,6 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
         self.ilockState = 0
         self.sock = None
         self.sim = None
-        self.EOL = '\r\n'
-
-        self.ioBuffer = bufferedSocket.BufferedSocket(self.name + "IO", EOL='ok\r\n')
 
         self.logger = logging.getLogger(self.name)
         self.logger.setLevel(loglevel)
@@ -88,10 +85,12 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
         :type mode: str
         :raise: Exception Config file badly formatted
         """
-
         self.mode = self.actor.config.get('bsh', 'mode') if mode is None else mode
-        self.host = self.actor.config.get('bsh', 'host')
-        self.port = int(self.actor.config.get('bsh', 'port'))
+        bufferedSocket.EthComm.__init__(self,
+                                        host=self.actor.config.get('bsh', 'host'),
+                                        port=int(self.actor.config.get('bsh', 'port')),
+                                        EOL='\r\n')
+
         self.biaPeriod = int(self.actor.config.get('bsh', 'bia_period'))
         self.biaDuty = int(self.actor.config.get('bsh', 'bia_duty'))
         self.biaStrobe = self.actor.config.get('bsh', 'bia_strobe')
@@ -103,11 +102,10 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
         :param cmd: on going command,
         :raise: Exception if the communication has failed with the controller
         """
-
         self.sim = BshSim()  # Create new simulator
-        s = self.connectSock()
 
-        self.checkStatus(cmd=cmd, doClose=True)
+        self.ioBuffer = bufferedSocket.BufferedSocket(self.name + "IO", EOL='ok\r\n')
+        s = self.connectSock()
 
     def init(self, cmd):
         """| Initialise the interlock board, called y device.initDevice().
@@ -118,8 +116,7 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
         :param cmd: on going command
         :raise: Exception if a command fail, user if warned with error
         """
-
-        self.setBiaConfig(cmd, self.biaPeriod, self.biaDuty, self.biaStrobe, doClose=False)
+        self.setBiaConfig(cmd, self.biaPeriod, self.biaDuty, self.biaStrobe)
         self._sendOrder(cmd, 'init')
 
     def switch(self, cmd, cmdStr):
@@ -163,7 +160,7 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
 
             stopExposure = self.waitUntil(cmd, exptime - (dt.utcnow() - start).total_seconds())
             if stopExposure:
-                raise UserWarning('expose aborted by user')
+                raise UserWarning('Abort exposure requested')
 
             if not self.shuttersClosed:
                 transientTime2 = dt.utcnow()
@@ -194,7 +191,7 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
             self.substates.fail()
             raise
 
-    def getStatus(self, cmd, doClose=True):
+    def getStatus(self, cmd):
         """| Call bsh._checkStatus() and publish shutters, bia keywords:
 
         - shutters = fsm_state, mode, position
@@ -208,7 +205,7 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
         cmd.inform('bshMode=%s' % self.mode)
 
         if self.states.current == 'ONLINE':
-            self.checkStatus(cmd, doClose=doClose)
+            self.checkStatus(cmd, doClose=True)
 
         cmd.finish()
 
