@@ -48,6 +48,9 @@ class slit(FSMDev, QThread):
         self.socks = {'main': -1,
                       'emergency': -1}
 
+        self.sim = None
+        self.currCmd = False
+
         self.logger = logging.getLogger(self.name)
         self.logger.setLevel(loglevel)
 

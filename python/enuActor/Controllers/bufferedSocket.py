@@ -43,7 +43,7 @@ class EthComm(object):
         self.sock = None
 
     @busy
-    def sendOneCommand(self, cmdStr, doClose=True, cmd=None):
+    def sendOneCommand(self, cmdStr, doClose=False, cmd=None):
         """| Send one command and return one response.
 
         :param cmdStr: (str) The command to send.

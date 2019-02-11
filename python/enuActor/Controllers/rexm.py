@@ -44,6 +44,9 @@ class rexm(FSMDev, QThread, bufferedSocket.EthComm):
         self.pulseDivisor = 0
         self.abortMotion = False
 
+        self.sim = None
+        self.currCmd = False
+
         self.samptime = time.time()
         self.logger = logging.getLogger(self.name)
         self.logger.setLevel(loglevel)

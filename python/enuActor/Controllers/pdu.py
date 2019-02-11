@@ -33,8 +33,8 @@ class pdu(FSMDev, QThread, bufferedSocket.EthComm):
         self.logger = logging.getLogger(self.name)
         self.logger.setLevel(loglevel)
 
-        self.mode = ''
         self.sim = None
+        self.currCmd = False
 
         self.state = {}
 
@@ -175,9 +175,9 @@ class pdu(FSMDev, QThread, bufferedSocket.EthComm):
 
         return s
 
-    def sendOneCommand(self, cmdStr, doClose=False, cmd=None, doRaise=True):
+    def sendOneCommand(self, cmdStr, cmd=None, doRaise=True):
         fullCmd = '%s%s' % (cmdStr, self.EOL)
-        reply = bufferedSocket.EthComm.sendOneCommand(self, cmdStr=cmdStr, doClose=doClose, cmd=cmd)
+        reply = bufferedSocket.EthComm.sendOneCommand(self, cmdStr=cmdStr, cmd=cmd)
 
         return self.parseResponse(cmd=cmd, fullCmd=fullCmd, reply=reply, doRaise=doRaise)
 

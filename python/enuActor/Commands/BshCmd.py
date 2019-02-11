@@ -19,7 +19,6 @@ class BshCmd(object):
         self.vocab = [
             ('bsh', 'ping', self.ping),
             ('bsh', 'status', self.status),
-            ('bsh', 'init', self.initialise),
             ('bsh', '<raw>', self.rawCommand),
             ('bia', '@(on|off)', self.biaSwitch),
             ('bia', '@(strobe) @(on|off)', self.biaStrobe),
@@ -36,7 +35,6 @@ class BshCmd(object):
                                         keys.Key("period", types.Float(), help="bia period"),
                                         keys.Key("raw", types.String(), help="raw command"),
                                         keys.Key("exptime", types.Float(), help="exposure time"),
-
                                         )
 
     @property
@@ -57,13 +55,6 @@ class BshCmd(object):
         self.controller.getBiaConfig(cmd)
         self.controller.getStatus(cmd)
 
-    @threaded
-    def initialise(self, cmd):
-        """Initialise Bsh, call fsm startInit event """
-
-        self.controller.substates.init(cmd=cmd)
-        self.controller.getStatus(cmd)
-
     def sendConfig(self, cmd):
         """Update bia parameters """
 
@@ -82,7 +73,7 @@ class BshCmd(object):
             else:
                 raise ValueError("duty not in range : %i => %i" % (0, 255))
 
-        self.controller.setBiaConfig(cmd, period, duty, doClose=True)
+        self.controller.setBiaConfig(cmd, period, duty)
         cmd.finish()
 
     def biaStrobe(self, cmd):
@@ -90,7 +81,7 @@ class BshCmd(object):
         cmdKeys = cmd.cmd.keywords
         state = "off" if "off" in cmdKeys else "on"
 
-        self.controller.setBiaConfig(cmd, biaStrobe=state, doClose=True)
+        self.controller.setBiaConfig(cmd, biaStrobe=state)
         cmd.finish()
 
     def biaSwitch(self, cmd):
@@ -142,19 +133,13 @@ class BshCmd(object):
                                          shutter=shutter)
         self.controller.getStatus(cmd)
 
+    @threaded
     def rawCommand(self, cmd):
-        """Send a raw command to the bsh board """
+        """send a raw command to the bsh board"""
         cmdKeys = cmd.cmd.keywords
-
         cmdStr = cmdKeys["raw"].values[0]
 
-        try:
-            reply = self.controller.sendOneCommand(cmdStr, doClose=False, cmd=cmd)
-            cmd.inform('text=%s' % reply)
-        except Exception as e:
-            cmd.warn('text=%s' % self.actor.strTraceback(e))
-
-        self.controller.getStatus(cmd)
+        cmd.finish('text=%s' % self.controller.sendOneCommand(cmdStr, cmd=cmd))
 
     def abort(self, cmd):
         """Abort current exposure"""

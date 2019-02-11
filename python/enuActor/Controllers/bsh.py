@@ -38,7 +38,6 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
                   {'name': 'fail', 'src': ['EXPOSING'], 'dst': 'FAILED'},
                   ]
 
-        bufferedSocket.EthComm.__init__(self)
         QThread.__init__(self, actor, name)
         FSMDev.__init__(self, actor, name, events=events, substates=substates)
 
@@ -50,7 +49,9 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
         self.stopExposure = False
         self.ilockState = 0
         self.sock = None
+
         self.sim = None
+        self.currCmd = False
 
         self.logger = logging.getLogger(self.name)
         self.logger.setLevel(loglevel)
@@ -205,11 +206,12 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
         cmd.inform('bshMode=%s' % self.mode)
 
         if self.states.current == 'ONLINE':
-            self.checkStatus(cmd, doClose=True)
+            self.checkStatus(cmd)
+            self.closeSock()
 
         cmd.finish()
 
-    def checkStatus(self, cmd, doClose=False):
+    def checkStatus(self, cmd):
         """| Get status from bsh board and update controller's attributes.
         | Warn the user if the shutters limits switch state does not match with interlock state machine
 
@@ -221,7 +223,7 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
 
         try:
             ilockState = self._ilockStat(cmd)
-            statword = self._shutstat(cmd, doClose=doClose)
+            statword = self._shutstat(cmd)
 
             cmd.inform('shb=%s,%s,%s' % (statword[0], statword[1], statword[2]))
             cmd.inform('shr=%s,%s,%s' % (statword[3], statword[4], statword[5]))
@@ -239,7 +241,7 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
         cmd.inform('shutters=%s' % self.shState)
         cmd.inform('bia=%s' % self.biaState)
 
-    def getBiaConfig(self, cmd, doClose=False):
+    def getBiaConfig(self, cmd):
         """|publish bia configuration keywords.
 
         - biaStrobe=off|on
@@ -249,13 +251,13 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
         :param doClose: if True close socket
         :raise: Exception if a command has failed
         """
-        biaStrobe, biaPeriod, biaDuty = self._biastat(cmd, doClose=doClose)
+        biaStrobe, biaPeriod, biaDuty = self._biastat(cmd)
         cmd.inform('biaStrobe=%s' % biaStrobe)
         cmd.inform('biaConfig=%i,%i' % (biaPeriod, biaDuty))
 
         return biaStrobe, biaPeriod, biaDuty
 
-    def setBiaConfig(self, cmd, biaPeriod=None, biaDuty=None, biaStrobe=None, doClose=False):
+    def setBiaConfig(self, cmd, biaPeriod=None, biaDuty=None, biaStrobe=None):
         """| Send new parameters for bia
 
         :param cmd: current command,
@@ -277,7 +279,7 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
         if biaStrobe is not None:
             self._sendOrder(cmd, 'pulse_%s' % biaStrobe)
 
-        self.biaStrobe, self.biaPeriod, self.biaDuty = self.getBiaConfig(cmd, doClose=doClose)
+        self.biaStrobe, self.biaPeriod, self.biaDuty = self.getBiaConfig(cmd)
 
     def checkInterlock(self, cmdStr, shState=False, biaState=False):
         """| Check transition and raise Exception if cmdStr is violating shutters/bia interlock.
@@ -398,27 +400,27 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
         :param cmd: current command,
         :raise: Exception if a command has failed
         """
-        ilockState = self.sendOneCommand("status", doClose=False, cmd=cmd)
+        ilockState = self.sendOneCommand("status", cmd=cmd)
 
         return int(ilockState)
 
-    def _shutstat(self, cmd, doClose=False):
+    def _shutstat(self, cmd):
         """| check and return shutter status word .
 
         :param cmd: current command,
         :raise: Exception if a command has failed
         """
-        statword = self.sendOneCommand("statword", doClose=doClose, cmd=cmd)
+        statword = self.sendOneCommand("statword", cmd=cmd)
 
         return bin(int(statword))[-6:]
 
-    def _biastat(self, cmd, doClose=False):
+    def _biastat(self, cmd):
         """| check and return current bia configuration.
 
         :param cmd: current command,
         :raise: Exception if a command has failed
         """
-        biastat = self.sendOneCommand("get_param", doClose=doClose, cmd=cmd)
+        biastat = self.sendOneCommand("get_param", cmd=cmd)
         strobe, period, duty = biastat.split(',')
         strobe = 'on' if int(strobe) else 'off'
 
