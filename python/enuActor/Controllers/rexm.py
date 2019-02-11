@@ -101,7 +101,7 @@ class rexm(FSMDev, QThread, bufferedSocket.EthComm):
         s = self.connectSock()
 
         self.checkConfig(cmd)
-        self.checkStatus(cmd, doClose=True)
+        self.checkStatus(cmd)
 
     def init(self, cmd):
         """| Initialise rexm controller, called by self.initDevice().
@@ -131,7 +131,8 @@ class rexm(FSMDev, QThread, bufferedSocket.EthComm):
 
         if self.states.current in ['LOADED', 'ONLINE']:
             self.checkConfig(cmd)
-            self.checkStatus(cmd, doClose=True)
+            self.checkStatus(cmd)
+            self.closeSock()
 
         cmd.finish()
 
@@ -190,19 +191,18 @@ class rexm(FSMDev, QThread, bufferedSocket.EthComm):
 
         self.substates.idle()
 
-    def checkStatus(self, cmd, doClose=False):
+    def checkStatus(self, cmd):
         """| Check current status from controller and generate rexmInfo keywords
         - rexmInfo = switchA state, switchB state, speed, position(ustep from origin)
 
         :param cmd: on going command
-        :param doClose: close socket if doClose=True
         :raise: Exception if communication error occurs
         """
         try:
             self.switchA = self._getAxisParameter(paramId=11, cmd=cmd)
             self.switchB = self._getAxisParameter(paramId=10, cmd=cmd)
             self.speed = self._getSpeed(cmd=cmd)
-            self.stepCount = self._getAxisParameter(1, doClose=doClose, fmtRet='>BBBBiB', cmd=cmd)
+            self.stepCount = self._getAxisParameter(1, fmtRet='>BBBBiB', cmd=cmd)
 
         except:
             cmd.warn('rexm=undef')
@@ -372,7 +372,7 @@ class rexm(FSMDev, QThread, bufferedSocket.EthComm):
         self._setAxisParameter(paramId=140, data=2, cmd=cmd)
         self._setAxisParameter(paramId=154, data=5, cmd=cmd)
 
-    def _getAxisParameter(self, paramId, doClose=False, fmtRet='>BBBBIB', cmd=None):
+    def _getAxisParameter(self, paramId, fmtRet='>BBBBIB', cmd=None):
         """| Get axis parameter
 
         :param paramId: parameter id
@@ -382,9 +382,9 @@ class rexm(FSMDev, QThread, bufferedSocket.EthComm):
         :raise: Exception if communication error occurs
         """
         cmdBytes = TMCM.gap(paramId=paramId)
-        return self.sendOneCommand(cmdBytes=cmdBytes, doClose=doClose, fmtRet=fmtRet, cmd=cmd)
+        return self.sendOneCommand(cmdBytes=cmdBytes, fmtRet=fmtRet, cmd=cmd)
 
-    def _setAxisParameter(self, paramId, data, doClose=False, fmtRet='>BBBBIB', cmd=None):
+    def _setAxisParameter(self, paramId, data, fmtRet='>BBBBIB', cmd=None):
         """| Set axis parameter
 
         :param paramId: parameter id
@@ -395,7 +395,7 @@ class rexm(FSMDev, QThread, bufferedSocket.EthComm):
         :raise: Exception if communication error occur
         """
         cmdBytes = TMCM.sap(paramId=paramId, data=data)
-        return self.sendOneCommand(cmdBytes=cmdBytes, doClose=doClose, fmtRet=fmtRet, cmd=cmd)
+        return self.sendOneCommand(cmdBytes=cmdBytes, fmtRet=fmtRet, cmd=cmd)
 
     def _getSpeed(self, cmd=None):
         """| Get current speed.
@@ -406,7 +406,7 @@ class rexm(FSMDev, QThread, bufferedSocket.EthComm):
         velocity = self._getAxisParameter(paramId=3, fmtRet='>BBBBiB', cmd=cmd)
         return velocity / (2 ** self.pulseDivisor * (65536 / 16e6))  # speed in ustep/sec
 
-    def _setSpeed(self, speedMm, doClose=False, cmd=None):
+    def _setSpeed(self, speedMm, cmd=None):
         """| Set motor speed.
 
         :param speedMm motor speed in mm/s
@@ -415,18 +415,18 @@ class rexm(FSMDev, QThread, bufferedSocket.EthComm):
         :raise: Exception if communication error occurs
         """
         freq = TMCM.mm2counts(stepIdx=self.stepIdx, valueMm=speedMm) * (2 ** self.pulseDivisor * (65536 / 16e6))
-        return self._setAxisParameter(paramId=4, data=freq, doClose=doClose, cmd=cmd)
+        return self._setAxisParameter(paramId=4, data=freq, cmd=cmd)
 
-    def _setHome(self, doClose=False, cmd=None):
+    def _setHome(self, cmd=None):
         """| Set low position as 0.
 
         :param cmd: on going command
         :raise: Exception if communication error occurs
         """
         cmdBytes = TMCM.sap(paramId=1, data=0)
-        return self.sendOneCommand(cmdBytes=cmdBytes, doClose=doClose, cmd=cmd)
+        return self.sendOneCommand(cmdBytes=cmdBytes, cmd=cmd)
 
-    def _MVP(self, direction, distance, doClose=False, cmd=None):
+    def _MVP(self, direction, distance, cmd=None):
         """| Move in relative for a specified distance and direction.
 
         :param direction 0 => to low, direction 1=> to mid
@@ -439,16 +439,16 @@ class rexm(FSMDev, QThread, bufferedSocket.EthComm):
         counts = np.int32(TMCM.mm2counts(stepIdx=self.stepIdx, valueMm=distance))
         cmdBytes = TMCM.MVP(direction, counts)
 
-        return self.sendOneCommand(cmdBytes=cmdBytes, doClose=doClose, cmd=cmd)
+        return self.sendOneCommand(cmdBytes=cmdBytes, cmd=cmd)
 
-    def _stop(self, cmd, doClose=False):
+    def _stop(self, cmd):
         """| Stop current motion
 
         :param cmd: on going command
         :raise: Exception if communication error occurs
         """
         cmdBytes = TMCM.stop()
-        return self.sendOneCommand(cmdBytes=cmdBytes, doClose=doClose, cmd=cmd)
+        return self.sendOneCommand(cmdBytes=cmdBytes, cmd=cmd)
 
     def sendOneCommand(self, cmdBytes, doClose=False, cmd=None, fmtRet='>BBBBIB'):
         """| Send one command and return one response.
