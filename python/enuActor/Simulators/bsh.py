@@ -3,6 +3,8 @@
 import socket
 import time
 
+import numpy as np
+
 
 class BshSim(socket.socket):
     statword = {0: 82, 10: 82, 20: 100, 30: 98, 40: 84}
@@ -27,6 +29,9 @@ class BshSim(socket.socket):
 
     def sendall(self, cmdStr, flags=None):
         time.sleep(0.02)
+        transient = 0
+        redTime = np.random.normal(0.38, 0.005)
+        blueTime = np.random.normal(0.3, 0.005)
         cmdOk = False
         cmdStr = cmdStr.decode()
 
@@ -39,12 +44,15 @@ class BshSim(socket.socket):
                 cmdOk = True
             elif cmdStr == "shut_open\r\n":
                 bia_mode = 20
+                transient = redTime
                 cmdOk = True
             elif cmdStr == "blue_open\r\n":
                 bia_mode = 30
+                transient = blueTime
                 cmdOk = True
             elif cmdStr == "red_open\r\n":
                 bia_mode = 40
+                transient = redTime
                 cmdOk = True
             elif cmdStr == "init\r\n":
                 bia_mode = 0
@@ -61,55 +69,68 @@ class BshSim(socket.socket):
         elif bia_mode == 20:  # SHUTTERS OPEN
             if cmdStr == "shut_close\r\n":
                 bia_mode = 0
+                transient = redTime
                 cmdOk = True
             elif cmdStr == "blue_close\r\n":
                 bia_mode = 40
+                transient = blueTime
                 cmdOk = True
             elif cmdStr == "red_close\r\n":
                 bia_mode = 30
+                transient = redTime
                 cmdOk = True
             if cmdStr == "init\r\n":
                 bia_mode = 0
+                transient = redTime
                 cmdOk = True
 
         elif bia_mode == 30:  # BLUE SHUTTER OPEN
             if cmdStr == "shut_open\r\n":
                 bia_mode = 20
+                transient = redTime
                 cmdOk = True
             if cmdStr == "shut_close\r\n":
                 bia_mode = 0
+                transient = blueTime
                 cmdOk = True
             elif cmdStr == "red_open\r\n":
                 bia_mode = 20
+                transient = redTime
                 cmdOk = True
             elif cmdStr == "blue_close\r\n":
                 bia_mode = 0
+                transient = blueTime
                 cmdOk = True
             elif cmdStr == "init\r\n":
                 bia_mode = 0
+                transient = blueTime
                 cmdOk = True
 
         elif bia_mode == 40:  # RED SHUTTER OPEN
             if cmdStr == "shut_open\r\n":
                 bia_mode = 20
+                transient = blueTime
                 cmdOk = True
             if cmdStr == "shut_close\r\n":
                 bia_mode = 0
+                transient = redTime
                 cmdOk = True
             elif cmdStr == "blue_open\r\n":
                 bia_mode = 20
+                transient = blueTime
                 cmdOk = True
             elif cmdStr == "red_close\r\n":
                 bia_mode = 0
+                transient = redTime
                 cmdOk = True
             elif cmdStr == "init\r\n":
                 bia_mode = 0
+                transient = redTime
                 cmdOk = True
 
         if bia_mode != self.bia_mode:
+            time.sleep(transient)
             self.bia_mode = bia_mode
-            if bia_mode != 10:
-                time.sleep(0.35)  # Shutters motion time
 
         if cmdStr == "statword\r\n":
             self.buf.append(self.statword)

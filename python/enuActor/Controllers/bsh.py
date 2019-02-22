@@ -1,5 +1,8 @@
 __author__ = 'alefur'
 import logging
+import time
+from datetime import datetime as dt
+from datetime import timedelta
 
 import enuActor.Controllers.bufferedSocket as bufferedSocket
 from actorcore.FSM import FSMDev
@@ -33,7 +36,7 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
         """
         substates = ['IDLE', 'FAILED', 'BUSY', 'EXPOSING', 'OPENRED', 'OPENBLUE', 'BIA']
         events = [
-            {'name': 'init', 'src': ['EXPOSING', 'OPENRED', 'OPENBLUE', 'BIA'], 'dst': 'IDLE'},
+            {'name': 'init', 'src': ['IDLE', 'EXPOSING', 'OPENRED', 'OPENBLUE', 'BIA'], 'dst': 'IDLE'},
             {'name': 'shut_open', 'src': ['IDLE', 'OPENRED', 'OPENBLUE'], 'dst': 'EXPOSING'},
             {'name': 'shut_close', 'src': ['EXPOSING', 'OPENRED', 'OPENBLUE'], 'dst': 'IDLE'},
             {'name': 'red_open', 'src': ['IDLE'], 'dst': 'OPENRED'},
@@ -54,11 +57,11 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
         QThread.__init__(self, actor, name)
         FSMDev.__init__(self, actor, name, events=events, substates=substates)
 
-        self.stopExposure = False
         self.sock = None
-
         self.sim = None
         self.currCmd = False
+        self.finishExposure = False
+        self.abortExposure = False
 
         self.logger = logging.getLogger(self.name)
         self.logger.setLevel(loglevel)
@@ -137,6 +140,51 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
 
         self.substates.trigger(cmdStr)
 
+    def expose(self, cmd, exptime, shutter):
+        """| Command opening and closing of shutters with a chosen exposure time and generate keywords:
+        | dateobs : exposure starting time isoformatted
+        | transientTime : opening+closing shutters transition time
+        | exptime : absolute exposure time
+
+        :param cmd: on going command
+        :param exptime: Exposure time
+        :param shutter: which shutter to open
+        :type exptime: float
+        :type shutter: str
+        """
+        self.finishExposure = False
+        self.abortExposure = False
+
+        try:
+            self.gotoState(cmd=cmd, cmdStr='init')
+
+            start = dt.utcnow()
+            self.gotoState(cmd=cmd, cmdStr='%s_open' % shutter)
+            transientTime1 = (dt.utcnow() - start).total_seconds()
+
+            if 'open' not in self.shutterStatus(cmd):
+                raise RuntimeError('shutter(s) not open')
+
+            integEnd = self._waitUntil(cmd, start, exptime)
+            self.gotoState(cmd=cmd, cmdStr='%s_close' % shutter)
+
+            if not integEnd:
+                raise RuntimeWarning('exposure aborted')
+
+            if self.shutterStatus(cmd) != 'close':
+                raise RuntimeError('shutter(s) not close')
+
+            end = dt.utcnow()
+            transientTime2 = (end - integEnd).total_seconds()
+
+            cmd.inform('dateobs=%s' % start.isoformat())
+            cmd.inform('transientTime=%.3f' % (transientTime1 + transientTime2))
+            cmd.inform('exptime=%.3f' % ((end - start).total_seconds() - 0.5 * (transientTime1 + transientTime2)))
+
+        except:
+            cmd.warn('exptime=nan')
+            raise
+
     def getStatus(self, cmd, doFinish=True):
         """| Call bsh.checkStatus() and generate shutters, bia keywords
 
@@ -186,6 +234,8 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
         except:
             cmd.warn('shutters=undef')
             raise
+
+        return shutters
 
     def biaStatus(self, cmd):
         """| Get bia status and generate bia keywords
@@ -276,6 +326,31 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
             raise RuntimeError("bsh has replied nok, cmdStr : %s inappropriate in current state " % cmdStr)
 
         return reply
+
+    def _waitUntil(self, cmd, start, exptime, ti=0.001):
+        """| Temporization, check every 0.01 sec for a user abort command.
+
+        :param cmd: current command,
+        :param exptime: exposure time,
+        :type exptime: float
+        :raise: Exception("Exposure aborted by user") if the an abort command has been received
+        """
+        tlim = start + timedelta(seconds=exptime)
+        inform = dt.utcnow()
+        cmd.inform("integratingTime=%.2f" % (tlim - inform).total_seconds())
+        cmd.inform("elapsedTime=%.2f" % (inform - start).total_seconds())
+
+        while dt.utcnow() < tlim:
+            if self.finishExposure:
+                break
+            if self.abortExposure:
+                return 0
+            if (dt.utcnow() - inform).total_seconds() > 2:
+                inform = dt.utcnow()
+                cmd.inform("elapsedTime=%.2f" % (inform - start).total_seconds())
+            time.sleep(ti)
+
+        return dt.utcnow()
 
     def createSock(self):
         if self.simulated:

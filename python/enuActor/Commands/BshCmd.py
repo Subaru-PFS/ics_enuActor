@@ -26,7 +26,10 @@ class BshCmd(object):
             ('bia', 'config [<duty>] [<period>]', self.setBiaConfig),
             ('bia', 'status', self.biaStatus),
             ('shutters', '@(open|close) [blue|red]', self.shutterSwitch),
-            ('shutters', 'status', self.shutterStatus)
+            ('shutters', 'status', self.shutterStatus),
+            ('shutters', '@(expose) <exptime> [blue|red]', self.expose),
+            ('exposure', 'abort', self.abortExposure),
+            ('exposure', 'finish', self.finishExposure)
         ]
 
         # Define typed command arguments for the above commands.
@@ -143,3 +146,32 @@ class BshCmd(object):
         cmdStr = cmdKeys['raw'].values[0]
 
         cmd.finish('text=%s' % self.controller.sendOneCommand(cmdStr, cmd=cmd))
+
+    @threaded
+    def expose(self, cmd):
+        """send a raw command to the bsh board"""
+        cmdKeys = cmd.cmd.keywords
+
+        exptime = cmdKeys["exptime"].values[0]
+        shutter = 'shut'
+        shutter = 'red' if 'red' in cmdKeys else shutter
+        shutter = 'blue' if 'blue' in cmdKeys else shutter
+
+        if exptime < 0.5:
+            raise ValueError('exptime>=0.5 (red shutter transientTime)')
+
+        self.controller.expose(cmd=cmd,
+                               exptime=exptime,
+                               shutter=shutter)
+
+        self.controller.getStatus(cmd)
+
+    def abortExposure(self, cmd):
+        """send a raw command to the bsh board"""
+        self.controller.abortExposure = True
+        cmd.finish("text='aborting current exposure'")
+
+    def finishExposure(self, cmd):
+        """send a raw command to the bsh board"""
+        self.controller.finishExposure = True
+        cmd.finish("text='finishing current exposure'")
