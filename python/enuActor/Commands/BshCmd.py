@@ -20,6 +20,7 @@ class BshCmd(object):
             ('bsh', 'ping', self.ping),
             ('bsh', 'status', self.status),
             ('bsh', '<raw>', self.rawCommand),
+            ('bsh', 'init', self.initBsh),
             ('bia', '@(on|off)', self.biaSwitch),
             ('bia', '@(strobe) @(on|off)', self.setStrobe),
             ('bia', 'config [<duty>] [<period>]', self.setBiaConfig),
@@ -54,6 +55,19 @@ class BshCmd(object):
         self.controller.getStatus(cmd)
 
     @threaded
+    def initBsh(self, cmd):
+        """Report state, mode, position"""
+        doFinish = True
+
+        try:
+            self.controller.gotoState(cmd, 'init')
+        except:
+            doFinish = False
+            raise
+        finally:
+            self.controller.getStatus(cmd, doFinish=doFinish)
+
+    @threaded
     def setBiaConfig(self, cmd):
         """Update bia parameters """
         cmdKeys = cmd.cmd.keywords
@@ -75,16 +89,29 @@ class BshCmd(object):
 
     @threaded
     def biaSwitch(self, cmd):
-        """Switch bia on/off, optional keyword force to force transition (without breaking interlock)"""
+        """Switch bia on/off)"""
+        doFinish = True
         cmdKeys = cmd.cmd.keywords
         cmdStr = "bia_on" if "on" in cmdKeys else "bia_off"
 
-        self.controller.switch(cmd, cmdStr)
-        self.controller.getStatus(cmd)
+        try:
+            self.controller.gotoState(cmd, cmdStr)
+        except:
+            doFinish = False
+            raise
+        finally:
+            self.controller.getStatus(cmd, doFinish=doFinish)
+
+    @threaded
+    def biaStatus(self, cmd):
+        """get bia status"""
+        self.controller.biaStatus(cmd)
+        cmd.finish()
 
     @threaded
     def shutterSwitch(self, cmd):
-        """Open/close , optional keyword force to force transition (without breaking interlock)"""
+        """Open/close shutters (red/blue or both)"""
+        doFinish = True
         cmdKeys = cmd.cmd.keywords
         shutter = 'shut'
         shutter = 'red' if 'red' in cmdKeys else shutter
@@ -93,8 +120,21 @@ class BshCmd(object):
 
         cmdStr = '%s_%s' % (shutter, move)
 
-        self.controller.switch(cmd, cmdStr)
-        self.controller.getStatus(cmd)
+        cmd.inform('cmdStr=%s' % cmdStr)
+
+        try:
+            self.controller.gotoState(cmd, cmdStr)
+        except:
+            doFinish = False
+            raise
+        finally:
+            self.controller.getStatus(cmd, doFinish=doFinish)
+
+    @threaded
+    def shutterStatus(self, cmd):
+        """get shutters status"""
+        self.controller.shutterStatus(cmd)
+        cmd.finish()
 
     @threaded
     def rawCommand(self, cmd):
@@ -103,15 +143,3 @@ class BshCmd(object):
         cmdStr = cmdKeys['raw'].values[0]
 
         cmd.finish('text=%s' % self.controller.sendOneCommand(cmdStr, cmd=cmd))
-
-    @threaded
-    def shutterStatus(self, cmd):
-        """send a raw command to the bsh board"""
-        self.controller.shutterStatus(cmd)
-        cmd.finish()
-
-    @threaded
-    def biaStatus(self, cmd):
-        """send a raw command to the bsh board"""
-        self.controller.biaStatus(cmd)
-        cmd.finish()

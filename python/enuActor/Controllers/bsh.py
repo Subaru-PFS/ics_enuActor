@@ -7,6 +7,10 @@ from actorcore.QThread import QThread
 from enuActor.Simulators.bsh import BshSim
 
 
+def busyEvent(event):
+    return [dict(name='%s_%s' % (src, event['name']), src='BUSY', dst=event['dst']) for src in event['src']]
+
+
 class bsh(FSMDev, QThread, bufferedSocket.EthComm):
     bshFSM = {0: ('close', 'off'),
               10: ('close', 'on'),
@@ -27,11 +31,25 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
         :param name: controller name
         :type name: str
         """
-        substates = ['IDLE', 'EXPOSING', 'FAILED']
-        events = [{'name': 'expose', 'src': 'IDLE', 'dst': 'EXPOSING'},
-                  {'name': 'idle', 'src': ['EXPOSING'], 'dst': 'IDLE'},
-                  {'name': 'fail', 'src': ['EXPOSING'], 'dst': 'FAILED'},
-                  ]
+        substates = ['IDLE', 'FAILED', 'BUSY', 'EXPOSING', 'OPENRED', 'OPENBLUE', 'BIA']
+        events = [
+            {'name': 'init', 'src': ['EXPOSING', 'OPENRED', 'OPENBLUE', 'BIA'], 'dst': 'IDLE'},
+            {'name': 'shut_open', 'src': ['IDLE', 'OPENRED', 'OPENBLUE'], 'dst': 'EXPOSING'},
+            {'name': 'shut_close', 'src': ['EXPOSING', 'OPENRED', 'OPENBLUE'], 'dst': 'IDLE'},
+            {'name': 'red_open', 'src': ['IDLE'], 'dst': 'OPENRED'},
+            {'name': 'red_open', 'src': ['OPENBLUE'], 'dst': 'EXPOSING'},
+            {'name': 'red_close', 'src': ['EXPOSING'], 'dst': 'OPENBLUE'},
+            {'name': 'red_close', 'src': ['OPENRED'], 'dst': 'IDLE'},
+            {'name': 'blue_open', 'src': ['IDLE'], 'dst': 'OPENBLUE'},
+            {'name': 'blue_open', 'src': ['OPENRED'], 'dst': 'EXPOSING'},
+            {'name': 'blue_close', 'src': ['EXPOSING'], 'dst': 'OPENRED'},
+            {'name': 'blue_close', 'src': ['OPENBLUE'], 'dst': 'IDLE'},
+            {'name': 'bia_on', 'src': ['IDLE'], 'dst': 'BIA'},
+            {'name': 'bia_off', 'src': ['BIA'], 'dst': 'IDLE'}]
+
+        events += sum([busyEvent(event) for event in events], [])
+        events += [{'name': 'fail', 'src': 'BUSY', 'dst': 'FAILED'},
+                   {'name': 'lock', 'src': ['IDLE', 'EXPOSING', 'OPENRED', 'OPENBLUE', 'BIA'], 'dst': 'BUSY'}]
 
         QThread.__init__(self, actor, name)
         FSMDev.__init__(self, actor, name, events=events, substates=substates)
@@ -103,7 +121,23 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
         self.setBiaConfig(cmd, self.defaultPeriod, self.defaultDuty, self.defaultStrobe)
         self._gotoState('init', cmd=cmd)
 
-    def getStatus(self, cmd):
+    def gotoState(self, cmd, cmdStr):
+        current = self.substates.current
+
+        if self.substates.can(cmdStr):
+            self.substates.lock()
+
+            try:
+                self._gotoState(cmdStr, cmd=cmd)
+                cmdStr = '%s_%s' % (current, cmdStr)
+
+            except:
+                self.substates.fail()
+                raise
+
+        self.substates.trigger(cmdStr)
+
+    def getStatus(self, cmd, doFinish=True):
         """| Call bsh.checkStatus() and generate shutters, bia keywords
 
         :param cmd: on going command
@@ -116,6 +150,7 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
             self.checkStatus(cmd)
             self.closeSock()
 
+        if doFinish:
             cmd.finish()
 
     def checkStatus(self, cmd):
