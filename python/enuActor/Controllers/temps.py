@@ -109,11 +109,11 @@ class temps(FSMDev, QThread, bufferedSocket.EthComm):
 
         if self.states.current == 'ONLINE':
             try:
-                self.getTemps(cmd, slot=1)
+                self.getTemps(slot=1, cmd=cmd)
             except:
                 raise
             finally:
-                self.getTemps(cmd, slot=2)
+                self.getTemps(slot=2, cmd=cmd)
                 self.closeSock()
 
         cmd.finish()
@@ -130,10 +130,10 @@ class temps(FSMDev, QThread, bufferedSocket.EthComm):
         """
         try:
             if self.doCalib:
-                resistances = self.fetchResistance(slot=slot)
+                resistances = self.fetchResistance(slot=slot, cmd=cmd)
                 temps = self.convert(resistances=resistances, calib=self.calib[slot])
             else:
-                temps = self.fetchTemps(slot=slot)
+                temps = self.fetchTemps(slot=slot, cmd=cmd)
 
             cmd.inform('temps%d=%s' % (slot, ','.join(['%.3f' % float(temp) for temp in temps])))
 
@@ -150,14 +150,14 @@ class temps(FSMDev, QThread, bufferedSocket.EthComm):
         :raise: Exception if a command fail
         """
         try:
-            resistances = self.fetchResistance(slot=slot)
+            resistances = self.fetchResistance(slot=slot, cmd=cmd)
             cmd.inform('res%d=%s' % (slot, ','.join(['%.5f' % float(res) for res in resistances])))
 
         except:
             cmd.warn('res%d=%s' % (slot, ','.join(['%.5f' % float(res) for res in np.ones(10) * np.nan])))
             raise
 
-    def fetchResistance(self, slot):
+    def fetchResistance(self, cmd, slot):
         """|  fetch resistance values for a specified slot.
 
         :param cmd: on going command
@@ -167,10 +167,10 @@ class temps(FSMDev, QThread, bufferedSocket.EthComm):
         """
         channels = self.channels[slot]
 
-        ret = self.sendOneCommand('MEAS:FRES? 100,0.0003,(@%s)' % channels)
+        ret = self.sendOneCommand('MEAS:FRES? 100,0.0003,(@%s)' % channels, cmd=cmd)
         return np.array([float(res) for res in ret.split(',')])
 
-    def fetchTemps(self, slot):
+    def fetchTemps(self, cmd, slot):
         """|  fetch temperature values for a specified slot.
 
         :param cmd: on going command
@@ -180,7 +180,7 @@ class temps(FSMDev, QThread, bufferedSocket.EthComm):
         """
         channels = self.channels[slot]
 
-        ret = self.sendOneCommand('MEAS:TEMP? FRTD, (@%s)' % channels)
+        ret = self.sendOneCommand('MEAS:TEMP? FRTD, (@%s)' % channels, cmd=cmd)
         return np.array([float(temp) for temp in ret.split(',')])
 
     def getInfo(self, cmd):
@@ -189,9 +189,9 @@ class temps(FSMDev, QThread, bufferedSocket.EthComm):
         :param cmd: on going command
         :raise: Exception if a command fail
         """
-        cmd.inform('slot1="%s"' % self.sendOneCommand('SYST:CTYP? 100'))
-        cmd.inform('slot2="%s"' % self.sendOneCommand('SYST:CTYP? 200'))
-        cmd.inform('firmware=%s' % self.sendOneCommand('SYST:VERS?'))
+        cmd.inform('slot1="%s"' % self.sendOneCommand('SYST:CTYP? 100', cmd=cmd))
+        cmd.inform('slot2="%s"' % self.sendOneCommand('SYST:CTYP? 200', cmd=cmd))
+        cmd.inform('firmware=%s' % self.sendOneCommand('SYST:VERS?', cmd=cmd))
 
     def getError(self, cmd):
         """|  fetch controller error
@@ -199,7 +199,7 @@ class temps(FSMDev, QThread, bufferedSocket.EthComm):
         :param cmd: on going command
         :raise: RuntimeError if the controller returns an error
         """
-        errorCode, errorMsg = self.sendOneCommand('SYST:ERR?').split(',')
+        errorCode, errorMsg = self.sendOneCommand('SYST:ERR?', cmd=cmd).split(',')
 
         if int(errorCode) != 0:
             cmd.warn('error=%d,%s' % (int(errorCode), errorMsg))

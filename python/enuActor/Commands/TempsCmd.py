@@ -47,11 +47,11 @@ class TempsCmd(object):
     def getResistance(self, cmd):
         """Report resistance value for all sensors"""
         try:
-            self.controller.getResistance(cmd, slot=1, doClose=False)
+            self.controller.getResistance(slot=1, cmd=cmd)
         except:
             raise
         finally:
-            self.controller.getResistance(cmd, slot=2)
+            self.controller.getResistance(slot=2, cmd=cmd)
 
         cmd.finish()
 
