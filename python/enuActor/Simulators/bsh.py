@@ -167,6 +167,15 @@ class BshSim(socket.socket):
             self.pulse_on = 0
             cmdOk = True
 
+        if cmdStr == "read_phr\r\n":
+            if self.bia_mode == 10:
+                values = np.random.normal(845, 5), np.random.normal(845, 5)
+            else:
+                values = np.random.normal(10, 2), np.random.normal(10, 2)
+
+            self.buf.append('%d,%d' % (values[0], values[1]))
+            cmdOk = True
+
         if cmdOk:
             self.buf.append("ok\r\n")
 

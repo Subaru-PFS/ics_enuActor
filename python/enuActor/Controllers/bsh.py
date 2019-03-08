@@ -97,9 +97,9 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
                                         port=int(self.actor.config.get('bsh', 'port')),
                                         EOL='\r\n')
 
-        self.defaultPeriod = int(self.actor.config.get('bsh', 'bia_period'))
-        self.defaultDuty = int(self.actor.config.get('bsh', 'bia_duty'))
-        self.defaultStrobe = self.actor.config.get('bsh', 'bia_strobe')
+        self.defaultBiaParams = dict(period=int(self.actor.config.get('bsh', 'bia_period')),
+                                     duty=int(self.actor.config.get('bsh', 'bia_duty')),
+                                     strobe=self.actor.config.get('bsh', 'bia_strobe'))
 
     def startComm(self, cmd):
         """| Start socket with the interlock board or simulate it.
@@ -121,7 +121,7 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
         :param cmd: on going command
         :raise: Exception if a command fail, user if warned with error
         """
-        self.setBiaConfig(cmd, self.defaultPeriod, self.defaultDuty, self.defaultStrobe)
+        self.setBiaConfig(cmd, **self.defaultBiaParams)
         self._gotoState('init', cmd=cmd)
 
     def gotoState(self, cmd, cmdStr):
@@ -246,7 +246,9 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
         try:
             __, bia = bsh.bshFSM[self._state(cmd)]
             strobe, period, duty = self._biaConfig(cmd)
+            phr1, phr2 = self._photores(cmd)
 
+            cmd.inform('photores=%d,%d' % (phr1, phr2))
             cmd.inform('biaConfig=%d,%d,%d' % (strobe, period, duty))
             cmd.inform('bia=%s' % bia)
         except:
@@ -313,6 +315,17 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
         strobe, period, duty = biastat.split(',')
 
         return int(strobe), int(period), int(duty)
+
+    def _photores(self, cmd):
+        """| check and return current photoresistances values.
+
+        :param cmd: current command,
+        :raise: Exception if a command has failed
+        """
+        photores = self.sendOneCommand("read_phr", cmd=cmd)
+        phr1, phr2 = photores.split(',')
+
+        return int(phr1), int(phr2)
 
     def _gotoState(self, cmdStr, cmd):
         """| try to reach required state in bsh low level state machine
