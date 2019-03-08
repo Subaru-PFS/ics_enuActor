@@ -125,13 +125,7 @@ class BufferedSocket(object):
         """
 
         while self.buffer.find(self.EOL) == -1:
-            try:
-                more = self.getOutput(sock=sock, timeout=timeout, cmd=cmd)
-                if not more:
-                    raise IOError
-
-            except IOError:
-                return ''
+            more = self.getOutput(sock=sock, timeout=timeout, cmd=cmd)
             msg = '%s added: %r' % (self.name, more)
 
             self.buffer += more
@@ -146,7 +140,7 @@ class BufferedSocket(object):
 
 class bsh(EthComm):
     states = ['init', 'shut_open', 'red_open', 'blue_open', 'bia_on']
-    cmdList = ['shut_open', 'red_open', 'blue_open', 'red_close', 'blue_close', 'bia_on', 'bia_off']
+    cmdList = ['shut_open', 'shut_close', 'red_open', 'blue_open', 'red_close', 'blue_close', 'bia_on', 'bia_off']
     statList = {'init': 0,
                 'bia_on': 10,
                 'shut_open': 20,
@@ -209,17 +203,6 @@ class bsh(EthComm):
 
         if biaStrobe is not None:
             self.sendOneCommand('pulse_%s' % biaStrobe)
-
-        strobe, period, duty = self.getBiaConfig()
-
-        if biaStrobe is not None and biaStrobe != strobe:
-            raise ValueError('bia strobe is not correct')
-
-        if biaPeriod is not None and biaPeriod != period:
-            raise ValueError('bia period is not correct')
-
-        if biaDuty is not None and biaDuty != duty:
-            raise ValueError('bia duty is not correct')
 
     def getBiaConfig(self):
         """|publish bia configuration keywords.
