@@ -1,7 +1,9 @@
 import logging
 import select
 import socket
+
 from enuActor.utils.wrap import busy
+
 
 class EthComm(object):
     def __init__(self, host, port, EOL='\r\n', timeout=3.0):
@@ -118,11 +120,9 @@ class BufferedSocket(object):
 
         readers, writers, broken = select.select([sock.fileno()], [], [], timeout)
         if len(readers) == 0:
-            msg = "Timed out reading character from %s" % self.name
-            self.logger.warning(msg)
-            if cmd is not None:
-                cmd.warn('text="%s"' % msg)
-            raise IOError(msg)
+            cmd.warn('text="Timed out reading character from %s"' % self.name)
+            raise IOError
+
         return sock.recv(1024).decode('utf8', 'ignore')
 
     def getOneResponse(self, sock=None, timeout=None, cmd=None):
