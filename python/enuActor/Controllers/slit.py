@@ -208,7 +208,7 @@ class slit(FSMDev, QThread):
         if self.states.current in ['LOADED', 'ONLINE']:
             self.getPosition(cmd=cmd)
             hxpStatus = self._getHxpStatus()
-            cmd.inform('slitStatus=%d,"%s' % (int(hxpStatus), self._getHxpStatusString(hxpStatus)))
+            cmd.inform('hexaStatus=%d,"%s' % (int(hxpStatus), self._getHxpStatusString(hxpStatus)))
             cmd.inform('slitLocation=%s' % self.location)
 
         cmd.finish()
