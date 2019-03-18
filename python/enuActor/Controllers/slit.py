@@ -3,13 +3,12 @@ import logging
 import socket
 
 import numpy as np
-from actorcore.FSM import FSMDev
-from actorcore.QThread import QThread
 from enuActor.Simulators.slit import SlitSim
 from enuActor.drivers import hxp_drivers
+from enuActor.utils.fsmThread import FSMThread
 
 
-class slit(FSMDev, QThread):
+class slit(FSMThread):
     timeout = 2
 
     @staticmethod
@@ -36,8 +35,7 @@ class slit(FSMDev, QThread):
                   {'name': 'shutdown', 'src': ['IDLE'], 'dst': 'SHUTDOWN'},
                   ]
 
-        QThread.__init__(self, actor, name)
-        FSMDev.__init__(self, actor, name, events=events, substates=substates)
+        FSMThread.__init__(self, actor, name, events=events, substates=substates, doInit=False)
 
         self.addStateCB('MOVING', self.moveTo)
         self.addStateCB('SHUTDOWN', self.shutdown)
@@ -50,6 +48,9 @@ class slit(FSMDev, QThread):
 
         self.sim = None
         self.currCmd = False
+
+        self.last = 0
+        self.monitor = 60
 
         self.logger = logging.getLogger(self.name)
         self.logger.setLevel(loglevel)
@@ -73,14 +74,6 @@ class slit(FSMDev, QThread):
 
     def disconnect(self):
         self.actor.callCommand('disconnect controller=%s' % self.name)
-
-    def start(self, cmd=None, doInit=False, mode=None):
-        QThread.start(self)
-        FSMDev.start(self, cmd=cmd, doInit=doInit, mode=mode)
-
-    def stop(self, cmd=None):
-        FSMDev.stop(self, cmd=cmd)
-        self.exit()
 
     def initDevice(self, args):
         """| init callback triggered entering INITIALISING state
@@ -530,7 +523,3 @@ class slit(FSMDev, QThread):
             s = hxp_drivers.XPS()
 
         return s
-
-    def handleTimeout(self):
-        if self.exitASAP:
-            raise SystemExit()

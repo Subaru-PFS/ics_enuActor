@@ -6,23 +6,22 @@ from enuActor.utils.wrap import busy
 
 
 class EthComm(object):
-    def __init__(self, host, port, EOL='\r\n', timeout=3.0):
+    def __init__(self, host, port, EOL='\r\n'):
         object.__init__(self)
         self.sock = None
         self.isBusy = False
         self.host = host
         self.port = port
         self.EOL = EOL
-        self.timeout = timeout
 
-    def connectSock(self):
+    def connectSock(self, timeout=3.0):
         """| Connect socket if self.sock is None.
 
         :return: - socket
         """
         if self.sock is None:
             s = self.createSock()
-            s.settimeout(self.timeout)
+            s.settimeout(timeout)
             s.connect((self.host, self.port))
 
             self.sock = s

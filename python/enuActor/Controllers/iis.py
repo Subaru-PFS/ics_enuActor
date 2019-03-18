@@ -1,12 +1,12 @@
 __author__ = 'alefur'
 import logging
-import enuActor.Controllers.bufferedSocket as bufferedSocket
-from actorcore.FSM import FSMDev
-from actorcore.QThread import QThread
+
+import enuActor.utils.bufferedSocket as bufferedSocket
 from enuActor.Simulators.iis import IisSim
+from enuActor.utils.fsmThread import FSMThread
 
 
-class iis(FSMDev, QThread, bufferedSocket.EthComm):
+class iis(FSMThread, bufferedSocket.EthComm):
 
     def __init__(self, actor, name, loglevel=logging.DEBUG):
         """__init__.
@@ -16,16 +16,11 @@ class iis(FSMDev, QThread, bufferedSocket.EthComm):
         :param name: controller name
         :type name: str
         """
-
-        bufferedSocket.EthComm.__init__(self)
-        QThread.__init__(self, actor, name)
-        FSMDev.__init__(self, actor, name)
+        FSMThread.__init__(self, actor, name, doInit=True)
 
         self.sock = None
         self.sim = None
         self.EOL = '\r\n'
-
-        self.ioBuffer = bufferedSocket.BufferedSocket(self.name + "IO", EOL='\r\n')
 
         self.logger = logging.getLogger(self.name)
         self.logger.setLevel(loglevel)
@@ -39,14 +34,6 @@ class iis(FSMDev, QThread, bufferedSocket.EthComm):
         else:
             raise ValueError('unknown mode')
 
-    def start(self, cmd=None, doInit=True, mode=None):
-        QThread.start(self)
-        FSMDev.start(self, cmd=cmd, doInit=doInit, mode=mode)
-
-    def stop(self, cmd=None):
-        FSMDev.stop(self, cmd=cmd)
-        self.exit()
-
     def loadCfg(self, cmd, mode=None):
         """loadCfg
         load Configuration file
@@ -56,9 +43,11 @@ class iis(FSMDev, QThread, bufferedSocket.EthComm):
                  False, ret : Config file badly formatted, Exception ret
         """
 
-        self.mode = self.actor.config.get('iis', 'mode') if mode is None else mode
-        self.host = self.actor.config.get('iis', 'host')
-        self.port = int(self.actor.config.get('iis', 'port'))
+        self.mode = self.actor.config.get('bsh', 'mode') if mode is None else mode
+        bufferedSocket.EthComm.__init__(self,
+                                        host=self.actor.config.get('iis', 'host'),
+                                        port=int(self.actor.config.get('iis', 'port')),
+                                        EOL='\r\n')
 
     def startComm(self, cmd):
         """| Start socket with the interlock board or simulate it.
@@ -70,6 +59,8 @@ class iis(FSMDev, QThread, bufferedSocket.EthComm):
 
         self.sim = IisSim()  # Create new simulator
         s = self.connectSock()
+
+        self.ioBuffer = bufferedSocket.BufferedSocket(self.name + "IO", EOL='ok\r\n')
 
     def init(self, cmd):
         """ Initialise the temperature controller
@@ -122,7 +113,3 @@ class iis(FSMDev, QThread, bufferedSocket.EthComm):
             s = bufferedSocket.EthComm.createSock(self)
 
         return s
-
-    def handleTimeout(self):
-        if self.exitASAP:
-            raise SystemExit()

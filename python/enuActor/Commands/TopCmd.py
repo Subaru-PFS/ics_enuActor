@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-import subprocess
-
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
 
@@ -42,10 +40,7 @@ class TopCmd(object):
         period = cmd.cmd.keywords['period'].values[0]
         controllers = cmd.cmd.keywords['controllers'].values
 
-        knownControllers = []
-        for c in self.actor.config.get(self.actor.name, 'controllers').split(','):
-            c = c.strip()
-            knownControllers.append(c)
+        knownControllers = [c.strip() for c in self.actor.config.get(self.actor.name, 'controllers').split(',')]
 
         foundOne = False
         for c in controllers:
@@ -113,7 +108,6 @@ class TopCmd(object):
 
         if mode not in ['operation', 'simulation']:
             raise ValueError('unknown mode')
-
 
         self.actor.attachController(name=controller,
                                     cmd=cmd,
