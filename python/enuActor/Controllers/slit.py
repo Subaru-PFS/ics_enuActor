@@ -195,16 +195,10 @@ class slit(FSMThread):
 
         :param cmd: on going command
         """
-        cmd.inform('slitFSM=%s,%s' % (self.states.current, self.substates.current))
-        cmd.inform('slitMode=%s' % self.mode)
-
-        if self.states.current in ['LOADED', 'ONLINE']:
-            self.getPosition(cmd=cmd)
-            hxpStatus = self._getHxpStatus()
-            cmd.inform('hexaStatus=%d,"%s' % (int(hxpStatus), self._getHxpStatusString(hxpStatus)))
-            cmd.inform('slitLocation=%s' % self.location)
-
-        cmd.finish()
+        self.getPosition(cmd=cmd)
+        hxpStatus = self._getHxpStatus()
+        cmd.inform('hexaStatus=%d,"%s' % (int(hxpStatus), self._getHxpStatusString(hxpStatus)))
+        cmd.inform('slitLocation=%s' % self.location)
 
     def getPosition(self, cmd):
         """| Get current coordinates from the controller and generate slit position.
@@ -510,7 +504,7 @@ class slit(FSMThread):
 
         return self.socks[sockName]
 
-    def closeSock(self, sockName):
+    def closeSock(self, sockName='main'):
         socketId = self.socks[sockName]
 
         self.socks[sockName] = -1

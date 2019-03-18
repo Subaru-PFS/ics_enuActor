@@ -4,9 +4,9 @@ import time
 
 import enuActor.utils.bufferedSocket as bufferedSocket
 import numpy as np
-from enuActor.utils.fsmThread import FSMThread
 from enuActor.Simulators.rexm import RexmSim
 from enuActor.drivers.rexm_drivers import recvPacket, TMCM
+from enuActor.utils.fsmThread import FSMThread
 
 
 class rexm(FSMThread, bufferedSocket.EthComm):
@@ -115,15 +115,8 @@ class rexm(FSMThread, bufferedSocket.EthComm):
 
         :param cmd: on going command
         """
-        cmd.inform('rexmFSM=%s,%s' % (self.states.current, self.substates.current))
-        cmd.inform('rexmMode=%s' % self.mode)
-
-        if self.states.current in ['LOADED', 'ONLINE']:
-            self.checkConfig(cmd)
-            self.checkStatus(cmd)
-            self.closeSock()
-
-        cmd.finish()
+        self.checkConfig(cmd)
+        self.checkStatus(cmd)
 
     def safeStop(self, cmd):
         """| Abort current motion and retry until speed=0
@@ -499,11 +492,3 @@ class rexm(FSMThread, bufferedSocket.EthComm):
             s = bufferedSocket.EthComm.createSock(self)
 
         return s
-
-    def handleTimeout(self):
-        if self.exitASAP:
-            raise SystemExit()
-
-        if self.monitor and (time.time() - self.last) > self.monitor:
-            self.getStatus(cmd=self.actor.bcast)
-            self.last = time.time()

@@ -38,18 +38,11 @@ class PduCmd(object):
         except KeyError:
             raise RuntimeError('%s controller is not connected.' % (self.name))
 
-    @property
-    def slit(self):
-        try:
-            return self.actor.controllers['slit']
-        except KeyError:
-            raise RuntimeError('slit controller is not connected.')
-
     @threaded
     def status(self, cmd):
         """Report status and version; obtain and send current data"""
 
-        self.controller.getStatus(cmd)
+        self.controller.generate(cmd)
 
     @threaded
     def switch(self, cmd):
@@ -63,4 +56,4 @@ class PduCmd(object):
                 raise ValueError('unknown port')
 
         self.controller.substates.switch(cmd=cmd, switchOn=switchOn, switchOff=switchOff)
-        self.controller.getStatus(cmd)
+        self.controller.generate(cmd)

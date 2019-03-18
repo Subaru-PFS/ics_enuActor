@@ -92,17 +92,8 @@ class temps(FSMThread, bufferedSocket.EthComm):
         :param cmd: on going command
         :raise: Exception if a command fail
         """
-        cmd.inform('tempsFSM=%s,%s' % (self.states.current, self.substates.current))
-        cmd.inform('tempsMode=%s' % self.mode)
-
-        if self.states.current == 'ONLINE':
-            try:
-                self.getTemps(slot=1, cmd=cmd)
-            except:
-                raise
-            finally:
-                self.getTemps(slot=2, cmd=cmd)
-                self.closeSock()
+        self.getTemps(slot=1, cmd=cmd)
+        self.getTemps(slot=2, cmd=cmd)
 
         cmd.finish()
 

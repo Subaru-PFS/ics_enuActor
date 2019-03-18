@@ -114,6 +114,15 @@ class bsh(FSMThread, bufferedSocket.EthComm):
         self.setBiaConfig(cmd, **self.defaultBiaParams)
         self._gotoState('init', cmd=cmd)
 
+    def getStatus(self, cmd):
+        """| Call bsh.biaStatus() and bsh.shutterStatus()
+
+        :param cmd: on going command
+        :raise: Exception if a command has failed
+        """
+        self.biaStatus(cmd=cmd)
+        self.shutterStatus(cmd=cmd)
+
     def gotoState(self, cmd, cmdStr):
         current = self.substates.current
 
@@ -174,35 +183,6 @@ class bsh(FSMThread, bufferedSocket.EthComm):
         except:
             cmd.warn('exptime=nan')
             raise
-
-    def getStatus(self, cmd, doFinish=True):
-        """| Call bsh.checkStatus() and generate shutters, bia keywords
-
-        :param cmd: on going command
-        :param doFinish: if True finish the command
-        """
-        cmd.inform('bshFSM=%s,%s' % (self.states.current, self.substates.current))
-        cmd.inform('bshMode=%s' % self.mode)
-
-        if self.states.current == 'ONLINE':
-            self.checkStatus(cmd)
-            self.closeSock()
-
-        if doFinish:
-            cmd.finish()
-
-    def checkStatus(self, cmd):
-        """| Call bsh.biaStatus() and bsh.shutterStatus()
-
-        :param cmd: on going command
-        :raise: Exception if a command has failed
-        """
-        try:
-            self.biaStatus(cmd=cmd)
-        except:
-            raise
-        finally:
-            self.shutterStatus(cmd=cmd)
 
     def shutterStatus(self, cmd):
         """| Get shutters status and generate shutters keywords

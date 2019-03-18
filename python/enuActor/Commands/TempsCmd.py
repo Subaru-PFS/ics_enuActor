@@ -41,18 +41,13 @@ class TempsCmd(object):
     @threaded
     def status(self, cmd):
         """Report state, substate, mode, temperatures"""
-        self.controller.getStatus(cmd)
+        self.controller.generate(cmd)
 
     @threaded
     def getResistance(self, cmd):
         """Report resistance value for all sensors"""
-        try:
-            self.controller.getResistance(slot=1, cmd=cmd)
-        except:
-            raise
-        finally:
-            self.controller.getResistance(slot=2, cmd=cmd)
-
+        self.controller.getResistance(slot=1, cmd=cmd)
+        self.controller.getResistance(slot=2, cmd=cmd)
         cmd.finish()
 
     @threaded
@@ -67,12 +62,10 @@ class TempsCmd(object):
     def getError(self, cmd):
         """Report controller error"""
         self.controller.getError(cmd)
-
         cmd.finish()
 
     @threaded
     def getInfo(self, cmd):
         """Report controller info"""
         self.controller.getInfo(cmd)
-
         cmd.finish()

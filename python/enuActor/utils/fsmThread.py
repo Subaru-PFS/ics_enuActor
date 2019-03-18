@@ -23,10 +23,24 @@ class FSMThread(FSMDev, QThread):
         FSMDev.stop(self, cmd=cmd)
         self.exit()
 
+    def generate(self, cmd):
+        cmd.inform('%sFSM=%s,%s' % (self.name, self.states.current, self.substates.current))
+        cmd.inform('%sMode=%s' % (self.name, self.mode))
+
+        if self.states.current in ['LOADED', 'ONLINE']:
+            try:
+                self.getStatus(cmd)
+            except:
+                raise
+            finally:
+                self.closeSock()
+
+        cmd.finish()
+
     def handleTimeout(self):
         if self.exitASAP:
             raise SystemExit()
 
         if self.monitor and (time.time() - self.last) > self.monitor:
-            self.getStatus(cmd=self.actor.bcast)
+            self.generate(cmd=self.actor.bcast)
             self.last = time.time()

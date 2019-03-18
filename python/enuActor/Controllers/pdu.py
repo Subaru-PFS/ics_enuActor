@@ -3,8 +3,8 @@ import logging
 import time
 
 import enuActor.utils.bufferedSocket as bufferedSocket
-from enuActor.utils.fsmThread import FSMThread
 from enuActor.Simulators.pdu import PduSim
+from enuActor.utils.fsmThread import FSMThread
 
 
 class pdu(FSMThread, bufferedSocket.EthComm):
@@ -76,6 +76,13 @@ class pdu(FSMThread, bufferedSocket.EthComm):
         self.ioBuffer = bufferedSocket.BufferedSocket(self.name + 'IO', EOL='\r\n>')
         s = self.connectSock()
 
+    def getStatus(self, cmd):
+
+        for channel in [channel for channel in self.actor.config.options('outlets')]:
+            self.checkChannel(cmd=cmd, channel=channel)
+
+        cmd.inform('pduVAW=%s,%s,%s' % self.checkVaw(cmd))
+
     def switch(self, e):
         toSwitch = dict([(channel, 'on') for channel in e.switchOn] + [(channel, 'off') for channel in e.switchOff])
 
@@ -103,25 +110,6 @@ class pdu(FSMThread, bufferedSocket.EthComm):
         __, outlet, state = ret.rsplit(' ', 2)
 
         self.setState(cmd=cmd, outlet=outlet, channel=channel, state=state)
-
-    def getStatus(self, cmd):
-        cmd.inform('pduMode=%s' % self.mode)
-        cmd.inform('pduFSM=%s,%s' % (self.states.current, self.substates.current))
-
-        channels = [channel for channel in self.actor.config.options('outlets')]
-
-        if self.states.current == 'ONLINE':
-            try:
-                for channel in channels:
-                    self.checkChannel(cmd=cmd, channel=channel)
-
-                cmd.finish('pduVAW=%s,%s,%s' % self.checkVaw(cmd))
-
-            except:
-                raise
-
-            finally:
-                self.closeSock()
 
     def checkVaw(self, cmd):
 

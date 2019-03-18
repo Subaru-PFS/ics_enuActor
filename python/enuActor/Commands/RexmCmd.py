@@ -41,15 +41,14 @@ class RexmCmd(object):
     @threaded
     def status(self, cmd):
         """Report state, mode, position"""
-
-        self.controller.getStatus(cmd)
+        self.controller.generate(cmd)
 
     @threaded
     def initialise(self, cmd):
         """Initialise Slit, call fsm startInit event """
 
         self.controller.substates.init(cmd=cmd)
-        self.controller.getStatus(cmd)
+        self.controller.generate(cmd)
 
     @threaded
     def moveTo(self, cmd):
@@ -60,7 +59,7 @@ class RexmCmd(object):
         self.controller.abortMotion = False
         self.controller.substates.move(cmd=cmd,
                                        position=position)
-        self.controller.getStatus(cmd)
+        self.controller.generate(cmd)
 
     @threaded
     def moveRelative(self, cmd):
@@ -77,7 +76,7 @@ class RexmCmd(object):
                                        position='',
                                        direction=direction,
                                        distance=distance)
-        self.controller.getStatus(cmd)
+        self.controller.generate(cmd)
 
     def abort(self, cmd):
         """ Abort current motion """

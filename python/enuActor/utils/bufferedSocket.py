@@ -2,8 +2,6 @@ import logging
 import select
 import socket
 
-from enuActor.utils.wrap import busy
-
 
 class EthComm(object):
     def __init__(self, host, port, EOL='\r\n'):
@@ -43,7 +41,6 @@ class EthComm(object):
 
         self.sock = None
 
-    @busy
     def sendOneCommand(self, cmdStr, doClose=False, cmd=None):
         """| Send one command and return one response.
 

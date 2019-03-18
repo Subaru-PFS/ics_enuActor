@@ -55,26 +55,37 @@ class BshCmd(object):
     @threaded
     def status(self, cmd):
         """Report state, mode, position"""
-        self.controller.getStatus(cmd)
+        self.controller.generate(cmd)
+
+    @threaded
+    def shutterStatus(self, cmd):
+        """get shutters status"""
+        self.controller.shutterStatus(cmd)
+        cmd.finish()
+
+    @threaded
+    def biaStatus(self, cmd):
+        """get bia status"""
+        self.controller.biaStatus(cmd)
+        cmd.finish()
 
     @threaded
     def initBsh(self, cmd):
         """Report state, mode, position"""
-        doFinish = True
+        self.controller.gotoState(cmd, 'init')
+        self.controller.generate(cmd)
 
-        try:
-            self.controller.gotoState(cmd, 'init')
-        except:
-            doFinish = False
-            raise
-        finally:
-            self.controller.getStatus(cmd, doFinish=doFinish)
+    @threaded
+    def rawCommand(self, cmd):
+        """send a raw command to the bsh board"""
+        cmdKeys = cmd.cmd.keywords
+        cmdStr = cmdKeys['raw'].values[0]
+        cmd.finish('text=%s' % self.controller.sendOneCommand(cmdStr, cmd=cmd))
 
     @threaded
     def setBiaConfig(self, cmd):
         """Update bia parameters """
         cmdKeys = cmd.cmd.keywords
-
         period = cmdKeys['period'].values[0] if 'period' in cmdKeys else None
         duty = cmdKeys['duty'].values[0] if 'duty' in cmdKeys else None
 
@@ -93,59 +104,25 @@ class BshCmd(object):
     @threaded
     def biaSwitch(self, cmd):
         """Switch bia on/off)"""
-        doFinish = True
         cmdKeys = cmd.cmd.keywords
-        cmdStr = "bia_on" if "on" in cmdKeys else "bia_off"
+        state = 'on' if 'on' in cmdKeys else 'off'
 
-        try:
-            self.controller.gotoState(cmd, cmdStr)
-        except:
-            doFinish = False
-            raise
-        finally:
-            self.controller.getStatus(cmd, doFinish=doFinish)
-
-    @threaded
-    def biaStatus(self, cmd):
-        """get bia status"""
+        self.controller.gotoState(cmd, cmdStr='bia_%s' % state)
         self.controller.biaStatus(cmd)
         cmd.finish()
 
     @threaded
     def shutterSwitch(self, cmd):
         """Open/close shutters (red/blue or both)"""
-        doFinish = True
         cmdKeys = cmd.cmd.keywords
         shutter = 'shut'
         shutter = 'red' if 'red' in cmdKeys else shutter
         shutter = 'blue' if 'blue' in cmdKeys else shutter
         move = 'open' if 'open' in cmdKeys else 'close'
 
-        cmdStr = '%s_%s' % (shutter, move)
-
-        cmd.inform('cmdStr=%s' % cmdStr)
-
-        try:
-            self.controller.gotoState(cmd, cmdStr)
-        except:
-            doFinish = False
-            raise
-        finally:
-            self.controller.getStatus(cmd, doFinish=doFinish)
-
-    @threaded
-    def shutterStatus(self, cmd):
-        """get shutters status"""
+        self.controller.gotoState(cmd, cmdStr='%s_%s' % (shutter, move))
         self.controller.shutterStatus(cmd)
         cmd.finish()
-
-    @threaded
-    def rawCommand(self, cmd):
-        """send a raw command to the bsh board"""
-        cmdKeys = cmd.cmd.keywords
-        cmdStr = cmdKeys['raw'].values[0]
-
-        cmd.finish('text=%s' % self.controller.sendOneCommand(cmdStr, cmd=cmd))
 
     @threaded
     def expose(self, cmd):
@@ -164,7 +141,7 @@ class BshCmd(object):
                                exptime=exptime,
                                shutter=shutter)
 
-        self.controller.getStatus(cmd)
+        self.controller.generate(cmd)
 
     def abortExposure(self, cmd):
         """send a raw command to the bsh board"""

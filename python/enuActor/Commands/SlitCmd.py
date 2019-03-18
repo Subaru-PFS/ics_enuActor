@@ -52,13 +52,6 @@ class SlitCmd(object):
                                         )
 
     @property
-    def pdu(self):
-        try:
-            return self.actor.controllers['pdu']
-        except KeyError:
-            raise RuntimeError('pdu controller is not connected.')
-
-    @property
     def controller(self):
         try:
             return self.actor.controllers[self.name]
@@ -74,15 +67,15 @@ class SlitCmd(object):
     @threaded
     def status(self, cmd):
         """Report state, mode, position"""
-
-        self.controller.getStatus(cmd)
+        self.controller.generate(cmd)
 
     @threaded
     def initialise(self, cmd):
         """Initialise Slit, call fsm startInit event """
         doHome = 'skipHoming' not in cmd.cmd.keywords
+
         self.controller.substates.init(cmd=cmd, doHome=doHome)
-        self.controller.getStatus(cmd)
+        self.controller.generate(cmd)
 
     @threaded
     def moveTo(self, cmd):
@@ -97,7 +90,7 @@ class SlitCmd(object):
                                        reference=reference,
                                        coords=coords)
 
-        self.controller.getStatus(cmd)
+        self.controller.generate(cmd)
 
     @threaded
     def goHome(self, cmd):
@@ -106,7 +99,7 @@ class SlitCmd(object):
                                        reference='absolute',
                                        coords=6 * [0.])
 
-        self.controller.getStatus(cmd)
+        self.controller.generate(cmd)
 
     @threaded
     def getSystem(self, cmd):
@@ -143,7 +136,7 @@ class SlitCmd(object):
         except Exception as e:
             cmd.warn('text=%s' % self.actor.strTraceback(e))
 
-        self.controller.getStatus(cmd)
+        self.controller.generate(cmd)
 
     @threaded
     def motionEnable(self, cmd):
@@ -153,7 +146,7 @@ class SlitCmd(object):
         except Exception as e:
             cmd.warn('text=%s' % self.actor.strTraceback(e))
 
-        self.controller.getStatus(cmd)
+        self.controller.generate(cmd)
 
     @threaded
     def motionDisable(self, cmd):
@@ -163,7 +156,7 @@ class SlitCmd(object):
         except Exception as e:
             cmd.warn('text=%s' % self.actor.strTraceback(e))
 
-        self.controller.getStatus(cmd)
+        self.controller.generate(cmd)
 
     @threaded
     def focus(self, cmd):
@@ -180,7 +173,7 @@ class SlitCmd(object):
                                        reference='relative',
                                        coords=coords)
 
-        self.controller.getStatus(cmd)
+        self.controller.generate(cmd)
 
     @threaded
     def dither(self, cmd):
@@ -203,7 +196,7 @@ class SlitCmd(object):
                                        reference='relative',
                                        coords=coords)
 
-        self.controller.getStatus(cmd)
+        self.controller.generate(cmd)
 
     @threaded
     def shift(self, cmd):
@@ -225,19 +218,20 @@ class SlitCmd(object):
         self.controller.substates.move(cmd=cmd,
                                        reference='relative',
                                        coords=coords)
-
-        self.controller.getStatus(cmd)
+        self.controller.generate(cmd)
 
     @threaded
     def shutdown(self, cmd):
         """ save hexapod position, turn power off and disconnect"""
-
         self.controller.substates.shutdown(cmd=cmd)
-        self.pdu.substates.switch(cmd=cmd,
-                                  switchOn=[],
-                                  switchOff=['slit'])
-        self.controller.disconnect()
+        cmdVar = self.actor.cmdr.call(actor=self.actor.name,
+                                      cmdStr='power off=slit',
+                                      forUserCmd=cmd,
+                                      timeLim=15)
+        if cmdVar.didFail:
+            raise RuntimeError('failed to power off hexapod controller')
 
+        self.controller.disconnect()
         cmd.finish()
 
     def abort(self, cmd):
@@ -248,7 +242,8 @@ class SlitCmd(object):
         except Exception as e:
             cmd.warn('text=%s' % self.actor.strTraceback(e))
 
-        self.controller.getStatus(cmd)
+        self.controller.generate(cmd)
+        cmd.finish()
 
     def convert(self, cmd):
         """ Convert measure in the slit coordinate system to the world coordinate"""
