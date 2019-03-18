@@ -2,13 +2,12 @@ __author__ = 'alefur'
 import logging
 import time
 
-import enuActor.Controllers.bufferedSocket as bufferedSocket
-from actorcore.FSM import FSMDev
-from actorcore.QThread import QThread
+import enuActor.utils.bufferedSocket as bufferedSocket
+from enuActor.utils.fsmThread import FSMThread
 from enuActor.Simulators.pdu import PduSim
 
 
-class pdu(FSMDev, QThread, bufferedSocket.EthComm):
+class pdu(FSMThread, bufferedSocket.EthComm):
     powerPorts = ('slit', 'xenon', 'hgar', 'krypton')
 
     def __init__(self, actor, name, loglevel=logging.DEBUG):
@@ -25,18 +24,16 @@ class pdu(FSMDev, QThread, bufferedSocket.EthComm):
                   {'name': 'fail', 'src': ['SWITCHING', ], 'dst': 'FAILED'},
                   ]
 
-        QThread.__init__(self, actor, name)
-        FSMDev.__init__(self, actor, name, events=events, substates=substates)
+        FSMThread.__init__(self, actor, name, events=events, substates=substates, doInit=True)
 
         self.addStateCB('SWITCHING', self.switch)
+        self.state = {}
+
+        self.sock = None
+        self.sim = None
 
         self.logger = logging.getLogger(self.name)
         self.logger.setLevel(loglevel)
-
-        self.sim = None
-        self.currCmd = False
-
-        self.state = {}
 
     @property
     def simulated(self):
@@ -49,14 +46,6 @@ class pdu(FSMDev, QThread, bufferedSocket.EthComm):
 
     def getOutlet(self, channel):
         return self.actor.config.get('outlets', channel).strip().zfill(2)
-
-    def start(self, cmd=None, doInit=True, mode=None):
-        QThread.start(self)
-        FSMDev.start(self, cmd=cmd, doInit=doInit, mode=mode)
-
-    def stop(self, cmd=None):
-        FSMDev.stop(self, cmd=cmd)
-        self.exit()
 
     def loadCfg(self, cmd, mode=None):
         """| Load Configuration file. called by device.loadDevice()
@@ -220,7 +209,3 @@ class pdu(FSMDev, QThread, bufferedSocket.EthComm):
             raise ValueError('Bad password')
 
         return sock
-
-    def handleTimeout(self):
-        if self.exitASAP:
-            raise SystemExit()

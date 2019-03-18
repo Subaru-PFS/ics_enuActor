@@ -4,17 +4,16 @@ import time
 from datetime import datetime as dt
 from datetime import timedelta
 
-import enuActor.Controllers.bufferedSocket as bufferedSocket
-from actorcore.FSM import FSMDev
-from actorcore.QThread import QThread
+import enuActor.utils.bufferedSocket as bufferedSocket
 from enuActor.Simulators.bsh import BshSim
+from enuActor.utils.fsmThread import FSMThread
 
 
 def busyEvent(event):
     return [dict(name='%s_%s' % (src, event['name']), src='BUSY', dst=event['dst']) for src in event['src']]
 
 
-class bsh(FSMDev, QThread, bufferedSocket.EthComm):
+class bsh(FSMThread, bufferedSocket.EthComm):
     bshFSM = {0: ('close', 'off'),
               10: ('close', 'on'),
               20: ('open', 'off'),
@@ -54,12 +53,11 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
         events += [{'name': 'fail', 'src': 'BUSY', 'dst': 'FAILED'},
                    {'name': 'lock', 'src': ['IDLE', 'EXPOSING', 'OPENRED', 'OPENBLUE', 'BIA'], 'dst': 'BUSY'}]
 
-        QThread.__init__(self, actor, name)
-        FSMDev.__init__(self, actor, name, events=events, substates=substates)
+        FSMThread.__init__(self, actor, name, events=events, substates=substates, doInit=True)
 
         self.sock = None
         self.sim = None
-        self.currCmd = False
+
         self.finishExposure = False
         self.abortExposure = False
 
@@ -74,14 +72,6 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
             return False
         else:
             raise ValueError('unknown mode')
-
-    def start(self, cmd=None, doInit=True, mode=None):
-        QThread.start(self)
-        FSMDev.start(self, cmd=cmd, doInit=doInit, mode=mode)
-
-    def stop(self, cmd=None):
-        FSMDev.stop(self, cmd=cmd)
-        self.exit()
 
     def loadCfg(self, cmd, mode=None):
         """| Load Configuration file
@@ -372,7 +362,3 @@ class bsh(FSMDev, QThread, bufferedSocket.EthComm):
             s = bufferedSocket.EthComm.createSock(self)
 
         return s
-
-    def handleTimeout(self):
-        if self.exitASAP:
-            raise SystemExit()

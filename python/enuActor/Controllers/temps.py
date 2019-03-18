@@ -2,14 +2,13 @@ __author__ = 'alefur'
 
 import logging
 
-import enuActor.Controllers.bufferedSocket as bufferedSocket
+import enuActor.utils.bufferedSocket as bufferedSocket
 import numpy as np
-from actorcore.FSM import FSMDev
-from actorcore.QThread import QThread
 from enuActor.Simulators.temps import TempsSim
+from enuActor.utils.fsmThread import FSMThread
 
 
-class temps(FSMDev, QThread, bufferedSocket.EthComm):
+class temps(FSMThread, bufferedSocket.EthComm):
     channels = {1: '101:110',
                 2: '201:210'}
 
@@ -22,18 +21,15 @@ class temps(FSMDev, QThread, bufferedSocket.EthComm):
         :type name: str
         """
 
-        QThread.__init__(self, actor, name)
-        FSMDev.__init__(self, actor, name)
+        FSMThread.__init__(self, actor, name, doInit=True)
 
         self.sock = None
-
         self.sim = None
-        self.currCmd = False
+
+        self.monitor = 15
 
         self.logger = logging.getLogger(self.name)
         self.logger.setLevel(loglevel)
-
-        self.defaultSamptime = 15
 
     @property
     def simulated(self):
@@ -46,14 +42,6 @@ class temps(FSMDev, QThread, bufferedSocket.EthComm):
 
     def getProbeCoeff(self, probe):
         return np.array([float(c) for c in self.actor.config.get('temps', probe).split(',')])
-
-    def start(self, cmd=None, doInit=True, mode=None):
-        QThread.start(self)
-        FSMDev.start(self, cmd=cmd, doInit=doInit, mode=mode)
-
-    def stop(self, cmd=None):
-        FSMDev.stop(self, cmd=cmd)
-        self.exit()
 
     def loadCfg(self, cmd, mode=None):
         """| Load Configuration file. called by device.loadDevice().
@@ -230,7 +218,3 @@ class temps(FSMDev, QThread, bufferedSocket.EthComm):
             s = bufferedSocket.EthComm.createSock(self)
 
         return s
-
-    def handleTimeout(self):
-        if self.exitASAP:
-            raise SystemExit()

@@ -6,10 +6,13 @@ import logging
 
 import actorcore.ICC
 import numpy as np
-from twisted.internet import reactor
 
 
 class enuActor(actorcore.ICC.ICC):
+    stateList = ['OFF', 'LOADED', 'ONLINE']
+    state2logic = dict([(state, val) for val, state in enumerate(stateList)])
+    logic2state = {v: k for k, v in state2logic.items()}
+
     def __init__(self, name, productName=None, configFile=None, logLevel=logging.INFO):
         # This sets up the connections to/from the hub, the logger, and the twisted reactor.
         #
@@ -21,35 +24,39 @@ class enuActor(actorcore.ICC.ICC):
         self.everConnected = False
         self.onsubstate = 'IDLE'
 
-        self.monitors = dict()
+    @property
+    def states(self):
+        return [controller.states.current for controller in self.controllers.values()]
 
-        self.statusLoopCB = self.statusLoop
+    @property
+    def substates(self):
+        return [controller.substates.current for controller in self.controllers.values()]
 
     @property
     def state(self):
-        states = ['OFF', 'LOADED', 'ONLINE']
-        state2logic = dict([(state, val) for val, state in enumerate(states)])
-        logic2state = dict([(val, state) for val, state in enumerate(states)])
-        if self.controllers.values():
-            minLogic = np.min([state2logic[ctrl.states.current] for ctrl in self.controllers.values()])
-            state = logic2state[minLogic]
-        else:
-            state = 'OFF'
+        if not self.controllers.values():
+            return 'OFF'
 
-        return state
+        minLogic = np.min([enuActor.state2logic[state] for state in self.states])
+        return enuActor.logic2state[minLogic]
 
     @property
     def substate(self):
+        if not self.controllers.values():
+            return 'IDLE'
 
-        if self.controllers.values():
-            if False in [controller.substates.current == 'IDLE' for controller in self.controllers.values()]:
-                substate = self.onsubstate
-            else:
-                substate = 'IDLE'
-        else:
+        if 'FAILED' in self.substates:
+            substate = 'FAILED'
+        elif list(set(self.substates)) == ['IDLE']:
             substate = 'IDLE'
+        else:
+            substate = self.onsubstate
 
         return substate
+
+    @property
+    def monitors(self):
+        return dict([(name, controller.monitor) for name, controller in self.controllers.items()])
 
     def reloadConfiguration(self, cmd):
         cmd.inform('sections=%08x,%r' % (id(self.config),
@@ -62,34 +69,14 @@ class enuActor(actorcore.ICC.ICC):
             self.attachAllControllers()
             self.everConnected = True
 
-            # reactor.callLater(10, self.status_check)
-
-    def statusLoop(self, controller):
-        try:
-            self.callCommand("%s status" % (controller))
-        except:
-            pass
-
-        if self.monitors[controller] > 0:
-            reactor.callLater(self.monitors[controller],
-                              self.statusLoopCB,
-                              controller)
-
     def monitor(self, controller, period, cmd=None):
         cmd = self.bcast if cmd is None else cmd
 
-        if controller not in self.monitors:
-            self.monitors[controller] = 0
+        if controller not in self.controllers:
+            raise ValueError('controller %s is not connected' % controller)
 
-        running = self.monitors[controller] > 0
-        self.monitors[controller] = period
-
-        if (not running) and period > 0:
-            cmd.warn('text="starting %gs loop for %s"' % (self.monitors[controller],
-                                                          controller))
-            self.statusLoopCB(controller)
-        else:
-            cmd.warn('text="adjusted %s loop to %gs"' % (controller, self.monitors[controller]))
+        self.controllers[controller].monitor = period
+        cmd.warn('text="setting %s loop to %gs"' % (controller, period))
 
     def updateStates(self, cmd, onsubstate=False):
         self.onsubstate = onsubstate if onsubstate and onsubstate != 'IDLE' else self.onsubstate

@@ -2,15 +2,14 @@ import copy
 import logging
 import time
 
-import enuActor.Controllers.bufferedSocket as bufferedSocket
+import enuActor.utils.bufferedSocket as bufferedSocket
 import numpy as np
-from actorcore.FSM import FSMDev
-from actorcore.QThread import QThread
+from enuActor.utils.fsmThread import FSMThread
 from enuActor.Simulators.rexm import RexmSim
 from enuActor.drivers.rexm_drivers import recvPacket, TMCM
 
 
-class rexm(FSMDev, QThread, bufferedSocket.EthComm):
+class rexm(FSMThread, bufferedSocket.EthComm):
     travellingTimeout = 150
     stoppingTimeout = 5
     startingTimeout = 3
@@ -33,10 +32,12 @@ class rexm(FSMDev, QThread, bufferedSocket.EthComm):
                   {'name': 'fail', 'src': ['MOVING'], 'dst': 'FAILED'},
                   ]
 
-        QThread.__init__(self, actor, name)
-        FSMDev.__init__(self, actor, name, events=events, substates=substates)
+        FSMThread.__init__(self, actor, name, events=events, substates=substates, doInit=False)
 
         self.addStateCB('MOVING', self.moveTo)
+
+        self.sock = None
+        self.sim = None
 
         self.switchA = 0
         self.switchB = 0
@@ -44,10 +45,6 @@ class rexm(FSMDev, QThread, bufferedSocket.EthComm):
         self.pulseDivisor = 0
         self.abortMotion = False
 
-        self.sim = None
-        self.currCmd = False
-
-        self.samptime = time.time()
         self.logger = logging.getLogger(self.name)
         self.logger.setLevel(loglevel)
 
@@ -67,14 +64,6 @@ class rexm(FSMDev, QThread, bufferedSocket.EthComm):
     @property
     def isMoving(self):
         return 1 if abs(self.speed) > 0 else 0
-
-    def start(self, cmd=None, doInit=False, mode=None):
-        QThread.start(self)
-        FSMDev.start(self, cmd=cmd, doInit=doInit, mode=mode)
-
-    def stop(self, cmd=None):
-        self.exit()
-        FSMDev.stop(self, cmd=cmd)
 
     def loadCfg(self, cmd, mode=None):
         """| Load Configuration file, called by device.loadDevice().
@@ -208,8 +197,8 @@ class rexm(FSMDev, QThread, bufferedSocket.EthComm):
             cmd.warn('rexm=undef')
             raise
 
-        if (time.time() - self.samptime) > 2:
-            self.samptime = time.time()
+        if (time.time() - self.last) > 2:
+            self.last = time.time()
             cmd.inform('rexmInfo=%i,%i,%i,%i' % (self.switchA, self.switchB, self.speed, self.stepCount))
             cmd.inform('rexm=%s' % self.position)
 
@@ -514,3 +503,7 @@ class rexm(FSMDev, QThread, bufferedSocket.EthComm):
     def handleTimeout(self):
         if self.exitASAP:
             raise SystemExit()
+
+        if self.monitor and (time.time() - self.last) > self.monitor:
+            self.getStatus(cmd=self.actor.bcast)
+            self.last = time.time()
