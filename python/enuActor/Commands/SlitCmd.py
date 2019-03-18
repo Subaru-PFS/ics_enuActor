@@ -107,14 +107,14 @@ class SlitCmd(object):
 
         cmdKeys = cmd.cmd.keywords
         if 'work' in cmdKeys:
-            system, keyword = ('Work', 'slitWork')
+            system = 'Work'
         elif 'tool' in cmdKeys:
-            system, keyword = ('Tool', 'slitTool')
+            system = 'Tool'
         else:
-            system, keyword = ('Base', 'slitBase')
+            system = 'Base'
 
-        ret = self.controller.getSystem(system)
-        cmd.finish('%s=%s' % (keyword, ','.join(['%.5f' % p for p in ret])))
+        self.controller.getSystem(cmd, system)
+        cmd.finish()
 
     @threaded
     def setSystem(self, cmd):
@@ -123,16 +123,15 @@ class SlitCmd(object):
         cmdKeys = cmd.cmd.keywords
 
         if 'work' in cmdKeys:
-            system, keyword, vec = ('Work', 'slitWork', self.controller.workSystem)
+            system, vec = ('Work', self.controller.workSystem)
         else:
-            system, keyword, vec = ('Tool', 'slitTool', self.controller.toolSystem)
+            system, vec = ('Tool', self.controller.toolSystem)
 
         coords = [cmdKeys[coord].values[0] if coord in cmdKeys else vec[i] for i, coord in enumerate(self.coordsName)]
 
         try:
             self.controller.setSystem(system, coords)
-            ret = self.controller.getSystem(system)
-            cmd.inform('%s=%s' % (keyword, ','.join(['%.5f' % p for p in ret])))
+            self.controller.getSystem(cmd, system)
         except Exception as e:
             cmd.warn('text=%s' % self.actor.strTraceback(e))
 

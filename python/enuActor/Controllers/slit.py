@@ -176,10 +176,10 @@ class slit(FSMThread):
                 raise RuntimeError('hxp needs to be fully initialize')
 
         self._hexapodCoordinateSysSet('Work', self.workSystem)
-        cmd.inform('slitWork=%s' % ','.join(['%.5f' % p for p in self.workSystem]))
+        self.getSystem(cmd, 'Work')
 
         self._hexapodCoordinateSysSet('Tool', self.toolSystem)
-        cmd.inform('slitTool=%s' % ','.join(['%.5f' % p for p in self.toolSystem]))
+        self.getSystem(cmd, 'Tool')
 
         if int(self._getHxpStatus()) not in [10, 11, 12, 13, 14, 15, 16, 17, 18]:
             raise RuntimeError('hexapod not in ready state, going home aborted ...')
@@ -258,7 +258,7 @@ class slit(FSMThread):
 
         self.substates.idle()
 
-    def getSystem(self, system):
+    def getSystem(self, cmd, system):
         """| Get system from the controller and update the actor's current value.
 
         :param system: Work|Tool|Base
@@ -276,6 +276,7 @@ class slit(FSMThread):
         else:
             raise ValueError('system : %s does not exist' % system)
 
+        cmd.inform('slit%s=%s' % (system, ','.join(['%.5f' % p for p in ret])))
         return ret
 
     def setSystem(self, system, coords):
