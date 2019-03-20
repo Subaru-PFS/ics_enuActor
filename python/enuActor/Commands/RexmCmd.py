@@ -4,7 +4,7 @@
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
 from enuActor.drivers.rexm_drivers import TMCM
-from enuActor.utils.wrap import threaded
+from enuActor.utils.wrap import threaded, blocking
 
 
 class RexmCmd(object):
@@ -43,14 +43,14 @@ class RexmCmd(object):
         """Report state, mode, position"""
         self.controller.generate(cmd)
 
-    @threaded
+    @blocking
     def initialise(self, cmd):
         """Initialise Slit, call fsm startInit event """
 
         self.controller.substates.init(cmd=cmd)
         self.controller.generate(cmd)
 
-    @threaded
+    @blocking
     def moveTo(self, cmd):
         """ Move to low|mid resolution position """
         cmdKeys = cmd.cmd.keywords
@@ -61,7 +61,7 @@ class RexmCmd(object):
                                        position=position)
         self.controller.generate(cmd)
 
-    @threaded
+    @blocking
     def moveRelative(self, cmd):
         """ Move to low|mid resolution position """
         cmdKeys = cmd.cmd.keywords

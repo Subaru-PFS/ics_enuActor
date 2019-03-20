@@ -3,7 +3,7 @@
 import numpy as np
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
-from enuActor.utils.wrap import threaded
+from enuActor.utils.wrap import threaded, blocking
 
 
 class SlitCmd(object):
@@ -69,7 +69,7 @@ class SlitCmd(object):
         """Report state, mode, position"""
         self.controller.generate(cmd)
 
-    @threaded
+    @blocking
     def initialise(self, cmd):
         """Initialise Slit, call fsm startInit event """
         doHome = 'skipHoming' not in cmd.cmd.keywords
@@ -77,7 +77,7 @@ class SlitCmd(object):
         self.controller.substates.init(cmd=cmd, doHome=doHome)
         self.controller.generate(cmd)
 
-    @threaded
+    @blocking
     def moveTo(self, cmd):
         """ Move to (X, Y, Z, U, V, W) rel. to home if absolute specified\
                 else if relative then incremental move. NB: In relative move parameters are optional.
@@ -92,7 +92,7 @@ class SlitCmd(object):
 
         self.controller.generate(cmd)
 
-    @threaded
+    @blocking
     def goHome(self, cmd):
         """   Go to home related to work : [0,0,0,0,0,0] """
         self.controller.substates.move(cmd=cmd,
@@ -157,7 +157,7 @@ class SlitCmd(object):
 
         self.controller.generate(cmd)
 
-    @threaded
+    @blocking
     def focus(self, cmd):
         """ Move wrt focus axis."""
         cmdKeys = cmd.cmd.keywords
@@ -174,7 +174,7 @@ class SlitCmd(object):
 
         self.controller.generate(cmd)
 
-    @threaded
+    @blocking
     def dither(self, cmd):
         """ Move wrt dither axis."""
         cmdKeys = cmd.cmd.keywords
@@ -197,7 +197,7 @@ class SlitCmd(object):
 
         self.controller.generate(cmd)
 
-    @threaded
+    @blocking
     def shift(self, cmd):
         """ Move wrt shift axis."""
         cmdKeys = cmd.cmd.keywords
@@ -219,7 +219,7 @@ class SlitCmd(object):
                                        coords=coords)
         self.controller.generate(cmd)
 
-    @threaded
+    @blocking
     def shutdown(self, cmd):
         """ save hexapod position, turn power off and disconnect"""
         self.controller.substates.shutdown(cmd=cmd)

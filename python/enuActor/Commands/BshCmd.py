@@ -2,7 +2,7 @@
 
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
-from enuActor.utils.wrap import threaded
+from enuActor.utils.wrap import threaded, blocking
 
 
 class BshCmd(object):
@@ -101,7 +101,7 @@ class BshCmd(object):
         self.controller.setBiaConfig(cmd, strobe=state)
         cmd.finish()
 
-    @threaded
+    @blocking
     def biaSwitch(self, cmd):
         """Switch bia on/off)"""
         cmdKeys = cmd.cmd.keywords
@@ -111,7 +111,7 @@ class BshCmd(object):
         self.controller.biaStatus(cmd)
         cmd.finish()
 
-    @threaded
+    @blocking
     def shutterSwitch(self, cmd):
         """Open/close shutters (red/blue or both)"""
         cmdKeys = cmd.cmd.keywords
@@ -124,7 +124,7 @@ class BshCmd(object):
         self.controller.shutterStatus(cmd)
         cmd.finish()
 
-    @threaded
+    @blocking
     def expose(self, cmd):
         """send a raw command to the bsh board"""
         cmdKeys = cmd.cmd.keywords

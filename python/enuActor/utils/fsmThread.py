@@ -30,8 +30,6 @@ class FSMThread(FSMDev, QThread):
         if self.states.current in ['LOADED', 'ONLINE']:
             try:
                 self.getStatus(cmd)
-            except:
-                raise
             finally:
                 self.closeSock()
 
@@ -42,5 +40,9 @@ class FSMThread(FSMDev, QThread):
             raise SystemExit()
 
         if self.monitor and (time.time() - self.last) > self.monitor:
-            self.generate(cmd=self.actor.bcast)
+            try:
+                self.generate(cmd=self.actor.bcast)
+            except Exception as e:
+                self.actor.bcast.fail('text=%s' % self.actor.strTraceback(e))
+
             self.last = time.time()
