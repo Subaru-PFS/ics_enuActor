@@ -106,7 +106,7 @@ class bsh(FSMThread, bufferedSocket.EthComm):
         :param cmd: on going command,
         :raise: Exception if the communication has failed with the controller
         """
-        cmd.inform('bshStatus=%d' % self._state(cmd))
+        cmd.inform('bshState=%d' % self._state(cmd))
 
     def _init(self, cmd):
         """| Initialise the interlock board
@@ -126,8 +126,9 @@ class bsh(FSMThread, bufferedSocket.EthComm):
         :param cmd: on going command
         :raise: Exception if a command has failed
         """
-        self.biaStatus(cmd=cmd)
-        self.shutterStatus(cmd=cmd)
+        bshState = self._state(cmd)
+        self.biaStatus(cmd=cmd, bshState=bshState)
+        self.shutterStatus(cmd=cmd, bshState=bshState)
 
     def gotoState(self, cmd, cmdStr):
         current = self.substates.current
@@ -190,14 +191,15 @@ class bsh(FSMThread, bufferedSocket.EthComm):
             cmd.warn('exptime=nan')
             raise
 
-    def shutterStatus(self, cmd):
+    def shutterStatus(self, cmd, bshState=None):
         """| Get shutters status and generate shutters keywords
 
         :param cmd: on going command
         :raise: RuntimeError if statword and current state are incoherent
         """
         try:
-            shutters, __ = bsh.bshFSM[self._state(cmd)]
+            bshState = self._state(cmd) if bshState is None else bshState
+            shutters, __ = bsh.bshFSM[bshState]
             statword = self._statword(cmd)
 
             cmd.inform('shb=%s,%s,%s' % (statword[0], statword[1], statword[2]))
@@ -213,14 +215,15 @@ class bsh(FSMThread, bufferedSocket.EthComm):
 
         return shutters
 
-    def biaStatus(self, cmd):
+    def biaStatus(self, cmd, bshState=None):
         """| Get bia status and generate bia keywords
 
         :param cmd: on going command
         :raise: Exception if communication has failed
         """
         try:
-            __, bia = bsh.bshFSM[self._state(cmd)]
+            bshState = self._state(cmd) if bshState is None else bshState
+            __, bia = bsh.bshFSM[bshState]
             strobe, period, duty = self._biaConfig(cmd)
             phr1, phr2 = self._photores(cmd)
 
