@@ -77,7 +77,7 @@ class rexm(FSMThread, bufferedSocket.EthComm):
                                         port=int(self.actor.config.get('rexm', 'port')))
 
     def _openComm(self, cmd):
-        """| Open socket with hexapod controller or simulate it.
+        """| Open socket with rexm controller or simulate it.
         | Called by FSMDev.loadDevice()
 
         :param cmd: on going command
@@ -94,7 +94,7 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         """
         self.checkConfig(cmd)
 
-    def _init(self, cmd):
+    def _init(self, cmd, doHome):
         """| Initialise rexm controller, called by self.initDevice().
         - set motor config
         - go to low resolution position
@@ -107,10 +107,11 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         self._setConfig(cmd)
         self.checkConfig(cmd)
 
-        self._goToPosition(cmd, position='low')
+        if doHome:
+            self._goToPosition(cmd, position='low')
 
-        cmd.inform('text="setting origin at 0..."')
-        self._setHome(cmd=cmd)
+            cmd.inform('text="setting origin at 0..."')
+            self._setHome(cmd=cmd)
 
     def getStatus(self, cmd):
         """| Get status from the controller and generate rexm keywords.

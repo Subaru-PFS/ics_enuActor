@@ -20,7 +20,7 @@ class RexmCmd(object):
         #
         self.vocab = [
             ('rexm', 'status', self.status),
-            ('rexm', 'init', self.initialise),
+            ('rexm', 'init [@(skipHoming)]', self.initialise),
             ('rexm', '@(move) @(low|mid)', self.moveTo),
             ('rexm', '@(move) <relative>', self.moveRelative),
             ('rexm', 'abort', self.abort),
@@ -47,7 +47,9 @@ class RexmCmd(object):
     def initialise(self, cmd):
         """Initialise Slit, call fsm startInit event """
 
-        self.controller.substates.init(cmd)
+        doHome = 'skipHoming' not in cmd.cmd.keywords
+
+        self.controller.substates.init(cmd, doHome)
         self.controller.generate(cmd)
 
     @blocking
