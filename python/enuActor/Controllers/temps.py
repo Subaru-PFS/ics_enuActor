@@ -20,12 +20,9 @@ class temps(FSMThread, bufferedSocket.EthComm):
         :param name: controller name
         :type name: str
         """
-
         FSMThread.__init__(self, actor, name, doInit=True)
 
-        self.sock = None
-        self.sim = None
-
+        self.sim = TempsSim()
         self.monitor = 15
 
         self.logger = logging.getLogger(self.name)
@@ -43,7 +40,7 @@ class temps(FSMThread, bufferedSocket.EthComm):
     def getProbeCoeff(self, probe):
         return np.array([float(c) for c in self.actor.config.get('temps', probe).split(',')])
 
-    def loadCfg(self, cmd, mode=None):
+    def _loadCfg(self, cmd, mode=None):
         """| Load Configuration file. called by device.loadDevice().
 
         :param cmd: on going command
@@ -61,30 +58,33 @@ class temps(FSMThread, bufferedSocket.EthComm):
         self.calib = {1: np.array([self.getProbeCoeff(str(probe)) for probe in range(101, 111)]),
                       2: np.array([self.getProbeCoeff(str(probe)) for probe in range(201, 211)])}
 
-    def startComm(self, cmd):
-        """| Start socket with the controller or simulate it.
+    def _openComm(self, cmd):
+        """| Open socket with keysight controller or simulate it.
+        | Called by FSMDev.loadDevice()
+
+        :param cmd: on going command
+        :raise: socket.error if the communication has failed with the controller
+        """
+        self.ioBuffer = bufferedSocket.BufferedSocket(self.name + "IO", EOL='\n')
+        s = self.connectSock()
+
+    def _testComm(self, cmd):
+        """| test communication
         | Called by FSMDev.loadDevice()
 
         :param cmd: on going command,
         :raise: Exception if the communication has failed with the controller
         """
-        self.sim = TempsSim()  # Create new simulator
+        self.getInfo(cmd=cmd)
 
-        self.ioBuffer = bufferedSocket.BufferedSocket(self.name + "IO", EOL='\n')
-        s = self.connectSock()
-
-    def init(self, cmd):
+    def _init(self, cmd):
         """| Initialise temperature controller, called by self.initDevice().
         - get error
-        - get info
-        - get slot 1 temperature
-        - get slot 2 temperature
 
         :param cmd: on going command
         :raise: Exception if a command fail, user if warned with error
         """
         self.getError(cmd=cmd)
-        self.getInfo(cmd=cmd)
 
     def getStatus(self, cmd):
         """| Get status and generate temps keywords.

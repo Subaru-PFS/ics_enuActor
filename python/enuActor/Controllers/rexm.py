@@ -34,10 +34,8 @@ class rexm(FSMThread, bufferedSocket.EthComm):
 
         FSMThread.__init__(self, actor, name, events=events, substates=substates, doInit=False)
 
-        self.addStateCB('MOVING', self.moveTo)
-
-        self.sock = None
-        self.sim = None
+        self.addStateCB('MOVING', self.moving)
+        self.sim = RexmSim()
 
         self.switchA = 0
         self.switchB = 0
@@ -65,7 +63,7 @@ class rexm(FSMThread, bufferedSocket.EthComm):
     def isMoving(self):
         return 1 if abs(self.speed) > 0 else 0
 
-    def loadCfg(self, cmd, mode=None):
+    def _loadCfg(self, cmd, mode=None):
         """| Load Configuration file, called by device.loadDevice().
 
         :param cmd: on going command
@@ -78,21 +76,25 @@ class rexm(FSMThread, bufferedSocket.EthComm):
                                         host=self.actor.config.get('rexm', 'host'),
                                         port=int(self.actor.config.get('rexm', 'port')))
 
-    def startComm(self, cmd):
-        """ Start socket with the rexm controller or simulate it.
+    def _openComm(self, cmd):
+        """| Open socket with hexapod controller or simulate it.
         | Called by FSMDev.loadDevice()
-        try to get controller statuses
 
         :param cmd: on going command
-        :raise: Exception if the communication has failed with the controller
+        :raise: socket.error if the communication has failed with the controller
         """
-        self.sim = RexmSim()  # Create new simulator
         s = self.connectSock()
 
-        self.checkConfig(cmd)
-        self.checkStatus(cmd)
+    def _testComm(self, cmd):
+        """| test communication
+        | Called by FSMDev.loadDevice()
 
-    def init(self, cmd):
+        :param cmd: on going command,
+        :raise: RuntimeError if the communication has failed with the controller
+        """
+        self.checkConfig(cmd)
+
+    def _init(self, cmd):
         """| Initialise rexm controller, called by self.initDevice().
         - set motor config
         - go to low resolution position
@@ -145,7 +147,7 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         time.sleep(0.5)
         self.checkStatus(cmd)
 
-    def moveTo(self, e):
+    def moving(self, cmd, kwargs):
         """| Go to desired position (low|mid), or relative move
 
         :param cmd: on going command
@@ -153,25 +155,12 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         :type position: str
         :raise: Exception if move command fails
         """
-        cmd, position = e.cmd, e.position
+        position = kwargs.pop('position', None)
 
-        try:
-            if position:
-                self._goToPosition(cmd, position)
-            else:
-                self._moveRelative(cmd,
-                                   direction=e.direction,
-                                   distance=e.distance,
-                                   speed=TMCM.g_speed)
-        except UserWarning:
-            self.safeStop(cmd)
-            cmd.warn('text=%s' % self.actor.strTraceback(e))
-
-        except:
-            self.substates.fail()
-            raise
-
-        self.substates.idle()
+        if position is not None:
+            self._goToPosition(cmd, position)
+        else:
+            self._moveRelative(cmd, **kwargs)
 
     def checkStatus(self, cmd):
         """| Check current status from controller and generate rexmInfo keywords
@@ -301,22 +290,28 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         expectedTime = start + (distance / speed)
         self.checkStatus(cmd)
 
-        while not (self.hasStarted(startCount=startCount) and self.waitForCompletion(expectedTime=expectedTime)):
-            self.checkStatus(cmd)
-            elapsedTime = time.time() - start
-            if self.limitSwitch(direction):
-                break
+        try:
+            while not (self.hasStarted(startCount=startCount) and self.waitForCompletion(expectedTime=expectedTime)):
+                self.checkStatus(cmd)
+                elapsedTime = time.time() - start
 
-            if elapsedTime > rexm.startingTimeout and not self.hasStarted(startCount=startCount):
-                raise TimeoutError('Rexm motion has not started')
+                if self.exitASAP:
+                    raise SystemExit()
 
-            if elapsedTime > rexm.travellingTimeout:
-                raise TimeoutError("Maximum travelling time has been reached")
+                if self.limitSwitch(direction):
+                    break
 
-            if self.abortMotion:
-                raise UserWarning('Abort motion requested')
+                if elapsedTime > rexm.startingTimeout and not self.hasStarted(startCount=startCount):
+                    raise TimeoutError('Rexm motion has not started')
 
-        self.safeStop(cmd)
+                if elapsedTime > rexm.travellingTimeout:
+                    raise TimeoutError("Maximum travelling time has been reached")
+
+                if self.abortMotion:
+                    raise UserWarning('Abort motion requested')
+
+        finally:
+            self.safeStop(cmd)
 
     def waitForCompletion(self, expectedTime):
         """| wait for motion completion

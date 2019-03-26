@@ -7,7 +7,6 @@ class EthComm(object):
     def __init__(self, host, port, EOL='\r\n'):
         object.__init__(self)
         self.sock = None
-        self.isBusy = False
         self.host = host
         self.port = port
         self.EOL = EOL

@@ -47,7 +47,7 @@ class RexmCmd(object):
     def initialise(self, cmd):
         """Initialise Slit, call fsm startInit event """
 
-        self.controller.substates.init(cmd=cmd)
+        self.controller.substates.init(cmd)
         self.controller.generate(cmd)
 
     @blocking
@@ -57,8 +57,7 @@ class RexmCmd(object):
         position = "low" if "low" in cmdKeys else "mid"
 
         self.controller.abortMotion = False
-        self.controller.substates.move(cmd=cmd,
-                                       position=position)
+        self.controller.substates.move(cmd, dict(position=position))
         self.controller.generate(cmd)
 
     @blocking
@@ -72,10 +71,9 @@ class RexmCmd(object):
             raise ValueError('requested distance out of range')
 
         self.controller.abortMotion = False
-        self.controller.substates.move(cmd=cmd,
-                                       position='',
-                                       direction=direction,
-                                       distance=distance)
+        self.controller.substates.move(cmd, dict(direction=direction,
+                                                 distance=distance,
+                                                 speed=TMCM.g_speed))
         self.controller.generate(cmd)
 
     def abort(self, cmd):

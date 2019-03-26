@@ -55,11 +55,9 @@ class bsh(FSMThread, bufferedSocket.EthComm):
 
         FSMThread.__init__(self, actor, name, events=events, substates=substates, doInit=True)
 
-        self.sock = None
-        self.sim = None
-
         self.finishExposure = False
         self.abortExposure = False
+        self.sim = BshSim()
 
         self.logger = logging.getLogger(self.name)
         self.logger.setLevel(loglevel)
@@ -73,7 +71,7 @@ class bsh(FSMThread, bufferedSocket.EthComm):
         else:
             raise ValueError('unknown mode')
 
-    def loadCfg(self, cmd, mode=None):
+    def _loadCfg(self, cmd, mode=None):
         """| Load Configuration file
 
         :param cmd: on going command
@@ -91,18 +89,26 @@ class bsh(FSMThread, bufferedSocket.EthComm):
                                      duty=int(self.actor.config.get('bsh', 'bia_duty')),
                                      strobe=self.actor.config.get('bsh', 'bia_strobe'))
 
-    def startComm(self, cmd):
-        """| Start socket with the interlock board or simulate it.
+    def _openComm(self, cmd):
+        """| Open socket with bsh arduino board or simulate it.
+        | Called by FSMDev.loadDevice()
+
+        :param cmd: on going command
+        :raise: socket.error if the communication has failed with the controller
+        """
+        self.ioBuffer = bufferedSocket.BufferedSocket(self.name + "IO", EOL='ok\r\n')
+        s = self.connectSock()
+
+    def _testComm(self, cmd):
+        """| test communication
+        | Called by FSMDev.loadDevice()
 
         :param cmd: on going command,
         :raise: Exception if the communication has failed with the controller
         """
-        self.sim = BshSim()  # Create new simulator
+        cmd.inform('bshStatus=%d' % self._state(cmd))
 
-        self.ioBuffer = bufferedSocket.BufferedSocket(self.name + "IO", EOL='ok\r\n')
-        s = self.connectSock()
-
-    def init(self, cmd):
+    def _init(self, cmd):
         """| Initialise the interlock board
 
         - Send the bia config to the interlock board

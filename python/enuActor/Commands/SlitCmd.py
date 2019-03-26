@@ -74,7 +74,7 @@ class SlitCmd(object):
         """Initialise Slit, call fsm startInit event """
         doHome = 'skipHoming' not in cmd.cmd.keywords
 
-        self.controller.substates.init(cmd=cmd, doHome=doHome)
+        self.controller.substates.init(cmd, doHome)
         self.controller.generate(cmd)
 
     @blocking
@@ -86,19 +86,69 @@ class SlitCmd(object):
         reference = 'absolute' if 'absolute' in cmdKeys else 'relative'
         coords = [cmdKeys[coord].values[0] if coord in cmdKeys else 0.0 for coord in self.coordsName]
 
-        self.controller.substates.move(cmd=cmd,
-                                       reference=reference,
-                                       coords=coords)
-
+        self.controller.substates.move(cmd, reference, coords)
         self.controller.generate(cmd)
 
     @blocking
     def goHome(self, cmd):
         """   Go to home related to work : [0,0,0,0,0,0] """
-        self.controller.substates.move(cmd=cmd,
-                                       reference='absolute',
-                                       coords=6 * [0.])
+        reference = 'absolute'
+        coords = 6 * [0.]
 
+        self.controller.substates.move(cmd, reference, coords)
+        self.controller.generate(cmd)
+
+    @blocking
+    def focus(self, cmd):
+        """ Move wrt focus axis."""
+        cmdKeys = cmd.cmd.keywords
+        shift = cmd.cmd.keywords['focus'].values[0]
+        fact = 0.001 if 'microns' in cmdKeys else 1
+        focus_axis = np.array([float(val) for val in self.actor.config.get('slit', 'focus_axis').split(',')])
+        coords = focus_axis * fact * shift
+        reference='relative'
+
+        self.controller.substates.move(cmd, reference, coords)
+        self.controller.generate(cmd)
+
+    @blocking
+    def dither(self, cmd):
+        """ Move wrt dither axis."""
+        cmdKeys = cmd.cmd.keywords
+        shift = cmd.cmd.keywords['dither'].values[0]
+
+        if 'pixels' in cmdKeys:
+            fact = float(self.actor.config.get('slit', 'pix_to_mm'))
+        elif 'microns' in cmdKeys:
+            fact = 0.001
+        else:
+            fact = 1
+
+        dither_axis = np.array([float(val) for val in self.actor.config.get('slit', 'dither_axis').split(',')])
+        coords = dither_axis * fact * shift
+        reference = 'relative'
+
+        self.controller.substates.move(cmd, reference, coords)
+        self.controller.generate(cmd)
+
+    @blocking
+    def shift(self, cmd):
+        """ Move wrt shift axis."""
+        cmdKeys = cmd.cmd.keywords
+        shift = cmd.cmd.keywords['shift'].values[0]
+
+        if 'pixels' in cmdKeys:
+            fact = float(self.actor.config.get('slit', 'pix_to_mm'))
+        elif 'microns' in cmdKeys:
+            fact = 0.001
+        else:
+            fact = 1
+
+        shift_axis = np.array([float(val) for val in self.actor.config.get('slit', 'shift_axis').split(',')])
+        coords = shift_axis * fact * shift
+        reference = 'relative'
+
+        self.controller.substates.move(cmd, reference, coords)
         self.controller.generate(cmd)
 
     @threaded
@@ -158,71 +208,9 @@ class SlitCmd(object):
         self.controller.generate(cmd)
 
     @blocking
-    def focus(self, cmd):
-        """ Move wrt focus axis."""
-        cmdKeys = cmd.cmd.keywords
-        shift = cmd.cmd.keywords['focus'].values[0]
-
-        fact = 0.001 if 'microns' in cmdKeys else 1
-        focus_axis = np.array([float(val) for val in self.actor.config.get('slit', 'focus_axis').split(',')])
-
-        coords = focus_axis * fact * shift
-
-        self.controller.substates.move(cmd=cmd,
-                                       reference='relative',
-                                       coords=coords)
-
-        self.controller.generate(cmd)
-
-    @blocking
-    def dither(self, cmd):
-        """ Move wrt dither axis."""
-        cmdKeys = cmd.cmd.keywords
-        shift = cmd.cmd.keywords['dither'].values[0]
-
-        if 'pixels' in cmdKeys:
-            fact = float(self.actor.config.get('slit', 'pix_to_mm'))
-        elif 'microns' in cmdKeys:
-            fact = 0.001
-        else:
-            fact = 1
-
-        dither_axis = np.array([float(val) for val in self.actor.config.get('slit', 'dither_axis').split(',')])
-
-        coords = dither_axis * fact * shift
-
-        self.controller.substates.move(cmd=cmd,
-                                       reference='relative',
-                                       coords=coords)
-
-        self.controller.generate(cmd)
-
-    @blocking
-    def shift(self, cmd):
-        """ Move wrt shift axis."""
-        cmdKeys = cmd.cmd.keywords
-        shift = cmd.cmd.keywords['shift'].values[0]
-
-        if 'pixels' in cmdKeys:
-            fact = float(self.actor.config.get('slit', 'pix_to_mm'))
-        elif 'microns' in cmdKeys:
-            fact = 0.001
-        else:
-            fact = 1
-
-        shift_axis = np.array([float(val) for val in self.actor.config.get('slit', 'shift_axis').split(',')])
-
-        coords = shift_axis * fact * shift
-
-        self.controller.substates.move(cmd=cmd,
-                                       reference='relative',
-                                       coords=coords)
-        self.controller.generate(cmd)
-
-    @blocking
     def shutdown(self, cmd):
         """ save hexapod position, turn power off and disconnect"""
-        self.controller.substates.shutdown(cmd=cmd)
+        self.controller.substates.shutdown(cmd)
         cmdVar = self.actor.cmdr.call(actor=self.actor.name,
                                       cmdStr='power off=slit',
                                       forUserCmd=cmd,

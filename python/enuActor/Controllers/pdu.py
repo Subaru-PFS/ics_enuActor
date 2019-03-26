@@ -26,11 +26,9 @@ class pdu(FSMThread, bufferedSocket.EthComm):
 
         FSMThread.__init__(self, actor, name, events=events, substates=substates, doInit=True)
 
-        self.addStateCB('SWITCHING', self.switch)
+        self.addStateCB('SWITCHING', self.switching)
         self.state = {}
-
-        self.sock = None
-        self.sim = None
+        self.sim = PduSim()
 
         self.logger = logging.getLogger(self.name)
         self.logger.setLevel(loglevel)
@@ -47,8 +45,8 @@ class pdu(FSMThread, bufferedSocket.EthComm):
     def getOutlet(self, channel):
         return self.actor.config.get('outlets', channel).strip().zfill(2)
 
-    def loadCfg(self, cmd, mode=None):
-        """| Load Configuration file. called by device.loadDevice()
+    def _loadCfg(self, cmd, mode=None):
+        """| Load Configuration file.
 
         :param cmd: on going command
         :param mode: operation|simulation, loaded from config file if None
@@ -60,21 +58,26 @@ class pdu(FSMThread, bufferedSocket.EthComm):
                                         host=self.actor.config.get('pdu', 'host'),
                                         port=int(self.actor.config.get('pdu', 'port')),
                                         EOL='\r\n')
-
         for channel in self.powerPorts:
             self.getOutlet(channel=channel)
 
-    def startComm(self, cmd):
-        """| Start socket with the interlock board or simulate it.
-        | Called by device.loadDevice()
+    def _openComm(self, cmd):
+        """| Open socket with pdu controller or simulate it.
+
+        :param cmd: on going command
+        :raise: socket.error if the communication has failed with the controller
+        """
+        self.ioBuffer = bufferedSocket.BufferedSocket(self.name + 'IO', EOL='\r\n>')
+        s = self.connectSock()
+
+    def _testComm(self, cmd):
+        """| test communication
+        | Called by FSMDev.loadDevice()
 
         :param cmd: on going command,
         :raise: Exception if the communication has failed with the controller
         """
-        self.sim = PduSim()
-
-        self.ioBuffer = bufferedSocket.BufferedSocket(self.name + 'IO', EOL='\r\n>')
-        s = self.connectSock()
+        cmd.inform('pduVAW=%s,%s,%s' % self.checkVaw(cmd))
 
     def getStatus(self, cmd):
 
@@ -83,24 +86,13 @@ class pdu(FSMThread, bufferedSocket.EthComm):
 
         cmd.inform('pduVAW=%s,%s,%s' % self.checkVaw(cmd))
 
-    def switch(self, e):
-        toSwitch = dict([(channel, 'on') for channel in e.switchOn] + [(channel, 'off') for channel in e.switchOff])
+    def switching(self, cmd, channels):
 
-        try:
-            for channel, state in toSwitch.items():
-                cmdStr = "sw o%s %s imme" % (self.getOutlet(channel=channel), state)
-                ret = self.sendOneCommand(cmdStr=cmdStr, cmd=e.cmd, doRaise=False)
-                self.checkChannel(cmd=e.cmd, channel=channel)
-                time.sleep(2)
-
-            self.substates.idle(cmd=e.cmd)
-
-        except:
-            self.substates.fail(cmd=e.cmd)
-            raise
-
-        finally:
-            self.closeSock()
+        for channel, state in channels.items():
+            cmdStr = "sw o%s %s imme" % (self.getOutlet(channel=channel), state)
+            ret = self.sendOneCommand(cmdStr=cmdStr, cmd=cmd, doRaise=False)
+            self.checkChannel(cmd=cmd, channel=channel)
+            time.sleep(2)
 
     def checkChannel(self, cmd, channel):
 

@@ -37,20 +37,15 @@ class slit(FSMThread):
 
         FSMThread.__init__(self, actor, name, events=events, substates=substates, doInit=False)
 
-        self.addStateCB('MOVING', self.moveTo)
+        self.addStateCB('MOVING', self.moving)
         self.addStateCB('SHUTDOWN', self.shutdown)
+        self.sim = SlitSim()
 
         # Hexapod Attributes
         self.groupName = 'HEXAPOD'
         self.myxps = None
         self.socks = {'main': -1,
                       'emergency': -1}
-
-        self.sim = None
-        self.currCmd = False
-
-        self.last = 0
-        self.monitor = 60
 
         self.logger = logging.getLogger(self.name)
         self.logger.setLevel(loglevel)
@@ -75,24 +70,7 @@ class slit(FSMThread):
     def disconnect(self):
         self.actor.callCommand('disconnect controller=%s' % self.name)
 
-    def initDevice(self, args):
-        """| init callback triggered entering INITIALISING state
-        | Convert to world tool and home.
-
-        :param cmd: on going command
-        :param doHome: requesting homeSearch
-        :raise: RuntimeError if init function fails
-        """
-        try:
-            self.init(cmd=args.cmd, doHome=args.doHome)
-
-            self.states.toOnline()
-            self.substates.idle(cmd=args.cmd)
-        except:
-            self.substates.fail(cmd=args.cmd)
-            raise
-
-    def loadCfg(self, cmd, mode=None):
+    def _loadCfg(self, cmd, mode=None):
         """| Load Configuration file. called by FSMDev.loadDevice().
         | Convert to world tool and home.
 
@@ -102,7 +80,6 @@ class slit(FSMThread):
         :raise: RuntimeError Config file badly formatted
         """
         self.coords = np.nan * np.ones(6)
-
         self.mode = self.actor.config.get('slit', 'mode') if mode is None else mode
         self.host = self.actor.config.get('slit', 'host')
         self.port = int(self.actor.config.get('slit', 'port'))
@@ -114,29 +91,33 @@ class slit(FSMThread):
 
         self.workSystem = slit.convertToWorld([sum(i) for i in zip(self.homeHexa[:3],
                                                                    self.slit_position[:3])] + self.homeHexa[3:])
-
         # Set Tool to slit home coord instead of center of hexa
         tool = self.slit_position[:3] + self.workSystem[3:]
         tool = slit.convertToWorld(tool)[:3] + self.slit_position[3:]
         # Tool z = 21 + z_slit with 21 height of upper carriage
         self.toolSystem = [sum(i) for i in zip(tool, [0, 0, self.thicknessCarriage, 0, 0, 0])]
 
-    def startComm(self, cmd):
-        """| Start socket with the hexapod controller or simulate it.
+    def _openComm(self, cmd):
+        """| Open socket with hexapod controller or simulate it.
+        | Called by FSMDev.loadDevice()
+
+        :param cmd: on going command
+        :raise: socket.error if the communication has failed with the controller
+        """
+        self.myxps = self.createSock()
+        self.connectSock(sockName='main')
+        self.connectSock(sockName='emergency')
+
+    def _testComm(self, cmd):
+        """| test communication
         | Called by FSMDev.loadDevice()
 
         :param cmd: on going command,
         :raise: RuntimeError if the communication has failed with the controller
         """
-        self.sim = SlitSim()  # Create new simulator
-
-        self.myxps = self.createSock()
-        self.connectSock(sockName='main')
-        self.connectSock(sockName='emergency')
-
         self.getPosition(cmd=cmd)
 
-    def init(self, cmd, doHome):
+    def _init(self, cmd, doHome):
         """| Initialise hexapod, called by self.initDevice().
 
         - kill socket
@@ -197,7 +178,7 @@ class slit(FSMThread):
         """
         self.getPosition(cmd=cmd)
         hxpStatus = self._getHxpStatus()
-        cmd.inform('hexaStatus=%d,"%s' % (int(hxpStatus), self._getHxpStatusString(hxpStatus)))
+        cmd.inform('hxpStatus=%d,"%s' % (int(hxpStatus), self._getHxpStatusString(hxpStatus)))
         cmd.inform('slitLocation=%s' % self.location)
 
     def getPosition(self, cmd):
@@ -215,7 +196,7 @@ class slit(FSMThread):
 
         cmd.inform('slit=%s' % ','.join(['%.5f' % p for p in self.coords]))
 
-    def moveTo(self, args):
+    def moving(self, cmd, reference, coords):
         """| Move to coords in the reference,
 
         :param cmd: on going command
@@ -225,38 +206,21 @@ class slit(FSMThread):
         :type coords: list
         :raise: RuntimeError if move command fails
         """
-        cmd, reference, coords = args.cmd, args.reference, args.coords
-        try:
-            if reference == 'absolute':
-                ret = self._hexapodMoveAbsolute(coords)
+        if reference == 'absolute':
+            ret = self._hexapodMoveAbsolute(coords)
+        elif reference == 'relative':
+            ret = self._hexapodMoveIncremental('Work', coords)
+        else:
+            raise ValueError('unknown ref')
 
-            elif reference == 'relative':
-                ret = self._hexapodMoveIncremental('Work', coords)
-
-        except UserWarning as e:
-            cmd.warn('text=%s' % self.actor.strTraceback(e))
-
-        except:
-            self.substates.fail()
-            raise
-
-        self.substates.idle()
-
-    def shutdown(self, args):
+    def shutdown(self, cmd):
         """| Save current controller position
 
         :param cmd: on going command
         :raise: RuntimeError if TCLScriptExecute fails
                 """
-        try:
-            args.cmd.inform('text="Kill and save hexapod position..."')
-            self._TCLScriptExecute('KillWithRegistration.tcl')
-
-        except:
-            self.substates.fail()
-            raise
-
-        self.substates.idle()
+        cmd.inform('text="Kill and save hexapod position..."')
+        self._TCLScriptExecute('KillWithRegistration.tcl')
 
     def getSystem(self, cmd, system):
         """| Get system from the controller and update the actor's current value.
@@ -473,7 +437,6 @@ class slit(FSMThread):
         socketId = self.connectSock(sockName)
 
         buf = func(socketId, *args)
-
         if buf[0] != 0:
             if buf[0] == -2:
                 self.closeSock(sockName)

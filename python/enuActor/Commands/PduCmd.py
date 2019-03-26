@@ -50,10 +50,11 @@ class PduCmd(object):
 
         switchOn = cmdKeys['on'].values if 'on' in cmdKeys else []
         switchOff = cmdKeys['off'].values if 'off' in cmdKeys else []
+        channels = dict([(channel, 'on') for channel in switchOn] + [(channel, 'off') for channel in switchOff])
 
-        for channel in switchOn + switchOff:
+        for channel in channels.keys():
             if channel not in self.controller.powerPorts:
                 raise ValueError('unknown port')
 
-        self.controller.substates.switch(cmd=cmd, switchOn=switchOn, switchOff=switchOff)
+        self.controller.substates.switch(cmd, channels)
         self.controller.generate(cmd)
