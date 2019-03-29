@@ -230,7 +230,6 @@ class SlitCmd(object):
             cmd.warn('text=%s' % self.actor.strTraceback(e))
 
         self.controller.generate(cmd)
-        cmd.finish()
 
     def convert(self, cmd):
         """ Convert measure in the slit coordinate system to the world coordinate"""
