@@ -52,10 +52,10 @@ class TMCM(object):
                         5: "Configuration EEPROM locked",
                         6: "Command not available"}
 
-    SPEED_MAX = 10.0 # mm/s
+    SPEED_MAX = 10.0  # mm/s
     DISTANCE_MAX = 420.0  # 410mm + 10mm margin
 
-    g_speed = 3.2 # mm/s
+    g_speed = 3.2  # mm/s
 
     MODULE_ADDRESS = 1
     MOTOR_ADDRESS = 0
@@ -168,7 +168,7 @@ class TMCM(object):
         nbStepByRev = 200.0  # motorstep per motor revolution
         reducer = 12.0  # motor revolution for 1 reducer revolution
 
-        return np.float64(valueMm / screwStep * reducer * nbStepByRev * step)
+        return np.float64((valueMm * reducer * nbStepByRev * step) / screwStep)
 
     @staticmethod
     def counts2mm(stepIdx, counts):

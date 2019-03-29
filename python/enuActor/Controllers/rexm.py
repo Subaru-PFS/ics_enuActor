@@ -174,7 +174,7 @@ class rexm(FSMThread, bufferedSocket.EthComm):
             self.switchA = self._getAxisParameter(paramId=11, cmd=cmd)
             self.switchB = self._getAxisParameter(paramId=10, cmd=cmd)
             self.speed = self._getSpeed(cmd=cmd)
-            self.stepCount = self._getAxisParameter(1, fmtRet='>BBBBiB', cmd=cmd)
+            self.stepCount = self._getStepCount(cmd=cmd)
 
         except:
             cmd.warn('rexm=undef')
@@ -375,14 +375,23 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         cmdBytes = TMCM.sap(paramId=paramId, data=data)
         return self.sendOneCommand(cmdBytes=cmdBytes, fmtRet=fmtRet, cmd=cmd)
 
+    def _getStepCount(self, cmd=None):
+        """| Get current step count.
+
+        :param cmd: on going command
+        :raise: Exception if communication error occurs
+        """
+        ustep = self._getAxisParameter(1, fmtRet='>BBBBiB', cmd=cmd)  # get microstep count
+        return ustep / (2 ** self.stepIdx)
+
     def _getSpeed(self, cmd=None):
         """| Get current speed.
 
         :param cmd: on going command
         :raise: Exception if communication error occurs
         """
-        velocity = self._getAxisParameter(paramId=3, fmtRet='>BBBBiB', cmd=cmd)
-        return velocity / (2 ** self.pulseDivisor * (65536 / 16e6))  # speed in ustep/sec
+        velocity = self._getAxisParameter(paramId=3, fmtRet='>BBBB  iB', cmd=cmd)
+        return velocity / (2 ** (self.pulseDivisor + self.stepIdx) * (65536 / 16e6))  # speed in step/sec
 
     def _setSpeed(self, speedMm, cmd=None):
         """| Set motor speed.
@@ -392,8 +401,9 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         :param cmd: on going command
         :raise: Exception if communication error occurs
         """
-        freq = TMCM.mm2counts(stepIdx=self.stepIdx, valueMm=speedMm) * (2 ** self.pulseDivisor * (65536 / 16e6))
-        return self._setAxisParameter(paramId=4, data=freq, cmd=cmd)
+        freq = TMCM.mm2counts(stepIdx=self.stepIdx, valueMm=speedMm)
+        velocity = freq * (2 ** self.pulseDivisor * (65536 / 16e6))
+        return self._setAxisParameter(paramId=4, data=velocity, cmd=cmd)
 
     def _setHome(self, cmd=None):
         """| Set low position as 0.
