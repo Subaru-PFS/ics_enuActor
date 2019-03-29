@@ -11,6 +11,21 @@ from enuActor.utils.fsmThread import FSMThread
 class temps(FSMThread, bufferedSocket.EthComm):
     channels = {1: '101:110',
                 2: '201:210'}
+    tempMin, tempMax = -20, 60
+    resMin, resMax = 90, 120
+
+    @staticmethod
+    def polyval(resistances, calib):
+        """|  convert resistance to temperature using lab calibration
+
+        :param resistances: resistance value
+        :param calib: polynomial coeffient
+        :type resistances: np.array
+        :type calib: np.array
+        :return: temperature
+        :rtype: np.array
+        """
+        return np.array([np.polyval(calib[i], resistances[i]) for i in range(len(resistances))])
 
     def __init__(self, actor, name, loglevel=logging.DEBUG):
         """__init__.
@@ -38,7 +53,7 @@ class temps(FSMThread, bufferedSocket.EthComm):
             raise ValueError('unknown mode')
 
     def getProbeCoeff(self, probe):
-        return np.array([float(c) for c in self.actor.config.get('temps', probe).split(',')])
+        return np.array([float(c) for c in self.actor.config.get('temps', str(probe)).split(',')])
 
     def _loadCfg(self, cmd, mode=None):
         """| Load Configuration file. called by device.loadDevice().
@@ -55,8 +70,8 @@ class temps(FSMThread, bufferedSocket.EthComm):
                                         EOL='\n')
 
         self.doCalib = self.actor.config.getboolean('temps', 'doCalib')
-        self.calib = {1: np.array([self.getProbeCoeff(str(probe)) for probe in range(101, 111)]),
-                      2: np.array([self.getProbeCoeff(str(probe)) for probe in range(201, 211)])}
+        self.calib = {1: np.array([self.getProbeCoeff(probe) for probe in range(101, 111)]),
+                      2: np.array([self.getProbeCoeff(probe) for probe in range(201, 211)])}
 
     def _openComm(self, cmd):
         """| Open socket with keysight controller or simulate it.
@@ -92,64 +107,76 @@ class temps(FSMThread, bufferedSocket.EthComm):
         :param cmd: on going command
         :raise: Exception if a command fail
         """
-        self.getTemps(slot=1, cmd=cmd)
-        self.getTemps(slot=2, cmd=cmd)
+        self.getTemps(cmd=cmd)
 
-        cmd.finish()
+    def getTemps(self, cmd):
+        """| generate temps keyword
 
-    def getTemps(self, cmd, slot):
-        """| generate temps keyword for a dedicated slot controller.
-          if doCalib : get resistance and compute temperature according to the lab calibration
-          else : get directly temperature from the controller
+        :param cmd: on going command
+        :raise: Exception if a command fail
+        """
+        self.genKeys(cmd, self.calibTemps, keys='temps1', slot=1)
+        self.genKeys(cmd, self.calibTemps, keys='temps2', slot=2)
+
+    def getResistance(self, cmd):
+        """|  generate resistance keywords
 
         :param cmd: on going command
         :param slot: temperature slot
         :type slot:int
         :raise: Exception if a command fail
         """
+        self.genKeys(cmd, self._fetchResistance, keys='res1', slot=1)
+        self.genKeys(cmd, self._fetchResistance, keys='res2', slot=2)
+
+    def getInfo(self, cmd):
+        """|  fetch controller info.
+
+        :param cmd: on going command
+        :raise: Exception if a command fail
+        """
+        cmd.inform('tempsSlot1=%s' % self._fetchSlotInfo(cmd, slot=1))
+        cmd.inform('tempsSlot2=%s' % self._fetchSlotInfo(cmd, slot=2))
+        cmd.inform('tempsVersion=%s' % self.sendOneCommand('SYST:VERS?', cmd=cmd))
+
+    def getError(self, cmd):
+        """|  fetch controller error
+
+        :param cmd: on going command
+        :raise: RuntimeError if the controller returns an error
+        """
+        errorCode, errorMsg = self._fetchError(cmd)
+        cmd.inform('error=%d,%s' % (errorCode, errorMsg))
+
+    def calibTemps(self, cmd, slot):
+        """|  fetch resistance and use lab calibration if doCalib else fetch temps
+
+        :param cmd: on going command
+        :param slot: temperature slot
+        :type slot:int
+        :raise: RuntimeError if the controller returns an error
+        """
+        if not self.doCalib:
+            return self._fetchTemps(slot=slot, cmd=cmd)
+
+        resistances = self._fetchResistance(slot=slot, cmd=cmd)
+        return temps.polyval(resistances, calib=self.calib[slot])
+
+    def genKeys(self, cmd, retrieveData, keys, **kwargs):
+        """|  generate keys using retrieveData func
+
+        :param cmd: on going command
+        :raise: RuntimeError if the controller returns an error
+        """
+        values = np.ones(10) * np.nan
         try:
-            if self.doCalib:
-                resistances = self.fetchResistance(slot=slot, cmd=cmd)
-                temps = self.convert(resistances=resistances, calib=self.calib[slot])
-            else:
-                temps = self.fetchTemps(slot=slot, cmd=cmd)
+            values = retrieveData(cmd, **kwargs)
+        except Exception as e:
+            cmd.warn('text=%s' % self.actor.strTraceback(e))
 
-            cmd.inform('temps%d=%s' % (slot, ','.join(['%.3f' % float(temp) for temp in temps])))
+        cmd.inform('%s=%s' % (keys, ','.join(['%.3f' % float(val) for val in values])))
 
-        except:
-            cmd.warn('temps%d=%s' % (slot, ','.join(['%.3f' % float(temp) for temp in np.ones(10) * np.nan])))
-            raise
-
-    def getResistance(self, cmd, slot):
-        """|  generate res keyword for a dedicated slot.
-
-        :param cmd: on going command
-        :param slot: temperature slot
-        :type slot:int
-        :raise: Exception if a command fail
-        """
-        try:
-            resistances = self.fetchResistance(slot=slot, cmd=cmd)
-            cmd.inform('res%d=%s' % (slot, ','.join(['%.5f' % float(res) for res in resistances])))
-
-        except:
-            cmd.warn('res%d=%s' % (slot, ','.join(['%.5f' % float(res) for res in np.ones(10) * np.nan])))
-            raise
-
-    def fetchResistance(self, cmd, slot):
-        """|  fetch resistance values for a specified slot.
-
-        :param cmd: on going command
-        :param slot: temperature slot
-        :type slot:int
-        :raise: Exception if a command fail
-        """
-        channels = self.channels[slot]
-
-        ret = self.sendOneCommand('MEAS:FRES? 100,0.0003,(@%s)' % channels, cmd=cmd)
-        return np.array([float(res) for res in ret.split(',')])
-
-    def fetchTemps(self, cmd, slot):
+    def _fetchTemps(self, cmd, slot):
         """|  fetch temperature values for a specified slot.
 
         :param cmd: on going command
@@ -160,19 +187,34 @@ class temps(FSMThread, bufferedSocket.EthComm):
         channels = self.channels[slot]
 
         ret = self.sendOneCommand('MEAS:TEMP? FRTD, (@%s)' % channels, cmd=cmd)
-        return np.array([float(temp) for temp in ret.split(',')])
+        return np.array([float(t) if temps.tempMin < float(t) < temps.tempMax else np.nan for t in ret.split(',')])
 
-    def getInfo(self, cmd):
-        """|  fetch controller info.
+    def _fetchResistance(self, cmd, slot):
+        """|  fetch resistance values for a specified slot.
 
         :param cmd: on going command
+        :param slot: temperature slot
+        :type slot:int
         :raise: Exception if a command fail
         """
-        cmd.inform('slot1="%s"' % self.sendOneCommand('SYST:CTYP? 100', cmd=cmd))
-        cmd.inform('slot2="%s"' % self.sendOneCommand('SYST:CTYP? 200', cmd=cmd))
-        cmd.inform('firmware=%s' % self.sendOneCommand('SYST:VERS?', cmd=cmd))
+        channels = self.channels[slot]
 
-    def getError(self, cmd):
+        ret = self.sendOneCommand('MEAS:FRES? 100,0.0003,(@%s)' % channels, cmd=cmd)
+        return np.array([float(res) if temps.resMin < float(res) < temps.resMax else np.nan for res in ret.split(',')])
+
+    def _fetchSlotInfo(self, cmd, slot):
+        """|  fetch slot info
+
+        :param cmd: on going command
+        :param slot: temperature slot
+        :type slot:int
+        :raise: RuntimeError if the controller returns an error
+        """
+        ret = self.sendOneCommand('SYST:CTYP? %d00' % slot, cmd=cmd)
+        company, modelNumber, serialNumber, firmware = ret.split(',')
+        return '"%s", "%s", %s, %s' % (company, modelNumber, serialNumber, firmware)
+
+    def _fetchError(self, cmd):
         """|  fetch controller error
 
         :param cmd: on going command
@@ -184,19 +226,7 @@ class temps(FSMThread, bufferedSocket.EthComm):
             cmd.warn('error=%d,%s' % (int(errorCode), errorMsg))
             raise RuntimeError(errorMsg)
 
-        cmd.inform('error=%d,%s' % (int(errorCode), errorMsg))
-
-    def convert(self, resistances, calib):
-        """|  convert resistance to temperature using lab calibration
-
-        :param resistances: resistance value
-        :param calib: polynomial coeffient
-        :type resistances: np.array
-        :type calib: np.array
-        :return: temperature
-        :rtype: np.array
-        """
-        return np.array([np.polyval(calib[i], resistances[i]) for i in range(len(resistances))])
+        return int(errorCode), errorMsg
 
     def createSock(self):
         """| create socket or fake it returning a simulator.

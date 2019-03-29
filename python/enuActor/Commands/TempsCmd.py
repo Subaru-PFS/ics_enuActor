@@ -46,17 +46,8 @@ class TempsCmd(object):
     @threaded
     def getResistance(self, cmd):
         """Report resistance value for all sensors"""
-        self.controller.getResistance(slot=1, cmd=cmd)
-        self.controller.getResistance(slot=2, cmd=cmd)
+        self.controller.getResistance(cmd)
         cmd.finish()
-
-    @threaded
-    def rawCommand(self, cmd):
-        """send a raw command to the controller"""
-        cmdKeys = cmd.cmd.keywords
-        cmdStr = cmdKeys["raw"].values[0]
-
-        cmd.finish('text=%s' % self.controller.sendOneCommand(cmdStr, cmd=cmd))
 
     @threaded
     def getError(self, cmd):
@@ -69,3 +60,11 @@ class TempsCmd(object):
         """Report controller info"""
         self.controller.getInfo(cmd)
         cmd.finish()
+
+    @threaded
+    def rawCommand(self, cmd):
+        """send a raw command to the controller"""
+        cmdKeys = cmd.cmd.keywords
+        cmdStr = cmdKeys["raw"].values[0]
+
+        cmd.finish('text=%s' % self.controller.sendOneCommand(cmdStr, cmd=cmd))
