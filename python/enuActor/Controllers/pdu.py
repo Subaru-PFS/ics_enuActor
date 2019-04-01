@@ -1,6 +1,5 @@
 __author__ = 'alefur'
 import logging
-import time
 
 import enuActor.utils.bufferedSocket as bufferedSocket
 from enuActor.Simulators.pdu import PduSim
@@ -8,8 +7,6 @@ from enuActor.utils.fsmThread import FSMThread
 
 
 class pdu(FSMThread, bufferedSocket.EthComm):
-    powerPorts = ('slit', 'xenon', 'hgar', 'krypton')
-
     def __init__(self, actor, name, loglevel=logging.DEBUG):
         """__init__.
         This sets up the connections to/from the hub, the logger, and the twisted reactor.
@@ -42,9 +39,6 @@ class pdu(FSMThread, bufferedSocket.EthComm):
         else:
             raise ValueError('unknown mode')
 
-    def getOutlet(self, channel):
-        return self.actor.config.get('outlets', channel).strip().zfill(2)
-
     def _loadCfg(self, cmd, mode=None):
         """| Load Configuration file.
 
@@ -58,8 +52,8 @@ class pdu(FSMThread, bufferedSocket.EthComm):
                                         host=self.actor.config.get('pdu', 'host'),
                                         port=int(self.actor.config.get('pdu', 'port')),
                                         EOL='\r\n')
-        for channel in self.powerPorts:
-            self.getOutlet(channel=channel)
+        self.powerNames = dict([(key, val) for (key, val) in self.actor.config.items('outlets')])
+        self.powerPorts = dict([(val, key) for (key, val) in self.actor.config.items('outlets')])
 
     def _openComm(self, cmd):
         """| Open socket with pdu controller or simulate it.
@@ -67,7 +61,7 @@ class pdu(FSMThread, bufferedSocket.EthComm):
         :param cmd: on going command
         :raise: socket.error if the communication has failed with the controller
         """
-        self.ioBuffer = bufferedSocket.BufferedSocket(self.name + 'IO', EOL='\r\n>')
+        self.ioBuffer = bufferedSocket.BufferedSocket(self.name + 'IO', EOL='\r\n\r\n> ')
         s = self.connectSock()
 
     def _testComm(self, cmd):
@@ -77,64 +71,96 @@ class pdu(FSMThread, bufferedSocket.EthComm):
         :param cmd: on going command,
         :raise: Exception if the communication has failed with the controller
         """
-        cmd.inform('pduVAW=%s,%s,%s' % self.checkVaw(cmd))
+        v = float(self.sendOneCommand('read meter olt o01 volt simple', cmd=cmd))
 
     def getStatus(self, cmd):
+        """| get all port status
 
-        for channel in [channel for channel in self.actor.config.options('outlets')]:
-            self.checkChannel(cmd=cmd, channel=channel)
+        :param cmd: on going command,
+        :raise: Exception if the communication has failed with the controller
+        """
+        for outlet in self.powerNames.keys():
+            self.portStatus(cmd, outlet=outlet)
 
-        cmd.inform('pduVAW=%s,%s,%s' % self.checkVaw(cmd))
+    def portStatus(self, cmd, outlet):
+        """| get state, voltage, current, power
 
-    def switching(self, cmd, channels):
+        :param cmd: on going command,
+        :raise: Exception if the communication has failed with the controller
+        """
+        state = self.sendOneCommand('read status o%s simple' % outlet, cmd=cmd)
+        v = float(self.sendOneCommand('read meter olt o%s volt simple' % outlet, cmd=cmd))
+        a = float(self.sendOneCommand('read meter olt o%s curr simple' % outlet, cmd=cmd))
+        w = float(self.sendOneCommand('read meter olt o%s pow simple' % outlet, cmd=cmd))
 
-        for channel, state in channels.items():
-            cmdStr = "sw o%s %s imme" % (self.getOutlet(channel=channel), state)
-            ret = self.sendOneCommand(cmdStr=cmdStr, cmd=cmd, doRaise=False)
-            self.checkChannel(cmd=cmd, channel=channel)
-            time.sleep(2)
+        cmd.inform('pduPort%s=%s,%s,%.2f,%.2f,%.2f' % (outlet, self.powerNames[outlet], state, v, a, w))
+        self.state[self.powerNames[outlet]] = state
 
-    def checkChannel(self, cmd, channel):
-
-        outlet = self.getOutlet(channel=channel)
-
-        ret = self.sendOneCommand('read status o%s format' % outlet, cmd=cmd)
-        __, outlet, state = ret.rsplit(' ', 2)
-
-        self.setState(cmd=cmd, outlet=outlet, channel=channel, state=state)
-
-    def checkVaw(self, cmd):
-
-        voltage = self.sendOneCommand('read meter dev volt simple', cmd=cmd)
-        current = self.sendOneCommand('read meter dev curr simple', cmd=cmd)
-        power = self.sendOneCommand('read meter dev pow simple', cmd=cmd)
-
-        return voltage, current, power
-
-    def setState(self, cmd, outlet, channel, state):
-
-        self.state[channel] = state
-        cmd.inform('pduport%s=%s,%s' % (outlet, channel, state))
-
-    def connectSock(self):
-        """ Connect socket if self.sock is None
+    def switching(self, cmd, powerPorts):
+        """ switch on/off powerPorts dict
 
         :param cmd : current command,
-        :return: sock in operation
-                 bsh simulator in simulation
+        :raise: Exception if the communication has failed with the controller
+        """
+        for outlet, state in powerPorts.items():
+            self.sendOneCommand('sw o%s %s imme' % (outlet, state), cmd=cmd)
+            self.portStatus(cmd, outlet=outlet)
+
+    def loginCommand(self, cmdStr, cmd=None, ioEOL=None):
+        """ used to login
+
+        :param cmd : current command,
+        :param cmdStr: (str) The command to send.
+        :raise: Exception if the communication has failed with the controller
+        """
+        self.ioBuffer.EOL = ioEOL if ioEOL is not None else self.ioBuffer.EOL
+
+        return bufferedSocket.EthComm.sendOneCommand(self, cmdStr=cmdStr, cmd=cmd)
+
+    def sendOneCommand(self, cmdStr, doClose=False, cmd=None):
+        """| Send one command and return one response.
+
+        :param cmdStr: (str) The command to send.
+        :param doClose: If True (the default), the device socket is closed before returning.
+        :param cmd: on going command
+        :return: reply : the single response string, with EOLs stripped.
+        :raise: IOError : from any communication errors.
+        """
+        fullCmd = '%s%s' % (cmdStr, self.EOL)
+        reply = bufferedSocket.EthComm.sendOneCommand(self, cmdStr=cmdStr, doClose=doClose, cmd=cmd)
+
+        if fullCmd not in reply:
+            raise ValueError('Command was not echoed properly')
+
+        return reply.split(fullCmd)[1].strip()
+
+    def connectSock(self):
+        """| Connect socket if self.sock is None
+
+        :param cmd : current command,
         """
         if self.sock is None:
             s = self.createSock()
             s.settimeout(2.0)
             s.connect((self.host, self.port))
-
-            try:
-                self.sock = self.authenticate(sock=s)
-            except ValueError:
-                self.closeSock()
-                return self.connectSock()
+            self.sock = s
+            self.authenticate()
 
         return self.sock
+
+    def authenticate(self):
+        """| log to the telnet server
+
+        :param cmd : current command,
+        """
+        try:
+            self.loginCommand('teladmin', ioEOL='Password: ')
+            self.loginCommand('pdu.%s' % self.actor.name, ioEOL='Telnet server 1.1\r\n\r\n> ')
+
+            self.ioBuffer.EOL = '\r\n\r\n> '
+        except:
+            self.sock = None
+            raise
 
     def createSock(self):
         if self.simulated:
@@ -143,49 +169,3 @@ class pdu(FSMThread, bufferedSocket.EthComm):
             s = bufferedSocket.EthComm.createSock(self)
 
         return s
-
-    def sendOneCommand(self, cmdStr, cmd=None, doRaise=True):
-        fullCmd = '%s%s' % (cmdStr, self.EOL)
-        reply = bufferedSocket.EthComm.sendOneCommand(self, cmdStr=cmdStr, cmd=cmd)
-
-        return self.parseResponse(cmd=cmd, fullCmd=fullCmd, reply=reply, doRaise=doRaise)
-
-    def parseResponse(self, cmd, fullCmd, reply, doRaise, retry=True):
-        if fullCmd in reply:
-            return reply.split(fullCmd)[1].strip()
-
-        if retry:
-            time.sleep(1)
-            reply = self.getOneResponse(cmd=cmd)
-            return self.parseResponse(cmd=cmd, fullCmd=fullCmd, reply=reply, doRaise=doRaise, retry=False)
-
-        if doRaise:
-            raise ValueError('Command was not echoed properly')
-
-        return
-
-    def authenticate(self, sock):
-        time.sleep(0.1)
-
-        ret = sock.recv(1024).decode('utf-8', 'ignore')
-
-        if 'Login: ' not in ret:
-            raise ValueError('Could not login')
-
-        sock.sendall('teladmin\r\n'.encode('utf-8'))
-
-        time.sleep(0.1)
-        ret = sock.recv(1024).decode('utf-8', 'ignore')
-
-        if 'Password:' not in ret:
-            raise ValueError('Bad login')
-
-        sock.sendall('toto\r\n'.encode('utf-8'))
-
-        time.sleep(0.1)
-        ret = sock.recv(1024).decode('utf-8', 'ignore')
-
-        if 'Logged in successfully' not in ret:
-            raise ValueError('Bad password')
-
-        return sock

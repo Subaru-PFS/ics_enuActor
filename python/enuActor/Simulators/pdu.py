@@ -11,16 +11,16 @@ class PduSim(socket.socket):
 
         self.buf = []
         self.channels = {}
-        for nb in ['o%s' % (str(i + 1).zfill(2)) for i in range(15)]:
+        for nb in ['o%s' % (str(i + 1).zfill(2)) for i in range(8)]:
             self.channels[nb] = 'off'
 
-        self.vals = {'volt': '110',
-                     'curr': '2',
-                     'pow': '220'}
+        self.vals = {'volt': '240',
+                     'curr': '0.5',
+                     'pow': '120'}
 
     def connect(self, server):
         (ip, port) = server
-        time.sleep(0.5)
+        time.sleep(0.2)
         if type(ip) is not str:
             raise TypeError
         if type(port) is not int:
@@ -29,27 +29,26 @@ class PduSim(socket.socket):
         self.buf.append('Login: \r\n>')
 
     def fakeSend(self, cmdStr):
-        time.sleep(0.1)
         cmdStr = cmdStr.decode()
-
+        time.sleep(0.05)
         if cmdStr == 'teladmin\r\n':
-            self.buf.append('Password: \r\n>')
+            self.buf.append('Password: ')
 
-        elif cmdStr == 'toto\r\n':
-            self.buf.append('Logged in successfully \r\n>')
+        elif 'pdu.enu_sm' in cmdStr:
+            self.buf.append('Telnet server 1.1\r\n\r\n> ')
 
         elif 'read status' in cmdStr:
             __, __, nb, __ = cmdStr.split(' ')
-            self.buf.append('%s Outlet %s %s\r\n> ' % (cmdStr, nb[1:], self.channels[nb]))
+            self.buf.append('%s%s\r\n\r\n> ' % (cmdStr, self.channels[nb]))
 
-        elif 'read meter dev' in cmdStr:
-            __, __, __, val, __ = cmdStr.split(' ')
-            self.buf.append('%s %s\r\n\r\n> ' % (cmdStr, self.vals[val]))
+        elif 'read meter olt' in cmdStr:
+            _, _, _, _, val, _ = cmdStr.split(' ')
+            self.buf.append('%s%s\r\n\r\n> ' % (cmdStr, self.vals[val]))
 
         elif 'sw o' in cmdStr:
             __, nb, state, __ = cmdStr.split(' ')
             self.channels[nb] = state
-            self.buf.append('%s  Outlet<%s> command is setting\r\n>' % (cmdStr, nb))
+            self.buf.append('%sOutlet<%s> command is setting\r\n\r\n> ' % (cmdStr, nb))
 
     def fakeRecv(self, buffer_size):
         ret = self.buf[0]
