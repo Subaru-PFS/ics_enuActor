@@ -120,7 +120,7 @@ class BufferedSocket(object):
 
         return sock.recv(1024).decode('utf8', 'ignore')
 
-    def getOneResponse(self, sock=None, timeout=None, cmd=None):
+    def getOneResponse(self, sock=None, timeout=None, cmd=None, doRaise=False):
         """ Return the next available complete line. Fetch new input if necessary.
 
         Args
@@ -133,19 +133,20 @@ class BufferedSocket(object):
         Returns
         -------
         str or None : a single line of response text, with EOL character(s) stripped.
-
         """
-
         while self.buffer.find(self.EOL) == -1:
             try:
                 more = self.getOutput(sock=sock, timeout=timeout, cmd=cmd)
                 if not more:
-                    raise IOError
+                    if doRaise:
+                        raise IOError
+                    else:
+                        return self.getOneResponse(sock=sock, timeout=timeout, cmd=cmd, doRaise=True)
 
             except IOError:
                 return ''
-            msg = '%s added: %r' % (self.name, more)
-            self.logger.debug(msg)
+
+            self.logger.debug('%s added: %r' % (self.name, more))
             self.buffer += more
 
         eolAt = self.buffer.find(self.EOL)

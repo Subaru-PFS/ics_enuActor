@@ -19,6 +19,7 @@ class PduCmd(object):
         self.name = "pdu"
         self.vocab = [
             (self.name, 'status', self.status),
+            ('power', 'status', self.status),
             ('power', '[<on>] [<off>]', self.switch),
 
         ]
@@ -26,9 +27,9 @@ class PduCmd(object):
         # Define typed command arguments for the above commands.
         self.keys = keys.KeysDictionary("enu__pdu", (1, 1),
                                         keys.Key("on", types.String() * (1, None),
-                                                 help='which channel to switch on.'),
+                                                 help='which outlet to switch on.'),
                                         keys.Key("off", types.String() * (1, None),
-                                                 help='which channel to switch off.'),
+                                                 help='which outlet to switch off.'),
                                         )
 
     @property
@@ -50,11 +51,13 @@ class PduCmd(object):
 
         switchOn = cmdKeys['on'].values if 'on' in cmdKeys else []
         switchOff = cmdKeys['off'].values if 'off' in cmdKeys else []
-        channels = dict([(channel, 'on') for channel in switchOn] + [(channel, 'off') for channel in switchOff])
+        powerNames = dict([(name, 'on') for name in switchOn] + [(name, 'off') for name in switchOff])
 
-        for channel in channels.keys():
-            if channel not in self.controller.powerPorts:
-                raise ValueError('unknown port')
+        for name in powerNames.keys():
+            if name not in self.controller.powerPorts.keys():
+                raise ValueError('%s : unknown port' % name)
 
-        self.controller.substates.switch(cmd, channels)
+        powerPorts = dict([(self.controller.powerPorts[name], state) for name, state in powerNames.items()])
+
+        self.controller.substates.switch(cmd, powerPorts)
         self.controller.generate(cmd)
