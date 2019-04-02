@@ -1,12 +1,15 @@
 __author__ = 'alefur'
 import logging
+import time
 
-import enuActor.utils.bufferedSocket as bufferedSocket
-from enuActor.Simulators.iis import IisSim
+from enuActor.Controllers import pdu
+from enuActor.Simulators.pdu import PduSim
 from enuActor.utils.fsmThread import FSMThread
 
 
-class iis(FSMThread, bufferedSocket.EthComm):
+class iis(pdu.pdu):
+    warmingTime = 15.0
+    arcs = ['hgar']
 
     def __init__(self, actor, name, loglevel=logging.DEBUG):
         """__init__.
@@ -16,100 +19,75 @@ class iis(FSMThread, bufferedSocket.EthComm):
         :param name: controller name
         :type name: str
         """
-        FSMThread.__init__(self, actor, name, doInit=True)
+        substates = ['IDLE', 'WARMING', 'FAILED']
+        events = [{'name': 'warming', 'src': 'IDLE', 'dst': 'WARMING'},
+                  {'name': 'idle', 'src': ['WARMING', ], 'dst': 'IDLE'},
+                  {'name': 'fail', 'src': ['WARMING', ], 'dst': 'FAILED'},
+                  ]
 
-        self.sock = None
-        self.sim = None
-        self.EOL = '\r\n'
+        FSMThread.__init__(self, actor, name, events=events, substates=substates, doInit=True)
+
+        self.addStateCB('WARMING', self.warming)
+        self.sim = PduSim()
 
         self.logger = logging.getLogger(self.name)
         self.logger.setLevel(loglevel)
 
-    @property
-    def simulated(self):
-        if self.mode == 'simulation':
-            return True
-        elif self.mode == 'operation':
-            return False
-        else:
-            raise ValueError('unknown mode')
+    def _loadCfg(self, cmd, mode=None):
+        """| Load Configuration file.
 
-    def loadCfg(self, cmd, mode=None):
-        """loadCfg
-        load Configuration file
-        :param cmd
-        :param mode (operation or simulation, loaded from config file if None
-        :return: True, ret : Config File successfully loaded'
-                 False, ret : Config file badly formatted, Exception ret
+        :param cmd: on going command
+        :param mode: operation|simulation, loaded from config file if None
+        :type mode: str
+        :raise: Exception Config file badly formatted
         """
+        pdu.pdu._loadCfg(self, cmd=cmd, mode=mode)
+        for arc in iis.arcs:
+            if arc not in self.powerPorts.keys():
+                raise ValueError(f'{arc} : unknown arc')
 
-        self.mode = self.actor.config.get('bsh', 'mode') if mode is None else mode
-        bufferedSocket.EthComm.__init__(self,
-                                        host=self.actor.config.get('iis', 'host'),
-                                        port=int(self.actor.config.get('iis', 'port')),
-                                        EOL='\r\n')
-
-    def startComm(self, cmd):
-        """| Start socket with the interlock board or simulate it.
-        | Called by device.loadDevice()
+    def getStatus(self, cmd):
+        """| get and generate iis keywords
 
         :param cmd: on going command,
         :raise: Exception if the communication has failed with the controller
         """
+        for arc in iis.arcs:
+            state = self.arcState(arc, cmd=cmd)
+            cmd.inform(f'{arc}={state}')
 
-        self.sim = IisSim()  # Create new simulator
-        s = self.connectSock()
+    def arcState(self, arc, cmd):
+        """| get arc state
 
-        self.ioBuffer = bufferedSocket.BufferedSocket(self.name + "IO", EOL='ok\r\n')
-
-    def init(self, cmd):
-        """ Initialise the temperature controller
-
-        wrapper @safeCheck handles the state machine
-        :param e : fsm event
-        :return: True, ret : if every steps are successfully operated, fsm (LOADED => IDLE)
-                 False, ret : if a command fail, user if warned with error ret, fsm (LOADED => FAILED)
+        :param cmd: on going command,
+        :raise: Exception if the communication has failed with the controller
         """
+        state = self.sendOneCommand('read status o%s simple' % self.powerPorts[arc], cmd=cmd)
+        if state == 'pending':
+            return self.getState(arc, cmd=cmd)
 
-        ret = self.sendOneCommand("init", doClose=False, cmd=cmd)
+        return state
 
-    def getStatus(self, cmd):
-        """getStatus
-        temperature is nan if the controller is unreachable
-        :param cmd,
-        :return True, state, mode, 8*temperature
-                 False, state, mode, 8*nan if not initialised or an error had occured
+    def warming(self, cmd, arcOn):
+        """ switch on and warm up arc lamp
+
+        :param cmd : current command
+        :param arcOn : arc lamp list to switch on,
+        :raise: Exception if the communication has failed with the controller
         """
+        for outlet in arcOn:
+            self.sendOneCommand('sw o%s on imme' % outlet, cmd=cmd)
+            self.portStatus(cmd, outlet=outlet)
 
-        cmd.inform('iisFSM=%s,%s' % (self.states.current, self.substates.current))
-        cmd.inform('iisMode=%s' % self.mode)
+        if arcOn:
+            time.sleep(iis.warmingTime)
 
-        if self.states.current == 'ONLINE':
-            self.checkStatus(cmd)
+    def isOff(self, arc):
+        """| check if arc lamp is currently off
 
-        cmd.finish()
-
-    def checkStatus(self, cmd):
-        """fetchTemps
-        temperature is nan if the controller is unreachable
-        :param cmd,
-        :return True, 8*temperature
-                 False, 8*nan if not initialised or an error had occured
+        :param arc: arc lamp
+        :type arc:str
+        :return state
         """
-
-        try:
-            ret = self.sendOneCommand("status", cmd=cmd)
-
-        except:
-            cmd.warn('iis=unknown')
-            raise
-
-        cmd.inform('iis=%s' % ret)
-
-    def createSock(self):
-        if self.simulated:
-            s = self.sim
-        else:
-            s = bufferedSocket.EthComm.createSock(self)
-
-        return s
+        state = self.actor.models[self.actor.name].keyVarDict[arc].getValue()
+        return not bool(state)

@@ -18,7 +18,9 @@ class enuActor(actorcore.ICC.ICC):
         #
         actorcore.ICC.ICC.__init__(self, name,
                                    productName=productName,
-                                   configFile=configFile)
+                                   configFile=configFile,
+                                   modelNames=name)
+        self.addModels([self.name])
         self.logger.setLevel(logLevel)
 
         self.everConnected = False
