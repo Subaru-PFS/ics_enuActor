@@ -9,7 +9,6 @@ from enuActor.utils.wrap import threaded
 class TempsCmd(object):
     def __init__(self, actor):
         # This lets us access the rest of the actor.
-        self.name = "temps"
         self.actor = actor
 
         # Declare the commands we implement. When the actor is started
@@ -34,9 +33,9 @@ class TempsCmd(object):
     @property
     def controller(self):
         try:
-            return self.actor.controllers[self.name]
+            return self.actor.controllers['temps']
         except KeyError:
-            raise RuntimeError('%s controller is not connected.' % (self.name))
+            raise RuntimeError('temps controller is not connected.')
 
     @threaded
     def status(self, cmd):

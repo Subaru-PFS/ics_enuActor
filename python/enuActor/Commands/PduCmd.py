@@ -16,9 +16,8 @@ class PduCmd(object):
         # associated methods when matched. The callbacks will be
         # passed a single argument, the parsed and typed command.
         #
-        self.name = "pdu"
         self.vocab = [
-            (self.name, 'status', self.status),
+            ('pdu', 'status', self.status),
             ('power', 'status', self.status),
             ('power', '[<on>] [<off>]', self.switch),
 
@@ -35,9 +34,9 @@ class PduCmd(object):
     @property
     def controller(self):
         try:
-            return self.actor.controllers[self.name]
+            return self.actor.controllers['pdu']
         except KeyError:
-            raise RuntimeError('%s controller is not connected.' % (self.name))
+            raise RuntimeError('pdu controller is not connected.')
 
     @threaded
     def status(self, cmd):

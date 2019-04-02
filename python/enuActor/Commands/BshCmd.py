@@ -9,7 +9,6 @@ class BshCmd(object):
     def __init__(self, actor):
         # This lets us access the rest of the actor.
         self.actor = actor
-        self.name = "bsh"
 
         # Declare the commands we implement. When the actor is started
         # these are registered with the parser, which will call the
@@ -17,7 +16,6 @@ class BshCmd(object):
         # passed a single argument, the parsed and typed command.
         #
         self.vocab = [
-            ('bsh', 'ping', self.ping),
             ('bsh', 'status', self.status),
             ('bsh', '<raw>', self.rawCommand),
             ('bsh', 'init', self.initBsh),
@@ -43,14 +41,9 @@ class BshCmd(object):
     @property
     def controller(self):
         try:
-            return self.actor.controllers[self.name]
+            return self.actor.controllers['bsh']
         except KeyError:
-            raise RuntimeError('%s controller is not connected.' % (self.name))
-
-    @threaded
-    def ping(self, cmd):
-        """Query the controller for liveness/happiness."""
-        cmd.finish('text="%s controller Present and (probably) well"' % self.name)
+            raise RuntimeError('bsh controller is not connected.')
 
     @threaded
     def status(self, cmd):

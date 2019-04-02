@@ -24,7 +24,6 @@ class pdu(FSMThread, bufferedSocket.EthComm):
         FSMThread.__init__(self, actor, name, events=events, substates=substates, doInit=True)
 
         self.addStateCB('SWITCHING', self.switching)
-        self.state = {}
         self.sim = PduSim()
 
         self.logger = logging.getLogger(self.name)
@@ -94,7 +93,6 @@ class pdu(FSMThread, bufferedSocket.EthComm):
         w = float(self.sendOneCommand('read meter olt o%s pow simple' % outlet, cmd=cmd))
 
         cmd.inform('pduPort%s=%s,%s,%.2f,%.2f,%.2f' % (outlet, self.powerNames[outlet], state, v, a, w))
-        self.state[self.powerNames[outlet]] = state
 
     def switching(self, cmd, powerPorts):
         """ switch on/off powerPorts dict

@@ -10,7 +10,6 @@ from enuActor.utils.wrap import threaded, blocking
 class RexmCmd(object):
     def __init__(self, actor):
         # This lets us access the rest of the actor.
-        self.name = "rexm"
         self.actor = actor
 
         # Declare the commands we implement. When the actor is started
@@ -34,9 +33,9 @@ class RexmCmd(object):
     @property
     def controller(self):
         try:
-            return self.actor.controllers[self.name]
+            return self.actor.controllers['rexm']
         except KeyError:
-            raise RuntimeError('%s controller is not connected.' % (self.name))
+            raise RuntimeError('rexm controller is not connected.')
 
     @threaded
     def status(self, cmd):

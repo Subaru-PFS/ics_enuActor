@@ -12,7 +12,6 @@ class SlitCmd(object):
     def __init__(self, actor):
         # This lets us access the rest of the actor.
         self.actor = actor
-        self.name = 'slit'
 
         # Declare the commands we implement. When the actor is started
         # these are registered with the parser, which will call the
@@ -20,7 +19,6 @@ class SlitCmd(object):
         # passed a single argument, the parsed and typed command.
         #
         self.vocab = [
-            ('slit', 'ping', self.ping),
             ('slit', 'status', self.status),
             ('slit', 'init [@(skipHoming)]', self.initialise),
             ('slit', 'abort', self.abort),
@@ -54,15 +52,9 @@ class SlitCmd(object):
     @property
     def controller(self):
         try:
-            return self.actor.controllers[self.name]
+            return self.actor.controllers['slit']
         except KeyError:
-            raise RuntimeError('%s controller is not connected.' % (self.name.upper()))
-
-    @threaded
-    def ping(self, cmd):
-        """Query the actor for liveness/happiness."""
-
-        cmd.finish('text="%s controller Present and (probably) well"' % self.name)
+            raise RuntimeError('slit controller is not connected.')
 
     @threaded
     def status(self, cmd):
