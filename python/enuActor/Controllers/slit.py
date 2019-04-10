@@ -108,6 +108,15 @@ class slit(FSMThread):
         self.connectSock(sockName='main')
         self.connectSock(sockName='emergency')
 
+    def _closeComm(self, cmd):
+        """| Close communication.
+        | Called by FSMThread.stop()
+
+        :param cmd: on going command
+        """
+        self.closeSock(sockName='main')
+        self.closeSock(sockName='emergency')
+
     def _testComm(self, cmd):
         """| test communication
         | Called by FSMDev.loadDevice()

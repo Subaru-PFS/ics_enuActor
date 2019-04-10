@@ -63,6 +63,14 @@ class pdu(FSMThread, bufferedSocket.EthComm):
         self.ioBuffer = bufferedSocket.BufferedSocket(self.name + 'IO', EOL='\r\n\r\n> ')
         s = self.connectSock()
 
+    def _closeComm(self, cmd):
+        """| Close communication.
+        | Called by FSMThread.stop()
+
+        :param cmd: on going command
+        """
+        self.closeSock()
+
     def _testComm(self, cmd):
         """| test communication
         | Called by FSMDev.loadDevice()
