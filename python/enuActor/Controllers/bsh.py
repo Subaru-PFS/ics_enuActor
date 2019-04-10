@@ -99,6 +99,14 @@ class bsh(FSMThread, bufferedSocket.EthComm):
         self.ioBuffer = bufferedSocket.BufferedSocket(self.name + "IO", EOL='ok\r\n')
         s = self.connectSock()
 
+    def _closeComm(self, cmd):
+        """| Close communication.
+        | Called by FSMThread.stop()
+
+        :param cmd: on going command
+        """
+        self.closeSock()
+
     def _testComm(self, cmd):
         """| test communication
         | Called by FSMDev.loadDevice()

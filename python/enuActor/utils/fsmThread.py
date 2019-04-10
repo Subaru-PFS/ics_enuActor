@@ -39,6 +39,9 @@ class FSMThread(FSMDevice, QThread):
     def _testComm(self, cmd):
         pass
 
+    def _closeComm(self, cmd):
+        pass
+
     def _init(self, cmd, *args):
         pass
 
@@ -48,6 +51,7 @@ class FSMThread(FSMDevice, QThread):
         QThread.start(self)
 
     def stop(self, cmd=None):
+        self._closeComm(cmd=cmd)
         FSMDevice.stop(self, cmd=cmd)
         self.exit()
 
@@ -59,7 +63,7 @@ class FSMThread(FSMDevice, QThread):
             try:
                 self.getStatus(cmd)
             finally:
-                self.closeSock()
+                self._closeComm(cmd)
 
         cmd.finish()
 
