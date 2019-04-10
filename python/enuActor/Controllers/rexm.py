@@ -94,7 +94,7 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         """
         self.checkConfig(cmd)
 
-    def _init(self, cmd, doHome):
+    def _init(self, cmd, doHome=True):
         """| Initialise rexm controller, called by self.initDevice().
         - set motor config
         - go to low resolution position
@@ -163,7 +163,7 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         else:
             self._moveRelative(cmd, **kwargs)
 
-    def checkStatus(self, cmd):
+    def checkStatus(self, cmd, genKeys=True):
         """| Check current status from controller and generate rexmInfo keywords
         - rexmInfo = switchA state, switchB state, speed, position(ustep from origin)
 
@@ -180,10 +180,12 @@ class rexm(FSMThread, bufferedSocket.EthComm):
             cmd.warn('rexm=undef')
             raise
 
-        if (time.time() - self.last) > 2:
-            self.last = time.time()
-            cmd.inform('rexmInfo=%i,%i,%i,%i' % (self.switchA, self.switchB, self.speed, self.stepCount))
-            cmd.inform('rexm=%s' % self.position)
+        if not genKeys and (time.time() - self.last) < 2:
+            return
+
+        self.last = time.time()
+        cmd.inform('rexmInfo=%i,%i,%i,%i' % (self.switchA, self.switchB, self.speed, self.stepCount))
+        cmd.inform('rexm=%s' % self.position)
 
     def checkConfig(self, cmd):
         """| Check current config from controller and generate rexmConfig keywords)
@@ -293,7 +295,7 @@ class rexm(FSMThread, bufferedSocket.EthComm):
 
         try:
             while not (self.hasStarted(startCount=startCount) and self.waitForCompletion(expectedTime=expectedTime)):
-                self.checkStatus(cmd)
+                self.checkStatus(cmd, genKeys=False)
                 elapsedTime = time.time() - start
 
                 if self.exitASAP:

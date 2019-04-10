@@ -38,7 +38,6 @@ class temps(FSMThread, bufferedSocket.EthComm):
         FSMThread.__init__(self, actor, name, doInit=True)
 
         self.sim = TempsSim()
-        self.monitor = 15
 
         self.logger = logging.getLogger(self.name)
         self.logger.setLevel(loglevel)
@@ -146,7 +145,7 @@ class temps(FSMThread, bufferedSocket.EthComm):
         :raise: RuntimeError if the controller returns an error
         """
         errorCode, errorMsg = self._fetchError(cmd)
-        cmd.inform('error=%d,%s' % (errorCode, errorMsg))
+        cmd.inform('tempsStatus=%d,%s' % (errorCode, errorMsg))
 
     def calibTemps(self, cmd, slot):
         """|  fetch resistance and use lab calibration if doCalib else fetch temps

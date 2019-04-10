@@ -2,6 +2,8 @@
 
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
+from opscore.utility.qstr import qstr
+
 from enuActor.utils.wrap import threaded, blocking
 
 
@@ -73,7 +75,8 @@ class BshCmd(object):
         """send a raw command to the bsh board"""
         cmdKeys = cmd.cmd.keywords
         cmdStr = cmdKeys['raw'].values[0]
-        cmd.finish('text=%s' % self.controller.sendOneCommand(cmdStr, cmd=cmd))
+        ret = self.controller.sendOneCommand(cmdStr, cmd=cmd)
+        cmd.finish('text=%s' % (qstr('returned: %s' % (ret))))
 
     @threaded
     def setBiaConfig(self, cmd):

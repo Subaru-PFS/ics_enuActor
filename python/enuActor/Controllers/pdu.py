@@ -92,7 +92,7 @@ class pdu(FSMThread, bufferedSocket.EthComm):
         a = float(self.sendOneCommand('read meter olt o%s curr simple' % outlet, cmd=cmd))
         w = float(self.sendOneCommand('read meter olt o%s pow simple' % outlet, cmd=cmd))
 
-        cmd.inform('pduPort%s=%s,%s,%.2f,%.2f,%.2f' % (outlet, self.powerNames[outlet], state, v, a, w))
+        cmd.inform('pduPort%d=%s,%s,%.2f,%.2f,%.2f' % (int(outlet), self.powerNames[outlet], state, v, a, w))
 
     def switching(self, cmd, powerPorts):
         """ switch on/off powerPorts dict

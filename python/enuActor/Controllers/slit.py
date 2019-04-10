@@ -117,7 +117,7 @@ class slit(FSMThread):
         """
         self.getPosition(cmd=cmd)
 
-    def _init(self, cmd, doHome):
+    def _init(self, cmd, doHome=True):
         """| Initialise hexapod, called by self.initDevice().
 
         - kill socket

@@ -314,10 +314,12 @@ class bsh(FSMThread, bufferedSocket.EthComm):
         """
         reply = self.sendOneCommand(cmdStr, cmd=cmd)
 
-        if reply != "":
-            raise RuntimeError("bsh has replied nok, cmdStr : %s inappropriate in current state " % cmdStr)
-
-        return reply
+        if reply == '':
+            return reply
+        elif reply == 'n':
+            raise RuntimeError('bsh has replied nok, %s inappropriate in current state ' % cmdStr)
+        else:
+            raise RuntimeError('error : %s' % reply)
 
     def _waitUntil(self, cmd, start, exptime, ti=0.001):
         """| Temporization, check every 0.01 sec for a user abort command.
