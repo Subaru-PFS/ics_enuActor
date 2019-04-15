@@ -47,8 +47,10 @@ class FSMThread(FSMDevice, QThread):
 
     def start(self, cmd=None, doInit=None, mode=None):
         doInit = self.doInit if doInit is None else doInit
-        FSMDevice.start(self, cmd=cmd, doInit=doInit, mode=mode)
-        QThread.start(self)
+        try:
+            FSMDevice.start(self, cmd=cmd, doInit=doInit, mode=mode)
+        finally:
+            QThread.start(self)
 
     def stop(self, cmd=None):
         self._closeComm(cmd=cmd)
