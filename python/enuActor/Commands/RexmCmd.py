@@ -57,7 +57,6 @@ class RexmCmd(object):
         cmdKeys = cmd.cmd.keywords
         position = "low" if "low" in cmdKeys else "mid"
 
-        self.controller.abortMotion = False
         self.controller.substates.move(cmd, dict(position=position))
         self.controller.generate(cmd)
 
@@ -68,13 +67,12 @@ class RexmCmd(object):
         direction = int(cmdKeys['relative'].values[0] > 0)
         distance = abs(cmdKeys['relative'].values[0])
 
-        if not 1 <= distance <= TMCM.DISTANCE_MAX:
+        if not 5 <= distance <= TMCM.DISTANCE_MAX:
             raise ValueError('requested distance out of range')
 
-        self.controller.abortMotion = False
         self.controller.substates.move(cmd, dict(direction=direction,
                                                  distance=distance,
-                                                 speed=TMCM.g_speed))
+                                                 speed=(TMCM.g_speed / 3)))
         self.controller.generate(cmd)
 
     def abort(self, cmd):
