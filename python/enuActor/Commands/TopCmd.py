@@ -2,6 +2,8 @@
 
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
+from enuActor.utils import getVersion
+from opscore.utility.qstr import qstr
 
 
 class TopCmd(object):
@@ -78,10 +80,9 @@ class TopCmd(object):
 
     def status(self, cmd):
         """Report enu status, actor version and each controller status """
-
-        self.actor.sendVersionKey(cmd)
-
-        cmd.inform('text=%s' % "Present!")
+        cmd.inform('version=%s' % (qstr(getVersion('ics_enuActor'))))
+        cmd.inform('actorcore=%s' % (qstr(getVersion('tron_actorcore'))))
+        cmd.inform('actorkeys=%s' % (qstr(getVersion('ics_actorkeys'))))
         cmd.inform('text="monitors: %s"' % self.actor.monitors)
         cmd.inform('text="config id=0x%08x %r"' % (id(self.actor.config),
                                                    self.actor.config.sections()))
