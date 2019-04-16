@@ -137,7 +137,6 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         :raise: Timeout if the command takes too long.
         """
         start = time.time()
-        self.stopMotion(cmd=cmd)
 
         while self.isMoving:
             if (time.time() - start) > rexm.stoppingTimeout:
