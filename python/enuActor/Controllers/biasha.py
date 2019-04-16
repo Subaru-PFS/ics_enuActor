@@ -280,17 +280,15 @@ class biasha(FSMThread, bufferedSocket.EthComm):
         if strobe is not None:
             self.sendOneCommand('pulse_%s' % strobe, cmd=cmd)
 
-        self.biaStatus(cmd)
 
     def _state(self, cmd):
-        """| check and return interlock board current state .
+        """| check and return biasha board current state .
 
         :param cmd: current command,
         :raise: Exception if a command has failed
         """
-        ilockState = self.sendOneCommand("status", cmd=cmd)
-
-        return int(ilockState)
+        state = self.sendOneCommand("status", cmd=cmd)
+        return int(state)
 
     def _statword(self, cmd):
         """| check and return shutter status word .
