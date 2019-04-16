@@ -6,7 +6,7 @@ import time
 import numpy as np
 
 
-class BshSim(socket.socket):
+class BiashaSim(socket.socket):
     statword = {0: 82, 10: 82, 20: 100, 30: 98, 40: 84}
 
     def __init__(self):
@@ -15,7 +15,7 @@ class BshSim(socket.socket):
         self.g_aperiod = 100
         self.bia_mode = 0
         self.pulse_on = 0
-        self.statword = BshSim.statword[self.bia_mode]
+        self.statword = BiashaSim.statword[self.bia_mode]
 
         self.buf = []
 
@@ -37,7 +37,7 @@ class BshSim(socket.socket):
         cmdStr = cmdStr.decode()
 
         bia_mode = self.bia_mode
-        self.statword = BshSim.statword[bia_mode]
+        self.statword = BiashaSim.statword[bia_mode]
 
         if bia_mode == 0:  # IDLE STATE
             if cmdStr == 'bia_on\r\n':

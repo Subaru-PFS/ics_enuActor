@@ -7,7 +7,7 @@ from opscore.utility.qstr import qstr
 from enuActor.utils.wrap import threaded, blocking
 
 
-class BshCmd(object):
+class BiashaCmd(object):
     def __init__(self, actor):
         # This lets us access the rest of the actor.
         self.actor = actor
@@ -18,9 +18,9 @@ class BshCmd(object):
         # passed a single argument, the parsed and typed command.
         #
         self.vocab = [
-            ('bsh', 'status', self.status),
-            ('bsh', '<raw>', self.rawCommand),
-            ('bsh', 'init', self.initBsh),
+            ('biasha', 'status', self.status),
+            ('biasha', '<raw>', self.rawCommand),
+            ('biasha', 'init', self.init),
             ('bia', '@(on|off)', self.biaSwitch),
             ('bia', '@(strobe) @(on|off)', self.setStrobe),
             ('bia', 'config [<duty>] [<period>]', self.setBiaConfig),
@@ -33,7 +33,7 @@ class BshCmd(object):
         ]
 
         # Define typed command arguments for the above commands.
-        self.keys = keys.KeysDictionary('enu__bsh', (1, 1),
+        self.keys = keys.KeysDictionary('enu__biasha', (1, 1),
                                         keys.Key('duty', types.Int(), help='bia duty cycle (0..255)'),
                                         keys.Key('period', types.Int(), help='bia period'),
                                         keys.Key('raw', types.String(), help='raw command'),
@@ -43,9 +43,9 @@ class BshCmd(object):
     @property
     def controller(self):
         try:
-            return self.actor.controllers['bsh']
+            return self.actor.controllers['biasha']
         except KeyError:
-            raise RuntimeError('bsh controller is not connected.')
+            raise RuntimeError('biasha controller is not connected.')
 
     @threaded
     def status(self, cmd):
@@ -65,14 +65,14 @@ class BshCmd(object):
         cmd.finish()
 
     @threaded
-    def initBsh(self, cmd):
+    def init(self, cmd):
         """Report state, mode, position"""
         self.controller.gotoState(cmd, 'init')
         self.controller.generate(cmd)
 
     @threaded
     def rawCommand(self, cmd):
-        """send a raw command to the bsh board"""
+        """send a raw command to the biasha board"""
         cmdKeys = cmd.cmd.keywords
         cmdStr = cmdKeys['raw'].values[0]
         ret = self.controller.sendOneCommand(cmdStr, cmd=cmd)
@@ -122,7 +122,7 @@ class BshCmd(object):
 
     @blocking
     def expose(self, cmd):
-        """send a raw command to the bsh board"""
+        """send a raw command to the biasha board"""
         cmdKeys = cmd.cmd.keywords
 
         exptime = cmdKeys["exptime"].values[0]
@@ -140,11 +140,11 @@ class BshCmd(object):
         self.controller.generate(cmd)
 
     def abortExposure(self, cmd):
-        """send a raw command to the bsh board"""
+        """send a raw command to the biasha board"""
         self.controller.abortExposure = True
         cmd.finish("text='aborting current exposure'")
 
     def finishExposure(self, cmd):
-        """send a raw command to the bsh board"""
+        """send a raw command to the biasha board"""
         self.controller.finishExposure = True
         cmd.finish("text='finishing current exposure'")
