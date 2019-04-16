@@ -137,7 +137,6 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         :raise: Timeout if the command takes too long.
         """
         start = time.time()
-        self.stopMotion(cmd=cmd)
 
         while self.isMoving:
             if (time.time() - start) > rexm.stoppingTimeout:
@@ -153,7 +152,7 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         cmd.inform('text="stopping rexm motion"')
         self._stop(cmd=cmd)
 
-        time.sleep(0.5)
+        time.sleep(1)
         self.checkStatus(cmd)
 
     def moving(self, cmd, kwargs):
@@ -164,6 +163,7 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         :type position: str
         :raise: Exception if move command fails
         """
+        self.abortMotion = False
         position = kwargs.pop('position', None)
 
         if position is not None:
@@ -256,7 +256,8 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         self._moveRelative(cmd,
                            direction=not direction,
                            distance=5,
-                           speed=(TMCM.g_speed / 3))
+                           speed=(TMCM.g_speed / 3),
+                           hitSwitch=False)
 
         cmd.inform('text="adjusting position forward"')
         self._moveRelative(cmd,
@@ -266,7 +267,7 @@ class rexm(FSMThread, bufferedSocket.EthComm):
 
         cmd.inform('text="arrived at desired position %s"' % position)
 
-    def _moveRelative(self, cmd, direction, distance, speed):
+    def _moveRelative(self, cmd, direction, distance, speed, hitSwitch=True):
         """| Go to specified distance, direction with desired speed.
 
         - Stop motion
@@ -298,18 +299,17 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         self._MVP(direction, distance, cmd=cmd)
 
         start = time.time()
-        expectedTime = start + (distance / speed)
         self.checkStatus(cmd)
 
         try:
-            while not (self.hasStarted(startCount=startCount) and self.waitForCompletion(expectedTime=expectedTime)):
+            while not self.hasStarted(startCount=startCount) or self.isMoving:
                 self.checkStatus(cmd, genKeys=False)
                 elapsedTime = time.time() - start
 
                 if self.exitASAP:
                     raise SystemExit()
 
-                if self.limitSwitch(direction):
+                if self.limitSwitch(direction, hitSwitch=hitSwitch):
                     break
 
                 if elapsedTime > rexm.startingTimeout and not self.hasStarted(startCount=startCount):
@@ -324,30 +324,25 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         finally:
             self.safeStop(cmd)
 
-    def waitForCompletion(self, expectedTime):
-        """| wait for motion completion
-
-        :param expectedTime: expected time for motion completion
-        :type expectedTime: float
-        """
-        return time.time() > expectedTime and not self.isMoving
-
     def hasStarted(self, startCount):
         """| demonstrate that motion that effectively started
 
         :param startCount: starting stepCount
         :type startCount: int
         """
-        return abs(startCount - self.stepCount) > TMCM.mm2counts(stepIdx=self.stepIdx, valueMm=0.5)
+        return abs(startCount - self.stepCount) > 500
 
-    def limitSwitch(self, direction):
+    def limitSwitch(self, direction, hitSwitch=True):
         """| Return limit switch state which will be reached by going in that direction.
 
         :param direction: 0 (go to low position ) 1 (go to mid position)
         :type direction: int
         :return: limit switch state
         """
-        return self.switchA if direction == 0 else self.switchB
+        if hitSwitch:
+            return self.switchA if direction == 0 else self.switchB
+        else:
+            return not self.switchB if direction == 0 else not self.switchA
 
     def _setConfig(self, cmd=None):
         """| Set motor parameters.
@@ -457,7 +452,6 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         :return: reply : the single response string, with EOLs stripped.
         :raise: IOError : from any communication errors.
         """
-        time.sleep(0.01)
         if cmd is None:
             cmd = self.actor.bcast
         if len(cmdBytes) != 9:
