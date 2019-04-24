@@ -5,7 +5,7 @@ from datetime import datetime as dt
 from datetime import timedelta
 
 import enuActor.utils.bufferedSocket as bufferedSocket
-from enuActor.Simulators.bsh import BshSim
+from enuActor.Simulators.biasha import BiashaSim
 from enuActor.utils.fsmThread import FSMThread
 
 
@@ -13,8 +13,8 @@ def busyEvent(event):
     return [dict(name='%s_%s' % (src, event['name']), src='BUSY', dst=event['dst']) for src in event['src']]
 
 
-class bsh(FSMThread, bufferedSocket.EthComm):
-    bshFSM = {0: ('close', 'off'),
+class biasha(FSMThread, bufferedSocket.EthComm):
+    status = {0: ('close', 'off'),
               10: ('close', 'on'),
               20: ('open', 'off'),
               30: ('openblue', 'off'),
@@ -57,7 +57,7 @@ class bsh(FSMThread, bufferedSocket.EthComm):
 
         self.finishExposure = False
         self.abortExposure = False
-        self.sim = BshSim()
+        self.sim = BiashaSim()
 
         self.logger = logging.getLogger(self.name)
         self.logger.setLevel(loglevel)
@@ -79,18 +79,18 @@ class bsh(FSMThread, bufferedSocket.EthComm):
         :type mode: str
         :raise: Exception Config file badly formatted
         """
-        self.mode = self.actor.config.get('bsh', 'mode') if mode is None else mode
+        self.mode = self.actor.config.get('biasha', 'mode') if mode is None else mode
         bufferedSocket.EthComm.__init__(self,
-                                        host=self.actor.config.get('bsh', 'host'),
-                                        port=int(self.actor.config.get('bsh', 'port')),
+                                        host=self.actor.config.get('biasha', 'host'),
+                                        port=int(self.actor.config.get('biasha', 'port')),
                                         EOL='\r\n')
 
-        self.defaultBiaParams = dict(period=int(self.actor.config.get('bsh', 'bia_period')),
-                                     duty=int(self.actor.config.get('bsh', 'bia_duty')),
-                                     strobe=self.actor.config.get('bsh', 'bia_strobe'))
+        self.defaultBiaParams = dict(period=int(self.actor.config.get('biasha', 'bia_period')),
+                                     duty=int(self.actor.config.get('biasha', 'bia_duty')),
+                                     strobe=self.actor.config.get('biasha', 'bia_strobe'))
 
     def _openComm(self, cmd):
-        """| Open socket with bsh arduino board or simulate it.
+        """| Open socket with biasha board or simulate it.
         | Called by FSMDev.loadDevice()
 
         :param cmd: on going command
@@ -114,7 +114,7 @@ class bsh(FSMThread, bufferedSocket.EthComm):
         :param cmd: on going command,
         :raise: Exception if the communication has failed with the controller
         """
-        cmd.inform('bshState=%d' % self._state(cmd))
+        self.getState(cmd=cmd)
 
     def _init(self, cmd):
         """| Initialise the interlock board
@@ -129,14 +129,24 @@ class bsh(FSMThread, bufferedSocket.EthComm):
         self._gotoState('init', cmd=cmd)
 
     def getStatus(self, cmd):
-        """| Call bsh.biaStatus() and bsh.shutterStatus()
+        """| Call biasha.biaStatus() and biasha.shutterStatus()
 
         :param cmd: on going command
         :raise: Exception if a command has failed
         """
-        bshState = self._state(cmd)
-        self.biaStatus(cmd=cmd, bshState=bshState)
-        self.shutterStatus(cmd=cmd, bshState=bshState)
+        state = self.getState(cmd=cmd)
+        self.biaStatus(cmd=cmd, state=state)
+        self.shutterStatus(cmd=cmd, state=state)
+
+    def getState(self, cmd):
+        """| Call biasha.biaStatus() and biasha.shutterStatus()
+
+        :param cmd: on going command
+        :raise: Exception if a command has failed
+        """
+        state = self._state(cmd)
+        cmd.inform('biasha=%d' % state)
+        return state
 
     def gotoState(self, cmd, cmdStr):
         current = self.substates.current
@@ -199,21 +209,21 @@ class bsh(FSMThread, bufferedSocket.EthComm):
             cmd.warn('exptime=nan')
             raise
 
-    def shutterStatus(self, cmd, bshState=None):
+    def shutterStatus(self, cmd, state=None):
         """| Get shutters status and generate shutters keywords
 
         :param cmd: on going command
         :raise: RuntimeError if statword and current state are incoherent
         """
         try:
-            bshState = self._state(cmd) if bshState is None else bshState
-            shutters, __ = bsh.bshFSM[bshState]
+            state = self.getState(cmd) if state is None else state
+            shutters, __ = biasha.status[state]
             statword = self._statword(cmd)
 
             cmd.inform('shb=%s,%s,%s' % (statword[0], statword[1], statword[2]))
             cmd.inform('shr=%s,%s,%s' % (statword[3], statword[4], statword[5]))
 
-            if bsh.statwords[shutters] != statword:
+            if biasha.statwords[shutters] != statword:
                 raise RuntimeError('statword %s  does not match current state' % statword)
             cmd.inform('shutters=%s' % shutters)
 
@@ -223,15 +233,15 @@ class bsh(FSMThread, bufferedSocket.EthComm):
 
         return shutters
 
-    def biaStatus(self, cmd, bshState=None):
+    def biaStatus(self, cmd, state=None):
         """| Get bia status and generate bia keywords
 
         :param cmd: on going command
         :raise: Exception if communication has failed
         """
         try:
-            bshState = self._state(cmd) if bshState is None else bshState
-            __, bia = bsh.bshFSM[bshState]
+            state = self.getState(cmd) if state is None else state
+            __, bia = biasha.status[state]
             strobe, period, duty = self._biaConfig(cmd)
             phr1, phr2 = self._photores(cmd)
 
@@ -270,17 +280,15 @@ class bsh(FSMThread, bufferedSocket.EthComm):
         if strobe is not None:
             self.sendOneCommand('pulse_%s' % strobe, cmd=cmd)
 
-        self.biaStatus(cmd)
 
     def _state(self, cmd):
-        """| check and return interlock board current state .
+        """| check and return biasha board current state .
 
         :param cmd: current command,
         :raise: Exception if a command has failed
         """
-        ilockState = self.sendOneCommand("status", cmd=cmd)
-
-        return int(ilockState)
+        state = self.sendOneCommand("status", cmd=cmd)
+        return int(state)
 
     def _statword(self, cmd):
         """| check and return shutter status word .

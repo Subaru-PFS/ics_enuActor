@@ -2,12 +2,11 @@
 
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
+from enuActor.utils.wrap import threaded, blocking
 from opscore.utility.qstr import qstr
 
-from enuActor.utils.wrap import threaded, blocking
 
-
-class BshCmd(object):
+class BiashaCmd(object):
     def __init__(self, actor):
         # This lets us access the rest of the actor.
         self.actor = actor
@@ -18,12 +17,14 @@ class BshCmd(object):
         # passed a single argument, the parsed and typed command.
         #
         self.vocab = [
-            ('bsh', 'status', self.status),
-            ('bsh', '<raw>', self.rawCommand),
-            ('bsh', 'init', self.initBsh),
-            ('bia', '@(on|off)', self.biaSwitch),
-            ('bia', '@(strobe) @(on|off)', self.setStrobe),
-            ('bia', 'config [<duty>] [<period>]', self.setBiaConfig),
+            ('biasha', 'status', self.status),
+            ('biasha', '<raw>', self.rawCommand),
+            ('biasha', 'init', self.init),
+            ('bia', '@on [strobe] [<period>] [<duty>] [<power>]', self.biaOn),
+            ('bia', '@off', self.biaOff),
+            ('bia', '@strobe @on [<period>] [<duty>] [<power>]', self.strobeOn),
+            ('bia', '@strobe @off', self.strobeOff),
+            ('bia', '[<period>] [<duty>] [<power>]', self.biaConfig),
             ('bia', 'status', self.biaStatus),
             ('shutters', '@(open|close) [blue|red]', self.shutterSwitch),
             ('shutters', 'status', self.shutterStatus),
@@ -33,9 +34,11 @@ class BshCmd(object):
         ]
 
         # Define typed command arguments for the above commands.
-        self.keys = keys.KeysDictionary('enu__bsh', (1, 1),
+        self.keys = keys.KeysDictionary('enu__biasha', (1, 1),
                                         keys.Key('duty', types.Int(), help='bia duty cycle (0..255)'),
                                         keys.Key('period', types.Int(), help='bia period'),
+                                        keys.Key("power", types.Float(),
+                                                 help='power level to set (0..100)'),
                                         keys.Key('raw', types.String(), help='raw command'),
                                         keys.Key('exptime', types.Float(), help='exposure time'),
                                         )
@@ -43,9 +46,9 @@ class BshCmd(object):
     @property
     def controller(self):
         try:
-            return self.actor.controllers['bsh']
+            return self.actor.controllers['biasha']
         except KeyError:
-            raise RuntimeError('bsh controller is not connected.')
+            raise RuntimeError('biasha controller is not connected.')
 
     @threaded
     def status(self, cmd):
@@ -64,46 +67,57 @@ class BshCmd(object):
         self.controller.biaStatus(cmd)
         cmd.finish()
 
-    @threaded
-    def initBsh(self, cmd):
-        """Report state, mode, position"""
-        self.controller.gotoState(cmd, 'init')
-        self.controller.generate(cmd)
-
-    @threaded
-    def rawCommand(self, cmd):
-        """send a raw command to the bsh board"""
+    @blocking
+    def biaOn(self, cmd):
+        """Switch bia on"""
         cmdKeys = cmd.cmd.keywords
-        cmdStr = cmdKeys['raw'].values[0]
-        ret = self.controller.sendOneCommand(cmdStr, cmd=cmd)
-        cmd.finish('text=%s' % (qstr('returned: %s' % (ret))))
 
-    @threaded
-    def setBiaConfig(self, cmd):
-        """Update bia parameters """
-        cmdKeys = cmd.cmd.keywords
+        strobe = 'on' if 'strobe' in cmdKeys else None
         period = cmdKeys['period'].values[0] if 'period' in cmdKeys else None
         duty = cmdKeys['duty'].values[0] if 'duty' in cmdKeys else None
+        duty = round(cmdKeys['power'].values[0] * 255 / 100) if 'power' in cmdKeys else duty
 
-        self.controller.setBiaConfig(cmd, period, duty)
-        cmd.finish()
+        self.controller.setBiaConfig(cmd, strobe=strobe, period=period, duty=duty)
 
-    @threaded
-    def setStrobe(self, cmd):
-        """Activate|desactivate bia strobe mode  """
-        cmdKeys = cmd.cmd.keywords
-        state = 'off' if 'off' in cmdKeys else 'on'
-
-        self.controller.setBiaConfig(cmd, strobe=state)
+        self.controller.gotoState(cmd, cmdStr='bia_on')
+        self.controller.biaStatus(cmd)
         cmd.finish()
 
     @blocking
-    def biaSwitch(self, cmd):
-        """Switch bia on/off)"""
-        cmdKeys = cmd.cmd.keywords
-        state = 'on' if 'on' in cmdKeys else 'off'
+    def biaOff(self, cmd):
+        """Switch bia off"""
+        self.controller.gotoState(cmd, cmdStr='bia_off')
+        self.controller.biaStatus(cmd)
+        cmd.finish()
 
-        self.controller.gotoState(cmd, cmdStr='bia_%s' % state)
+    @threaded
+    def strobeOn(self, cmd):
+        """Activate|desactivate bia strobe mode  """
+        cmdKeys = cmd.cmd.keywords
+        period = cmdKeys['period'].values[0] if 'period' in cmdKeys else None
+        duty = cmdKeys['duty'].values[0] if 'duty' in cmdKeys else None
+        duty = round(cmdKeys['power'].values[0] * 255 / 100) if 'power' in cmdKeys else duty
+
+        self.controller.setBiaConfig(cmd, strobe='on', period=period, duty=duty)
+        self.controller.biaStatus(cmd)
+        cmd.finish()
+
+    @threaded
+    def strobeOff(self, cmd):
+        """Activate|desactivate bia strobe mode  """
+        self.controller.setBiaConfig(cmd, strobe='off')
+        self.controller.biaStatus(cmd)
+        cmd.finish()
+
+    @threaded
+    def biaConfig(self, cmd):
+        """Activate|desactivate bia strobe mode  """
+        cmdKeys = cmd.cmd.keywords
+        period = cmdKeys['period'].values[0] if 'period' in cmdKeys else None
+        duty = cmdKeys['duty'].values[0] if 'duty' in cmdKeys else None
+        duty = round(cmdKeys['power'].values[0] * 255 / 100) if 'power' in cmdKeys else duty
+
+        self.controller.setBiaConfig(cmd, period=period, duty=duty)
         self.controller.biaStatus(cmd)
         cmd.finish()
 
@@ -122,7 +136,7 @@ class BshCmd(object):
 
     @blocking
     def expose(self, cmd):
-        """send a raw command to the bsh board"""
+        """send a raw command to the biasha board"""
         cmdKeys = cmd.cmd.keywords
 
         exptime = cmdKeys["exptime"].values[0]
@@ -139,12 +153,26 @@ class BshCmd(object):
 
         self.controller.generate(cmd)
 
+    @threaded
+    def init(self, cmd):
+        """Report state, mode, position"""
+        self.controller.gotoState(cmd, 'init')
+        self.controller.generate(cmd)
+
+    @threaded
+    def rawCommand(self, cmd):
+        """send a raw command to the biasha board"""
+        cmdKeys = cmd.cmd.keywords
+        cmdStr = cmdKeys['raw'].values[0]
+        ret = self.controller.sendOneCommand(cmdStr, cmd=cmd)
+        cmd.finish('text=%s' % (qstr('returned: %s' % (ret))))
+
     def abortExposure(self, cmd):
-        """send a raw command to the bsh board"""
+        """send a raw command to the biasha board"""
         self.controller.abortExposure = True
         cmd.finish("text='aborting current exposure'")
 
     def finishExposure(self, cmd):
-        """send a raw command to the bsh board"""
+        """send a raw command to the biasha board"""
         self.controller.finishExposure = True
         cmd.finish("text='finishing current exposure'")
