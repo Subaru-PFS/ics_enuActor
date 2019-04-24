@@ -11,7 +11,7 @@ class FSMThread(FSMDevice, QThread):
         self.last = 0
         self.monitor = 60
 
-        QThread.__init__(self, actor, name, timeout=2)
+        QThread.__init__(self, actor, name, timeout=15)
         FSMDevice.__init__(self, actor, name, events=events, substates=substates)
 
     def loadCfg(self, cmd, mode=None):
@@ -49,6 +49,7 @@ class FSMThread(FSMDevice, QThread):
         doInit = self.doInit if doInit is None else doInit
         try:
             FSMDevice.start(self, cmd=cmd, doInit=doInit, mode=mode)
+            self.generate(cmd=cmd, doFinish=False)
         finally:
             QThread.start(self)
 
@@ -57,17 +58,21 @@ class FSMThread(FSMDevice, QThread):
         FSMDevice.stop(self, cmd=cmd)
         self.exit()
 
-    def generate(self, cmd):
+    def generate(self, cmd=None, doFinish=True):
+        cmd = self.actor.bcast if cmd is None else cmd
+
         cmd.inform('%sFSM=%s,%s' % (self.name, self.states.current, self.substates.current))
         cmd.inform('%sMode=%s' % (self.name, self.mode))
 
         if self.states.current in ['LOADED', 'ONLINE']:
             try:
                 self.getStatus(cmd)
+                self.last = time.time()
             finally:
                 self._closeComm(cmd)
 
-        cmd.finish()
+        if doFinish:
+            cmd.finish()
 
     def handleTimeout(self, cmd=None):
         if self.exitASAP:
@@ -79,5 +84,3 @@ class FSMThread(FSMDevice, QThread):
                 self.generate(cmd)
             except Exception as e:
                 cmd.fail('text=%s' % self.actor.strTraceback(e))
-
-            self.last = time.time()
