@@ -20,14 +20,15 @@ class RexmCmd(object):
         self.vocab = [
             ('rexm', 'status', self.status),
             ('rexm', 'init [@(skipHoming)]', self.initialise),
-            ('rexm', '@(move) @(low|mid)', self.moveTo),
+            ('rexm', '@(low|med)', self.moveTo),
+            ('rexm', '@moveTo @(low|med)', self.moveTo),
             ('rexm', '@(move) <relative>', self.moveRelative),
             ('rexm', 'abort', self.abort),
 
         ]
 
         # Define typed command arguments for the above commands.
-        self.keys = keys.KeysDictionary("enu_rexm", (1, 1),
+        self.keys = keys.KeysDictionary('enu_rexm', (1, 1),
                                         keys.Key('relative', types.Float(), help='relative move in mm'))
 
     @property
@@ -53,16 +54,16 @@ class RexmCmd(object):
 
     @blocking
     def moveTo(self, cmd):
-        """ Move to low|mid resolution position """
+        """ Move to low|med resolution position """
         cmdKeys = cmd.cmd.keywords
-        position = "low" if "low" in cmdKeys else "mid"
+        position = 'low' if 'low' in cmdKeys else 'med'
 
         self.controller.substates.move(cmd, dict(position=position))
         self.controller.generate(cmd)
 
     @blocking
     def moveRelative(self, cmd):
-        """ Move to low|mid resolution position """
+        """ Move to low|med resolution position """
         cmdKeys = cmd.cmd.keywords
         direction = int(cmdKeys['relative'].values[0] > 0)
         distance = abs(cmdKeys['relative'].values[0])

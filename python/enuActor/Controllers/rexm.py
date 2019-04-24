@@ -14,9 +14,9 @@ class rexm(FSMThread, bufferedSocket.EthComm):
     stoppingTimeout = 5
     startingTimeout = 3
 
-    switch = {(1, 0): 'low', (0, 1): 'mid', (0, 0): 'undef', (1, 1): 'error'}
-    toPos = {0: 'low', 1: 'mid'}
-    toDir = {'low': 0, 'mid': 1}
+    switch = {(1, 0): 'low', (0, 1): 'med', (0, 0): 'undef', (1, 1): 'error'}
+    toPos = {0: 'low', 1: 'med'}
+    toDir = {'low': 0, 'med': 1}
 
     def __init__(self, actor, name, loglevel=logging.DEBUG):
         """__init__.
@@ -156,11 +156,10 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         self.checkStatus(cmd)
 
     def moving(self, cmd, kwargs):
-        """| Go to desired position (low|mid), or relative move
+        """| Go to desired position (low|med), or relative move
 
         :param cmd: on going command
-        :param position: (low|mid)
-        :type position: str
+        :param kwargs: keywords arguments
         :raise: Exception if move command fails
         """
         self.abortMotion = False
@@ -209,7 +208,7 @@ class rexm(FSMThread, bufferedSocket.EthComm):
     def checkParameters(self, direction, distance, speed):
         """| Check relative move parameters
 
-        :param direction: 0 (go to low position ) 1 (go to mid position)
+        :param direction: 0 (go to low position ) 1 (go to medium position)
         :type direction: int
         :param distance: distance in mm
         :type distance: float
@@ -220,11 +219,11 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         if direction not in [0, 1]:
             raise ValueError('unknown direction')
 
-        if not 0 < distance <= TMCM.DISTANCE_MAX:
-            raise ValueError('requested distance out of range')
+        if not (TMCM.DISTANCE_MIN <= distance <= TMCM.DISTANCE_MAX):
+            raise ValueError(f'{distance} out of range : {TMCM.DISTANCE_MIN} <= distance <= {TMCM.DISTANCE_MAX}')
 
-        if not (0 < speed <= TMCM.SPEED_MAX):
-            raise ValueError('requested speed out of range')
+        if not (TMCM.SPEED_MIN <= speed <= TMCM.SPEED_MAX):
+            raise ValueError(f'{speed} out of range : {TMCM.SPEED_MIN} <= speed <= {TMCM.SPEED_MAX}')
 
     def _goToPosition(self, cmd, position):
         """| Go accurately to the required position.
@@ -234,8 +233,8 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         - adjusting position forward to switch at nominal speed/3
 
         :param cmd: on going command
-        :param direction: 0 (go to low position ) 1 (go to mid position)
-        :type direction: int
+        :param position: low|med
+        :type position: str
         :raise: Exception if communication error occurs
         :raise: Timeout if the command takes too long
         """
@@ -274,7 +273,7 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         - Check status until limit switch is reached
 
         :param cmd: on going command
-        :param direction: 0 (go to low position ) 1 (go to mid position)
+        :param direction: 0 (go to low position ) 1 (go to medium position)
         :param distance: distance to go in mm
         :param speed: specified speed in ustep/s
         :param bool: switch state at the beginning of motion
@@ -282,7 +281,7 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         :type distance: float
         :type speed: float
         :raise: Exception if communication error occurs
-        :raise: timeout if commanding takes too long
+        :raise: TimeoutError if commanding takes too long
         """
         self.checkParameters(direction, distance, speed)
         self.safeStop(cmd)
@@ -335,7 +334,7 @@ class rexm(FSMThread, bufferedSocket.EthComm):
     def limitSwitch(self, direction, hitSwitch=True):
         """| Return limit switch state which will be reached by going in that direction.
 
-        :param direction: 0 (go to low position ) 1 (go to mid position)
+        :param direction: 0 (go to low position ) 1 (go to medium position)
         :type direction: int
         :return: limit switch state
         """
@@ -422,7 +421,7 @@ class rexm(FSMThread, bufferedSocket.EthComm):
     def _MVP(self, direction, distance, cmd=None):
         """| Move in relative for a specified distance and direction.
 
-        :param direction 0 => to low, direction 1=> to mid
+        :param direction 0 => to low, direction 1=> to med
         :type direction: int
         :param distance distance in mm
         :type distance: float

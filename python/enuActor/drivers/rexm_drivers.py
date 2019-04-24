@@ -52,7 +52,10 @@ class TMCM(object):
                         5: "Configuration EEPROM locked",
                         6: "Command not available"}
 
+    SPEED_MIN = 1.0  # mm/s
     SPEED_MAX = 10.0  # mm/s
+
+    DISTANCE_MIN = 5.0
     DISTANCE_MAX = 420.0  # 410mm + 10mm margin
 
     g_speed = 3.2  # mm/s
