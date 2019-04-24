@@ -62,10 +62,10 @@ class slit(FSMThread):
     @property
     def location(self):
         delta = np.sum(np.abs(np.zeros(6) - self.coords))
-        if delta > 0.005:
-            return 'undef'
-        else:
+        if ~np.isnan(delta) and delta < 0.005:
             return 'home'
+        else:
+            return 'undef'
 
     def disconnect(self):
         self.actor.callCommand('disconnect controller=%s' % self.name)
@@ -124,7 +124,7 @@ class slit(FSMThread):
         :param cmd: on going command,
         :raise: RuntimeError if the communication has failed with the controller
         """
-        self.getPosition(cmd=cmd)
+        self.checkPosition(cmd)
 
     def _init(self, cmd, doHome=True):
         """| Initialise hexapod, called by self.initDevice().
@@ -185,25 +185,30 @@ class slit(FSMThread):
 
         :param cmd: on going command
         """
-        self.getPosition(cmd=cmd)
-        hxpStatus = self._getHxpStatus()
-        cmd.inform('hxpStatus=%d,"%s' % (int(hxpStatus), self._getHxpStatusString(hxpStatus)))
-        cmd.inform('slitLocation=%s' % self.location)
+        self.checkPosition(cmd=cmd)
+        self.checkStatus(cmd=cmd)
 
-    def getPosition(self, cmd):
+    def checkPosition(self, cmd):
         """| Get current coordinates from the controller and generate slit position.
 
         :param cmd: on going command
         """
+        self.coords = [np.nan] * 6
+
         try:
             self.coords = self._getCurrentPosition()
-        except:
-            self.coords = np.nan * np.ones(6)
-            cmd.warn('slit=%s' % ','.join(['%.5f' % p for p in self.coords]))
-            cmd.warn('slitLocation=undef')
-            raise
+        finally:
+            genKeys = cmd.inform if np.nan not in self.coords else cmd.warn
+            genKeys('slit=%s' % ','.join(['%.5f' % p for p in self.coords]))
+            genKeys('slitLocation=%s' % self.location)
 
-        cmd.inform('slit=%s' % ','.join(['%.5f' % p for p in self.coords]))
+    def checkStatus(self, cmd):
+        """|  Get status from hxp100 controller
+
+        :param cmd: on going command
+        """
+        hxpStatus = self._getHxpStatus()
+        cmd.inform('hxpStatus=%d,"%s' % (int(hxpStatus), self._getHxpStatusString(hxpStatus)))
 
     def moving(self, cmd, reference, coords):
         """| Move to coords in the reference,

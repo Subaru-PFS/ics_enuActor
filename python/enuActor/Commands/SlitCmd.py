@@ -28,8 +28,9 @@ class SlitCmd(object):
             ('slit', '@(get) @(work|tool|base)', self.getSystem),
             ('slit', '@(set) @(work|tool) [<X>] [<Y>] [<Z>] [<U>] [<V>] [<W>]', self.setSystem),
             ('slit', 'move home', self.goHome),
-            ('slit', 'move absolute <X> <Y> <Z> <U> <V> <W>', self.moveTo),
-            ('slit', 'move relative [<X>] [<Y>] [<Z>] [<U>] [<V>] [<W>]', self.moveTo),
+            ('slit', 'home', self.goHome),
+            ('slit', 'move absolute [<X>] [<Y>] [<Z>] [<U>] [<V>] [<W>]', self.moveAbs),
+            ('slit', 'move relative [<X>] [<Y>] [<Z>] [<U>] [<V>] [<W>]', self.moveRel),
             ('slit', '<focus> [@(microns)]', self.focus),
             ('slit', '<dither> [@(pixels|microns)]', self.dither),
             ('slit', '<shift> [@(pixels|microns)]', self.shift),
@@ -70,15 +71,26 @@ class SlitCmd(object):
         self.controller.generate(cmd)
 
     @blocking
-    def moveTo(self, cmd):
+    def moveAbs(self, cmd):
         """ Move to (X, Y, Z, U, V, W) rel. to home if absolute specified\
                 else if relative then incremental move. NB: In relative move parameters are optional.
         """
         cmdKeys = cmd.cmd.keywords
-        reference = 'absolute' if 'absolute' in cmdKeys else 'relative'
+        current = self.controller.coords
+        coords = [cmdKeys[c].values[0] if c in cmdKeys else current[i] for i, c in enumerate(self.coordsName)]
+
+        self.controller.substates.move(cmd, 'absolute', coords)
+        self.controller.generate(cmd)
+
+    @blocking
+    def moveRel(self, cmd):
+        """ Move to (X, Y, Z, U, V, W) rel. to home if absolute specified\
+                else if relative then incremental move. NB: In relative move parameters are optional.
+        """
+        cmdKeys = cmd.cmd.keywords
         coords = [cmdKeys[coord].values[0] if coord in cmdKeys else 0.0 for coord in self.coordsName]
 
-        self.controller.substates.move(cmd, reference, coords)
+        self.controller.substates.move(cmd, 'relative', coords)
         self.controller.generate(cmd)
 
     @blocking
@@ -98,7 +110,7 @@ class SlitCmd(object):
         fact = 0.001 if 'microns' in cmdKeys else 1
         focus_axis = np.array([float(val) for val in self.actor.config.get('slit', 'focus_axis').split(',')])
         coords = focus_axis * fact * shift
-        reference='relative'
+        reference = 'relative'
 
         self.controller.substates.move(cmd, reference, coords)
         self.controller.generate(cmd)
@@ -199,7 +211,7 @@ class SlitCmd(object):
 
         self.controller.generate(cmd)
 
-    @blocking
+    @threaded
     def shutdown(self, cmd):
         """ save hexapod position, turn power off and disconnect"""
         self.controller.substates.shutdown(cmd)
