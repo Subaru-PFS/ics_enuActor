@@ -54,6 +54,8 @@ class RexmSim(socket.socket):
         self.stepIdx = 0
         self.direction = 1
         self.pulseDivisor = 7
+        self.holdingCurrent = 1
+        self.powerDownDelay = 1
         self.safeStop = False
 
         self.buf = []
@@ -88,6 +90,10 @@ class RexmSim(socket.socket):
                 self.stepIdx = packet.data
             elif packet.ctype == 154:
                 self.pulseDivisor = packet.data
+            elif packet.ctype == 7:
+                self.holdingCurrent = packet.data
+            elif packet.ctype == 214:
+                self.powerDownDelay = packet.data
 
             self.buf.append(sendFake(cmd=TMCM.TMCL_SAP, data=packet.data))
 
@@ -117,6 +123,14 @@ class RexmSim(socket.socket):
 
             elif packet.ctype == 154:
                 ret = self.pulseDivisor
+                self.buf.append(sendFake(cmd=TMCM.TMCL_GAP, data=ret))
+
+            elif packet.ctype == 7:
+                ret = self.holdingCurrent
+                self.buf.append(sendFake(cmd=TMCM.TMCL_GAP, data=ret))
+
+            elif packet.ctype == 214:
+                ret = self.powerDownDelay
                 self.buf.append(sendFake(cmd=TMCM.TMCL_GAP, data=ret))
 
         elif packet.cmd == TMCM.TMCL_MVP:
