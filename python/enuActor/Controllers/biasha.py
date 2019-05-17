@@ -96,7 +96,7 @@ class biasha(FSMThread, bufferedSocket.EthComm):
         :param cmd: on going command
         :raise: socket.error if the communication has failed with the controller
         """
-        self.ioBuffer = bufferedSocket.BufferedSocket(self.name + "IO", EOL='ok\r\n')
+        self.ioBuffer = bufferedSocket.BufferedSocket(self.name + "IO", EOL='\r\n')
         s = self.connectSock()
 
     def _closeComm(self, cmd):
@@ -280,7 +280,6 @@ class biasha(FSMThread, bufferedSocket.EthComm):
         if strobe is not None:
             self.sendOneCommand('pulse_%s' % strobe, cmd=cmd)
 
-
     def _state(self, cmd):
         """| check and return biasha board current state .
 
@@ -361,6 +360,14 @@ class biasha(FSMThread, bufferedSocket.EthComm):
             time.sleep(ti)
 
         return dt.utcnow()
+
+    def sendOneCommand(self, cmdStr, doClose=False, cmd=None):
+        ret = bufferedSocket.EthComm.sendOneCommand(self, cmdStr=cmdStr, doClose=doClose, cmd=cmd)
+
+        if 'ok' in ret:
+            return ret.split('ok')[0]
+        else:
+            raise IOError('unexpected return from biasha ret:%s' % ret)
 
     def createSock(self):
         if self.simulated:
