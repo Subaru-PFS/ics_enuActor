@@ -202,8 +202,11 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         """
         self.stepIdx = self._getAxisParameter(paramId=140, cmd=cmd)
         self.pulseDivisor = self._getAxisParameter(paramId=154, cmd=cmd)
+        self.holdingCurrent = self._getAxisParameter(paramId=7, cmd=cmd) * (9.3 / 255)
+        self.powerDownDelay = self._getAxisParameter(paramId=214, cmd=cmd) * 10
 
-        cmd.inform('rexmConfig=%d,%d' % (self.stepIdx, self.pulseDivisor))
+        cmd.inform('rexmConfig=%d,%d,%.2f,%.2f' % (self.stepIdx, self.pulseDivisor,
+                                                   self.holdingCurrent, self.powerDownDelay))
 
     def checkParameters(self, direction, distance, speed):
         """| Check relative move parameters
@@ -347,12 +350,16 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         """| Set motor parameters.
         - set stepIdx = 2
         - set pulseDivisor = 5
+        - set holding current = 0 * 9.3A / 255 = 0 A
+        - set power down delay = 20 * 10 ms = 200 ms
 
         :param cmd: on going command
         :raise: Exception if communication error occurs
         """
         self._setAxisParameter(paramId=140, data=2, cmd=cmd)
         self._setAxisParameter(paramId=154, data=5, cmd=cmd)
+        self._setAxisParameter(paramId=7, data=0, cmd=cmd)
+        self._setAxisParameter(paramId=214, data=20, cmd=cmd)
 
     def _getAxisParameter(self, paramId, fmtRet='>BBBBIB', cmd=None):
         """| Get axis parameter
