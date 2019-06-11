@@ -41,7 +41,9 @@ class iis(pdu.pdu):
         :type mode: str
         :raise: Exception Config file badly formatted
         """
+        mode = self.actor.config.get('iis', 'mode') if mode is None else mode
         pdu.pdu._loadCfg(self, cmd=cmd, mode=mode)
+
         for arc in iis.arcs:
             if arc not in self.powerPorts.keys():
                 raise ValueError(f'{arc} : unknown arc')
