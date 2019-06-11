@@ -40,7 +40,6 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         self.switchA = 0
         self.switchB = 0
         self.speed = 0
-        self.pulseDivisor = 0
         self.abortMotion = False
 
         self.logger = logging.getLogger(self.name)
@@ -62,6 +61,14 @@ class rexm(FSMThread, bufferedSocket.EthComm):
     @property
     def isMoving(self):
         return 1 if abs(self.speed) > 0 else 0
+
+    @property
+    def pulseDivisor(self):
+        return self.motorConfig[154]
+
+    @property
+    def stepIdx(self):
+        return self.motorConfig[140]
 
     def _loadCfg(self, cmd, mode=None):
         """| Load Configuration file, called by device.loadDevice().
@@ -126,7 +133,6 @@ class rexm(FSMThread, bufferedSocket.EthComm):
 
         :param cmd: on going command
         """
-        self.checkConfig(cmd)
         self.checkStatus(cmd)
 
     def safeStop(self, cmd):
@@ -200,13 +206,10 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         :param cmd: on going command
         :raise: Exception if communication error occurs
         """
-        self.stepIdx = self._getAxisParameter(paramId=140, cmd=cmd)
-        self.pulseDivisor = self._getAxisParameter(paramId=154, cmd=cmd)
-        self.holdingCurrent = self._getAxisParameter(paramId=7, cmd=cmd) * (9.3 / 255)
-        self.powerDownDelay = self._getAxisParameter(paramId=214, cmd=cmd) * 10
+        self.motorConfig = dict([(paramId, self._getAxisParameter(paramId=paramId, cmd=cmd))
+                                 for paramId in TMCM.defaultConfig.keys()])
 
-        cmd.inform('rexmConfig=%d,%d,%.2f,%.2f' % (self.stepIdx, self.pulseDivisor,
-                                                   self.holdingCurrent, self.powerDownDelay))
+        cmd.inform('rexmConfig=%s' % (','.join(['%d' % value for value in self.motorConfig.values()])))
 
     def checkParameters(self, direction, distance, speed):
         """| Check relative move parameters
@@ -356,10 +359,8 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         :param cmd: on going command
         :raise: Exception if communication error occurs
         """
-        self._setAxisParameter(paramId=140, data=2, cmd=cmd)
-        self._setAxisParameter(paramId=154, data=5, cmd=cmd)
-        self._setAxisParameter(paramId=7, data=0, cmd=cmd)
-        self._setAxisParameter(paramId=214, data=20, cmd=cmd)
+        for paramId, value in TMCM.defaultConfig.items():
+            self._setAxisParameter(paramId=paramId, data=value, cmd=cmd)
 
     def _getAxisParameter(self, paramId, fmtRet='>BBBBIB', cmd=None):
         """| Get axis parameter
