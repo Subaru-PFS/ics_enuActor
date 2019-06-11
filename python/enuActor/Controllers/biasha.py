@@ -195,11 +195,11 @@ class biasha(FSMThread, bufferedSocket.EthComm):
             if not integEnd:
                 raise RuntimeWarning('exposure aborted')
 
-            if self.shutterStatus(cmd) != 'close':
-                raise RuntimeError('shutter(s) not close')
-
             end = dt.utcnow()
             transientTime2 = (end - integEnd).total_seconds()
+
+            if self.shutterStatus(cmd) != 'close':
+                raise RuntimeError('shutter(s) not close')
 
             cmd.inform('dateobs=%s' % start.isoformat())
             cmd.inform('transientTime=%.3f' % (transientTime1 + transientTime2))
