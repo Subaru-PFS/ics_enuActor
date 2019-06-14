@@ -185,24 +185,34 @@ class TMCM(object):
         return packet.cmdBytes
 
     @staticmethod
-    def sgp(paramId, data):
+    def sgp(paramId, data, motorAddress):
         """set global parameter function
         """
         packet = sendPacket(moduleAddress=TMCM.MODULE_ADDRESS,
                             cmd=TMCM.TMCL_SGP,
                             ctype=paramId,
-                            motorAddress=TMCM.MOTOR_ADDRESS,
+                            motorAddress=motorAddress,
                             data=data)
         return packet.cmdBytes
 
     @staticmethod
-    def ggp(paramId):
+    def ggp(paramId, motorAddress):
         """get global parameter function
         """
         packet = sendPacket(moduleAddress=TMCM.MODULE_ADDRESS,
                             cmd=TMCM.TMCL_GGP,
                             ctype=paramId,
-                            motorAddress=TMCM.MOTOR_ADDRESS)
+                            motorAddress=motorAddress)
+        return packet.cmdBytes
+
+    @staticmethod
+    def gio(paramId, motorAddress):
+        """get input/outputfunction
+        """
+        packet = sendPacket(moduleAddress=TMCM.MODULE_ADDRESS,
+                            cmd=TMCM.TMCL_GIO,
+                            ctype=paramId,
+                            motorAddress=motorAddress)
         return packet.cmdBytes
 
     @staticmethod

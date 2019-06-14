@@ -48,16 +48,12 @@ class RexmSim(socket.socket):
         socket.socket.__init__(self, socket.AF_INET, socket.SOCK_STREAM)
 
         self.currSpeed = 0.
-        self.realPos = 50.
+        self.realPos = 100
         self.direction = 1
         self.motorConfig = TMCM.defaultConfig
 
-        # self.currPos = 0.
-        # self.stepIdx = 0
-
-        # self.pulseDivisor = 7
-        # self.holdingCurrent = 1
-        # self.powerDownDelay = 1
+        self.emergencyFlag = 0
+        self.emergencyButton = 0
         self.safeStop = False
 
         self.buf = []
@@ -125,6 +121,19 @@ class RexmSim(socket.socket):
             self.MVP(distance=np.int32(packet.data))
             self.buf.append(sendFake(cmd=TMCM.TMCL_MVP, data=packet.data))
 
+        elif packet.cmd == TMCM.TMCL_GGP:
+            if packet.ctype == 11:
+                self.buf.append(sendFake(cmd=TMCM.TMCL_GGP, data=int(self.emergencyFlag)))
+
+        elif packet.cmd == TMCM.TMCL_SGP:
+            if packet.ctype == 11:
+                self.emergencyFlag = packet.data
+
+            self.buf.append(sendFake(cmd=TMCM.TMCL_SGP, data=packet.data))
+
+        elif packet.cmd == TMCM.TMCL_GIO:
+            self.buf.append(sendFake(cmd=TMCM.TMCL_GIO, data=int(not self.emergencyButton)))
+
         else:
             self.buf.append(sendFake(cmd=TMCM.TMCL_GAP, data=0, status=2))
 
@@ -172,6 +181,16 @@ class RexmSim(socket.socket):
         f1.start()
 
         return 0
+
+    def test(self):
+        self.safeStop = True
+        self.currSpeed = 0
+        self.emergencyFlag = 1
+        self.emergencyButton = 1
+
+    def test2(self):
+        self.emergencyButton = 0
+
 
     def moveRelative(self, tempo, step):
         time.sleep(tempo)
