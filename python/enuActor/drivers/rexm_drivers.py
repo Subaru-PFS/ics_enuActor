@@ -94,9 +94,7 @@ class TMCM(object):
     MVP_REL = 1
     MVP_COORD = 2
 
-    defaultConfig = {1: 0,  # set current pos=0
-                     2: 0,  # set target pos=0
-                     4: 268,  # max. positioning speed [int]
+    defaultConfig = {4: 268,  # max. positioning speed [int]
                      5: 1759,  # max. acceleration [int]
                      6: 255,  # max. current
                      7: 0,  # standby current

@@ -51,6 +51,8 @@ class RexmSim(socket.socket):
         self.realPos = 100
         self.direction = 1
         self.motorConfig = TMCM.defaultConfig
+        self.motorConfig[1] = 0
+
 
         self.emergencyFlag = 0
         self.emergencyButton = 0
