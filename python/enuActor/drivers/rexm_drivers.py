@@ -14,22 +14,22 @@ class sendPacket(object):
         self.cmd = np.uint8(cmd)
         self.ctype = np.uint8(ctype)
         self.motorAddress = np.uint8(motorAddress)
-        self.data = np.uint32(data)
+        self.data = np.int32(data)
 
     @property
     def checksum(self):
-        data = pack('>BBBBI', self.moduleAddress, self.cmd, self.ctype, self.motorAddress, self.data)
+        data = pack('>BBBBi', self.moduleAddress, self.cmd, self.ctype, self.motorAddress, self.data)
         checksum = sum(data)
         checksum %= 256
         return checksum
 
     @property
     def cmdBytes(self):
-        return pack('>BBBBIB', self.moduleAddress, self.cmd, self.ctype, self.motorAddress, self.data, self.checksum)
+        return pack('>BBBBiB', self.moduleAddress, self.cmd, self.ctype, self.motorAddress, self.data, self.checksum)
 
 
 class recvPacket(object):
-    def __init__(self, bytes, fmtRet):
+    def __init__(self, bytes, fmtRet='>BBBBiB'):
         self.getRet(*(unpack(fmtRet, bytes)))
 
     def getRet(self, replyAddress, moduleAddress, status, cmd, data, checksum):

@@ -410,7 +410,7 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         :param cmd: on going command
         :raise: Exception if communication error occurs
         """
-        ustep = self._getAxisParameter(1, fmtRet='>BBBBiB', cmd=cmd)  # get microstep count
+        ustep = self._getAxisParameter(1, cmd=cmd)  # get microstep count
         return ustep / (2 ** self.stepIdx)
 
     def _getSpeed(self, cmd=None):
@@ -419,7 +419,7 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         :param cmd: on going command
         :raise: Exception if communication error occurs
         """
-        velocity = self._getAxisParameter(paramId=3, fmtRet='>BBBBiB', cmd=cmd)
+        velocity = self._getAxisParameter(paramId=3, cmd=cmd)
         return velocity / (2 ** (self.pulseDivisor + self.stepIdx) * (65536 / 16e6))  # speed in step/sec
 
     def _setSpeed(self, speedMm, cmd=None):
@@ -440,8 +440,7 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         :param cmd: on going command
         :raise: Exception if communication error occurs
         """
-        cmdBytes = TMCM.sap(paramId=1, data=0)
-        return self.sendOneCommand(cmdBytes=cmdBytes, cmd=cmd)
+        self._setAxisParameter(paramId=1, data=0, cmd=cmd)
 
     def _MVP(self, direction, distance, cmd=None):
         """| Move in relative for a specified distance and direction.
@@ -484,7 +483,7 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         cmdBytes = TMCM.gio(paramId=10, motorAddress=0)
         return not (int(self.sendOneCommand(cmdBytes=cmdBytes, cmd=cmd)))
 
-    def _getAxisParameter(self, paramId, fmtRet='>BBBBIB', cmd=None):
+    def _getAxisParameter(self, paramId, cmd=None):
         """| Get axis parameter
 
         :param paramId: parameter id
@@ -494,9 +493,9 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         :raise: Exception if communication error occurs
         """
         cmdBytes = TMCM.gap(paramId=paramId)
-        return self.sendOneCommand(cmdBytes=cmdBytes, fmtRet=fmtRet, cmd=cmd)
+        return self.sendOneCommand(cmdBytes=cmdBytes, cmd=cmd)
 
-    def _setAxisParameter(self, paramId, data, fmtRet='>BBBBIB', cmd=None):
+    def _setAxisParameter(self, paramId, data, cmd=None):
         """| Set axis parameter
 
         :param paramId: parameter id
@@ -507,9 +506,9 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         :raise: Exception if communication error occur
         """
         cmdBytes = TMCM.sap(paramId=paramId, data=data)
-        return self.sendOneCommand(cmdBytes=cmdBytes, fmtRet=fmtRet, cmd=cmd)
+        return self.sendOneCommand(cmdBytes=cmdBytes, cmd=cmd)
 
-    def _getGlobalParameter(self, paramId, motorAddress, fmtRet='>BBBBIB', cmd=None):
+    def _getGlobalParameter(self, paramId, motorAddress, cmd=None):
         """| Get global parameter
 
         :param paramId: parameter id
@@ -521,9 +520,9 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         :raise: Exception if communication error occurs
         """
         cmdBytes = TMCM.ggp(paramId=paramId, motorAddress=motorAddress)
-        return self.sendOneCommand(cmdBytes=cmdBytes, fmtRet=fmtRet, cmd=cmd)
+        return self.sendOneCommand(cmdBytes=cmdBytes, cmd=cmd)
 
-    def _setGlobalParameter(self, paramId, motorAddress, data, fmtRet='>BBBBIB', cmd=None):
+    def _setGlobalParameter(self, paramId, motorAddress, data, cmd=None):
         """| Set global parameter
 
         :param paramId: parameter id
@@ -536,9 +535,9 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         :raise: Exception if communication error occur
         """
         cmdBytes = TMCM.sgp(paramId=paramId, motorAddress=motorAddress, data=data)
-        return self.sendOneCommand(cmdBytes=cmdBytes, fmtRet=fmtRet, cmd=cmd)
+        return self.sendOneCommand(cmdBytes=cmdBytes, cmd=cmd)
 
-    def sendOneCommand(self, cmdBytes, doClose=False, cmd=None, fmtRet='>BBBBIB'):
+    def sendOneCommand(self, cmdBytes, doClose=False, cmd=None):
         """| Send one command and return one response.
 
         :param cmdStr: (str) The command to send.
@@ -562,14 +561,14 @@ class rexm(FSMThread, bufferedSocket.EthComm):
             self.closeSock()
             raise
 
-        reply = self.getOneResponse(sock=s, cmd=cmd, fmtRet=fmtRet)
+        reply = self.getOneResponse(sock=s, cmd=cmd)
 
         if doClose:
             self.closeSock()
 
         return reply
 
-    def getOneResponse(self, sock=None, cmd=None, fmtRet='>BBBBIB'):
+    def getOneResponse(self, sock=None, cmd=None):
         """| Attempt to receive data from the socket.
 
         :param sock: socket
@@ -581,7 +580,7 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         if sock is None:
             sock = self.connectSock()
 
-        ret = recvPacket(sock.recv(9), fmtRet=fmtRet)
+        ret = recvPacket(sock.recv(9))
         if ret.status != 100:
             raise RuntimeError(TMCM.controllerStatus[ret.status])
 
