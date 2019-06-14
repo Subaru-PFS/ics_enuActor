@@ -23,6 +23,7 @@ class RexmCmd(object):
             ('rexm', '@(low|med)', self.moveTo),
             ('rexm', '@moveTo @(low|med)', self.moveTo),
             ('rexm', '@(move) <relative>', self.moveRelative),
+            ('rexm', 'resetFlag', self.resetFlag),
             ('rexm', 'abort', self.abort),
 
         ]
@@ -74,6 +75,13 @@ class RexmCmd(object):
         self.controller.substates.move(cmd, dict(direction=direction,
                                                  distance=distance,
                                                  speed=(TMCM.g_speed / 3)))
+        self.controller.generate(cmd)
+
+    @threaded
+    def resetFlag(self, cmd):
+        """Report state, mode, position"""
+        self.controller.resetEmergencyFlag(cmd)
+        self.controller.substates.idle(cmd)
         self.controller.generate(cmd)
 
     def abort(self, cmd):
