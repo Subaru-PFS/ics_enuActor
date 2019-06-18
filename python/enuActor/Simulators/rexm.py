@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import copy
 import socket
 import time
 from struct import pack, unpack
@@ -50,9 +51,8 @@ class RexmSim(socket.socket):
         self.currSpeed = 0.
         self.realPos = 100
         self.direction = 1
-        self.motorConfig = TMCM.defaultConfig
+        self.motorConfig = copy.deepcopy(TMCM.defaultConfig)
         self.motorConfig[1] = 0
-
 
         self.emergencyFlag = 0
         self.emergencyButton = 0
@@ -192,7 +192,6 @@ class RexmSim(socket.socket):
 
     def test2(self):
         self.emergencyButton = 0
-
 
     def moveRelative(self, tempo, step):
         time.sleep(tempo)
