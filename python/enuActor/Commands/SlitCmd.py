@@ -122,7 +122,7 @@ class SlitCmd(object):
         shift = cmd.cmd.keywords['dither'].values[0]
 
         if 'pixels' in cmdKeys:
-            fact = float(self.actor.config.get('slit', 'pix_to_mm'))
+            fact = float(self.actor.config.get('slit', 'pix_to_mm').split(',')[1])
         elif 'microns' in cmdKeys:
             fact = 0.001
         else:
@@ -142,7 +142,7 @@ class SlitCmd(object):
         shift = cmd.cmd.keywords['shift'].values[0]
 
         if 'pixels' in cmdKeys:
-            fact = float(self.actor.config.get('slit', 'pix_to_mm'))
+            fact = float(self.actor.config.get('slit', 'pix_to_mm').split(',')[0])
         elif 'microns' in cmdKeys:
             fact = 0.001
         else:
