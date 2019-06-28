@@ -163,7 +163,7 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         time.sleep(1)
         self.checkStatus(cmd)
 
-    def moving(self, cmd, kwargs):
+    def moving(self, cmd, position=None, **kwargs):
         """| Go to desired position (low|med), or relative move
 
         :param cmd: on going command
@@ -171,7 +171,6 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         :raise: Exception if move command fails
         """
         self.abortMotion = False
-        position = kwargs.pop('position', None)
 
         if position is not None:
             self._goToPosition(cmd, position)

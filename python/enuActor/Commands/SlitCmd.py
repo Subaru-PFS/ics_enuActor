@@ -67,7 +67,7 @@ class SlitCmd(object):
         """Initialise Slit, call fsm startInit event """
         doHome = 'skipHoming' not in cmd.cmd.keywords
 
-        self.controller.substates.init(cmd, doHome)
+        self.controller.substates.init(cmd, doHome=doHome)
         self.controller.generate(cmd)
 
     @blocking
@@ -79,7 +79,7 @@ class SlitCmd(object):
         current = self.controller.coords
         coords = [cmdKeys[c].values[0] if c in cmdKeys else current[i] for i, c in enumerate(self.coordsName)]
 
-        self.controller.substates.move(cmd, 'absolute', coords)
+        self.controller.substates.move(cmd, reference='absolute', coords=coords)
         self.controller.generate(cmd)
 
     @blocking
@@ -90,7 +90,7 @@ class SlitCmd(object):
         cmdKeys = cmd.cmd.keywords
         coords = [cmdKeys[coord].values[0] if coord in cmdKeys else 0.0 for coord in self.coordsName]
 
-        self.controller.substates.move(cmd, 'relative', coords)
+        self.controller.substates.move(cmd, reference='relative', coords=coords)
         self.controller.generate(cmd)
 
     @blocking
@@ -99,7 +99,7 @@ class SlitCmd(object):
         reference = 'absolute'
         coords = 6 * [0.]
 
-        self.controller.substates.move(cmd, reference, coords)
+        self.controller.substates.move(cmd, reference=reference, coords=coords)
         self.controller.generate(cmd)
 
     @blocking
@@ -112,7 +112,7 @@ class SlitCmd(object):
         coords = focus_axis * fact * shift
         reference = 'relative'
 
-        self.controller.substates.move(cmd, reference, coords)
+        self.controller.substates.move(cmd, reference=reference, coords=coords)
         self.controller.generate(cmd)
 
     @blocking
@@ -132,7 +132,7 @@ class SlitCmd(object):
         coords = dither_axis * fact * shift
         reference = 'relative'
 
-        self.controller.substates.move(cmd, reference, coords)
+        self.controller.substates.move(cmd, reference=reference, coords=coords)
         self.controller.generate(cmd)
 
     @blocking
@@ -152,7 +152,7 @@ class SlitCmd(object):
         coords = shift_axis * fact * shift
         reference = 'relative'
 
-        self.controller.substates.move(cmd, reference, coords)
+        self.controller.substates.move(cmd, reference=reference, coords=coords)
         self.controller.generate(cmd)
 
     @threaded

@@ -54,7 +54,7 @@ class IisCmd(object):
         powerOff = dict([(self.controller.powerPorts[name], 'off') for name in arcOff])
         powerOn = [self.controller.powerPorts[name] for name in arcOn if self.controller.isOff(name)]
 
-        self.controller.switching(cmd, powerOff)
-        self.controller.substates.warming(cmd, powerOn)
+        self.controller.switching(cmd, powerPorts=powerOff)
+        self.controller.substates.warming(cmd, arcOn=powerOn)
 
         self.controller.generate(cmd)

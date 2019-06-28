@@ -58,5 +58,5 @@ class PduCmd(object):
 
         powerPorts = dict([(self.controller.powerPorts[name], state) for name, state in powerNames.items()])
 
-        self.controller.substates.switch(cmd, powerPorts)
+        self.controller.substates.switch(cmd, powerPorts=powerPorts)
         self.controller.generate(cmd)

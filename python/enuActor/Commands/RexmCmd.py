@@ -50,7 +50,7 @@ class RexmCmd(object):
 
         doHome = 'skipHoming' not in cmd.cmd.keywords
 
-        self.controller.substates.init(cmd, doHome)
+        self.controller.substates.init(cmd, doHome=doHome)
         self.controller.generate(cmd)
 
     @blocking
@@ -59,7 +59,7 @@ class RexmCmd(object):
         cmdKeys = cmd.cmd.keywords
         position = 'low' if 'low' in cmdKeys else 'med'
 
-        self.controller.substates.move(cmd, dict(position=position))
+        self.controller.substates.move(cmd, position=position)
         self.controller.generate(cmd)
 
     @blocking
@@ -72,9 +72,7 @@ class RexmCmd(object):
         if not 5 <= distance <= TMCM.DISTANCE_MAX:
             raise ValueError('requested distance out of range')
 
-        self.controller.substates.move(cmd, dict(direction=direction,
-                                                 distance=distance,
-                                                 speed=(TMCM.g_speed / 3)))
+        self.controller.substates.move(cmd, direction=direction, distance=distance, speed=(TMCM.g_speed / 3))
         self.controller.generate(cmd)
 
     @threaded

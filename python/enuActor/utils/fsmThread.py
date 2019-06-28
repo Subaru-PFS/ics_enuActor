@@ -26,8 +26,8 @@ class FSMThread(FSMDevice, QThread):
         self._testComm(cmd)
         FSMDevice.testComm(self, cmd)
 
-    def init(self, cmd, *args):
-        self._init(cmd, *args)
+    def init(self, cmd, **kwargs):
+        self._init(cmd, **kwargs)
         FSMDevice.init(self, cmd)
 
     def _loadCfg(self, cmd, mode=None):
@@ -42,7 +42,7 @@ class FSMThread(FSMDevice, QThread):
     def _closeComm(self, cmd):
         pass
 
-    def _init(self, cmd, *args):
+    def _init(self, cmd, **kwargs):
         pass
 
     def start(self, cmd=None, doInit=None, mode=None):
