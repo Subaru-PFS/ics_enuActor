@@ -144,6 +144,7 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         :raise: Exception if a communication error occurs.
         :raise: Timeout if the command takes too long.
         """
+        self.checkStatus(cmd)
         start = time.time()
 
         while self.isMoving:
@@ -151,6 +152,8 @@ class rexm(FSMThread, bufferedSocket.EthComm):
                 raise TimeoutError('failed to stop rexm motion')
 
             self.stopAndCheck(cmd=cmd)
+
+        self.getStatus(cmd)
 
     def stopAndCheck(self, cmd):
         """| Abort current motion and check status
@@ -313,9 +316,9 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         :raise: Exception if communication error occurs
         :raise: TimeoutError if commanding takes too long
         """
-        self.checkSafeStop(cmd)
-        self.checkParameters(direction, distance, speed)
         self.stopMotion(cmd)
+
+        self.checkParameters(direction, distance, speed)
         startCount = copy.deepcopy(self.stepCount)
 
         if self.limitSwitch(direction):
@@ -329,7 +332,6 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         self._MVP(direction, distance, cmd=cmd)
 
         start = time.time()
-        self.checkStatus(cmd)
 
         try:
             while not self.hasStarted(startCount=startCount) or self.isMoving:
@@ -350,8 +352,6 @@ class rexm(FSMThread, bufferedSocket.EthComm):
 
                 if self.abortMotion:
                     raise UserWarning('Abort motion requested')
-
-            self.checkSafeStop(cmd)
 
         finally:
             self.stopMotion(cmd)
@@ -404,7 +404,7 @@ class rexm(FSMThread, bufferedSocket.EthComm):
             self._setAxisParameter(paramId=paramId, data=value, cmd=cmd)
 
     def _getStepCount(self, cmd=None):
-        """| Get current step count.
+        """| Get current step count.at
 
         :param cmd: on going command
         :raise: Exception if communication error occurs
