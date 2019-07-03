@@ -60,7 +60,7 @@ class slit(FSMThread):
             raise ValueError('unknown mode')
 
     @property
-    def location(self):
+    def position(self):
         delta = np.sum(np.abs(np.zeros(6) - self.coords))
         if ~np.isnan(delta) and delta < 0.005:
             return 'home'
@@ -200,7 +200,7 @@ class slit(FSMThread):
         finally:
             genKeys = cmd.inform if np.nan not in self.coords else cmd.warn
             genKeys('slit=%s' % ','.join(['%.5f' % p for p in self.coords]))
-            genKeys('slitLocation=%s' % self.location)
+            genKeys('slitPosition=%s' % self.position)
 
     def checkStatus(self, cmd):
         """|  Get status from hxp100 controller

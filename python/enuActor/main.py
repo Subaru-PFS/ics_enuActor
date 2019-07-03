@@ -6,6 +6,7 @@ import logging
 
 import actorcore.ICC
 import numpy as np
+from enuActor.utils.fsmThread import FSMThread
 
 
 class enuActor(actorcore.ICC.ICC):
@@ -27,16 +28,20 @@ class enuActor(actorcore.ICC.ICC):
         self.onsubstate = 'IDLE'
 
     @property
+    def devices(self):
+        return dict([(name, ctrl) for name, ctrl in self.controllers.items() if isinstance(ctrl, FSMThread)])
+
+    @property
     def states(self):
-        return [controller.states.current for controller in self.controllers.values()]
+        return [controller.states.current for controller in self.devices.values()]
 
     @property
     def substates(self):
-        return [controller.substates.current for controller in self.controllers.values()]
+        return [controller.substates.current for controller in self.devices.values()]
 
     @property
     def state(self):
-        if not self.controllers.values():
+        if not self.devices.values():
             return 'OFF'
 
         minLogic = np.min([enuActor.state2logic[state] for state in self.states])
@@ -44,7 +49,7 @@ class enuActor(actorcore.ICC.ICC):
 
     @property
     def substate(self):
-        if not self.controllers.values():
+        if not self.devices.values():
             return 'IDLE'
 
         if 'FAILED' in self.substates:
@@ -59,6 +64,17 @@ class enuActor(actorcore.ICC.ICC):
     @property
     def monitors(self):
         return dict([(name, controller.monitor) for name, controller in self.controllers.items()])
+
+    def ownCall(self, cmd, cmdStr, failMsg, timeLim=20):
+        cmdVar = self.cmdr.call(actor=self.name, cmdStr=cmdStr, forUserCmd=cmd, timeLim=timeLim)
+
+        ret = cmdVar.replyList[-1].keywords.canonical(delimiter=';')
+
+        if cmdVar.didFail:
+            cmd.warn(ret)
+            raise RuntimeError(failMsg)
+
+        return ret
 
     def reloadConfiguration(self, cmd):
         cmd.inform('sections=%08x,%r' % (id(self.config),
