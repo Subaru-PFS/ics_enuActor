@@ -2,7 +2,8 @@
 
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
-from enuActor.utils import getVersion
+from enuActor.utils import waitForHost, getVersion
+from enuActor.utils.wrap import threaded
 from opscore.utility.qstr import qstr
 
 
@@ -21,7 +22,8 @@ class TopCmd(object):
             ('status', '[@all]', self.status),
             ('monitor', '<controllers> <period>', self.monitor),
             ('start', '', self.initControllers),
-            ('set', '<controller> <mode>', self.changeMode)
+            ('set', '<controller> <mode>', self.changeMode),
+            ('slit', 'startup', self.startSlit),
         ]
 
         # Define typed command arguments for the above commands.
@@ -35,6 +37,13 @@ class TopCmd(object):
                                         keys.Key("period", types.Int(),
                                                  help='the period to sample at.'),
                                         )
+
+    @property
+    def controller(self):
+        try:
+            return self.actor.controllers['top']
+        except KeyError:
+            raise RuntimeError('top controller is not connected.')
 
     def monitor(self, cmd):
         """ Enable/disable/adjust period controller monitors. """
@@ -115,5 +124,17 @@ class TopCmd(object):
                                     mode=mode)
 
         self.actor.callCommand("%s status" % controller)
+
+        cmd.finish()
+
+    @threaded
+    def startSlit(self, cmd):
+        """ save hexapod position, turn power off and disconnect"""
+
+        ret = self.actor.ownCall(cmd, cmdStr='power on=slit', failMsg='failed to power on hexapod controller')
+        waitForHost(hostname=self.actor.config.get('slit', 'host'))
+
+        ret = self.actor.ownCall(cmd, cmdStr='connect controller=slit', failMsg='failed to connect slit controller')
+        ret = self.actor.ownCall(cmd, cmdStr='slit init skipHoming', failMsg='failed to init slit')
 
         cmd.finish()
