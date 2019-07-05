@@ -376,3 +376,15 @@ class biasha(FSMThread, bufferedSocket.EthComm):
             s = bufferedSocket.EthComm.createSock(self)
 
         return s
+
+    def biaOverHeat(self, cmd=None):
+        cmd = self.actor.bcast if cmd is None else cmd
+
+        if self.substates.current == 'BIA' and self.actor.controllers['temps'].biaOverHeat:
+            cmd.warn('text="bia temp above safety threshold, turning off ..."')
+            self.gotoState(cmd, cmdStr='bia_off')
+            self.biaStatus(cmd)
+
+    def handleTimeout(self, cmd=None):
+        FSMThread.handleTimeout(self, cmd=cmd)
+        self.biaOverHeat(cmd=cmd)
