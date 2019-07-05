@@ -38,6 +38,7 @@ class temps(FSMThread, bufferedSocket.EthComm):
         FSMThread.__init__(self, actor, name, doInit=True)
 
         self.sim = TempsSim()
+        self.biaOverHeat = False
 
         self.logger = logging.getLogger(self.name)
         self.logger.setLevel(loglevel)
@@ -50,6 +51,10 @@ class temps(FSMThread, bufferedSocket.EthComm):
             return False
         else:
             raise ValueError('unknown mode')
+
+    @property
+    def biaTemp(self):
+        return self.actor.models[self.actor.name].keyVarDict['temps1'].getValue()[3]
 
     def getProbeCoeff(self, probe):
         return np.array([float(c) for c in self.actor.config.get('temps', str(probe)).split(',')])
@@ -68,6 +73,7 @@ class temps(FSMThread, bufferedSocket.EthComm):
                                         port=int(self.actor.config.get('temps', 'port')),
                                         EOL='\n')
 
+        self.biaTempLimit = float(self.actor.config.get('temps', 'biaTempLimit'))
         self.doCalib = self.actor.config.getboolean('temps', 'doCalib')
         self.calib = {1: np.array([self.getProbeCoeff(probe) for probe in range(101, 111)]),
                       2: np.array([self.getProbeCoeff(probe) for probe in range(201, 211)])}
@@ -122,8 +128,8 @@ class temps(FSMThread, bufferedSocket.EthComm):
         :param cmd: on going command
         :raise: Exception if a command fail
         """
-        self.genKeys(cmd, self.calibTemps, keys='temps1', slot=1)
-        self.genKeys(cmd, self.calibTemps, keys='temps2', slot=2)
+        self.genKey(cmd, self.calibTemps, key='temps1', slot=1)
+        self.genKey(cmd, self.calibTemps, key='temps2', slot=2)
 
     def getResistance(self, cmd):
         """|  generate resistance keywords
@@ -133,8 +139,8 @@ class temps(FSMThread, bufferedSocket.EthComm):
         :type slot:int
         :raise: Exception if a command fail
         """
-        self.genKeys(cmd, self._fetchResistance, keys='res1', slot=1)
-        self.genKeys(cmd, self._fetchResistance, keys='res2', slot=2)
+        self.genKey(cmd, self._fetchResistance, key='res1', slot=1)
+        self.genKey(cmd, self._fetchResistance, key='res2', slot=2)
 
     def getInfo(self, cmd):
         """|  fetch controller info.
@@ -169,8 +175,8 @@ class temps(FSMThread, bufferedSocket.EthComm):
         resistances = self._fetchResistance(slot=slot, cmd=cmd)
         return temps.polyval(resistances, calib=self.calib[slot])
 
-    def genKeys(self, cmd, retrieveData, keys, **kwargs):
-        """|  generate keys using retrieveData func
+    def genKey(self, cmd, retrieveData, key, **kwargs):
+        """|  generate key using retrieveData func
 
         :param cmd: on going command
         :raise: RuntimeError if the controller returns an error
@@ -181,7 +187,7 @@ class temps(FSMThread, bufferedSocket.EthComm):
         except Exception as e:
             cmd.warn('text=%s' % self.actor.strTraceback(e))
 
-        cmd.inform('%s=%s' % (keys, ','.join(['%.3f' % float(val) for val in values])))
+        cmd.inform('%s=%s' % (key, ','.join(['%.3f' % float(val) for val in values])))
 
     def _fetchTemps(self, cmd, slot):
         """|  fetch temperature values for a specified slot.
@@ -246,3 +252,7 @@ class temps(FSMThread, bufferedSocket.EthComm):
             s = bufferedSocket.EthComm.createSock(self)
 
         return s
+
+    def handleTimeout(self, cmd=None):
+        FSMThread.handleTimeout(self, cmd=cmd)
+        self.biaOverHeat = self.biaTemp > self.biaTempLimit
