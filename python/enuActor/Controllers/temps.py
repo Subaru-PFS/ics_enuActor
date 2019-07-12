@@ -1,7 +1,7 @@
 __author__ = 'alefur'
 
 import logging
-
+import opscore.protocols.types as types
 import enuActor.utils.bufferedSocket as bufferedSocket
 import numpy as np
 from enuActor.Simulators.temps import TempsSim
@@ -54,7 +54,8 @@ class temps(FSMThread, bufferedSocket.EthComm):
 
     @property
     def biaTemp(self):
-        return self.actor.models[self.actor.name].keyVarDict['temps1'].getValue()[3]
+        bia = self.actor.models[self.actor.name].keyVarDict['temps1'].getValue(doRaise=False)[3]
+        return np.nan if isinstance(bia, types.Invalid) else bia
 
     def getProbeCoeff(self, probe):
         return np.array([float(c) for c in self.actor.config.get('temps', str(probe)).split(',')])
