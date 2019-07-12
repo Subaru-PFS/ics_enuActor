@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import time
 
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
@@ -23,6 +24,7 @@ class TopCmd(object):
             ('start', '', self.initControllers),
             ('set', '<controller> <mode>', self.changeMode),
             ('slit', 'startup', self.startSlit),
+            ('power', 'outage', self.powerOutage)
         ]
 
         # Define typed command arguments for the above commands.
@@ -141,3 +143,26 @@ class TopCmd(object):
         self.actor.ownCall(cmd, cmdStr='slit init skipHoming', failMsg='failed to init slit')
 
         self.actor.controllers['slit'].generate(cmd)
+
+    @threaded
+    def powerOutage(self, cmd):
+        """ save hexapod position, turn power off and disconnect"""
+        controllers = ['biasha', 'iis', 'rexm', 'slit', 'temps']
+        script = [('closing shutters, turn off bia ...', 'biasha init'),
+                  ('aborting slit move ...', 'slit abort'),
+                  ('aborting rexm move ...', 'rexm abort'),
+                  ('shutting down slit ...', 'slit shutdown'),
+                  ('power off everything else ...', 'power off=ctrl,pows,temps,hgar')]
+
+        script += [('disconnecting %s...' % c, 'disconnect controller=%s' % c) for c in controllers]
+
+        for info, cmdStr in script:
+            cmd.inform('text="%s"' % info)
+            try:
+                self.actor.ownCall(cmd, cmdStr=cmdStr, failMsg='')
+            except RuntimeError:
+                pass
+
+            time.sleep(1)
+
+        cmd.finish()
