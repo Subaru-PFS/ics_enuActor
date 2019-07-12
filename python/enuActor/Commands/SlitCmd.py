@@ -3,7 +3,6 @@
 import numpy as np
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
-from enuActor.utils import waitForHost
 from enuActor.utils.wrap import threaded, blocking
 
 
@@ -215,9 +214,11 @@ class SlitCmd(object):
     @threaded
     def shutdown(self, cmd):
         """ save hexapod position, turn power off and disconnect"""
-
         self.controller.substates.shutdown(cmd)
-        ret = self.actor.ownCall(cmd, cmdStr='power off=slit', failMsg='failed to power off hexapod controller')
+        self.controller.getStatus(cmd)
+
+        cmd.inform('text="powering down hxp controller ..."')
+        self.actor.ownCall(cmd, cmdStr='power off=slit', failMsg='failed to power off hexapod controller')
         self.controller.disconnect()
 
         cmd.finish()

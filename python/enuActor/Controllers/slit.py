@@ -1,7 +1,7 @@
 __author__ = 'alefur'
 import logging
 import socket
-
+import time
 import numpy as np
 from enuActor.Simulators.slit import SlitSim
 from enuActor.drivers import hxp_drivers
@@ -235,6 +235,8 @@ class slit(FSMThread):
                 """
         cmd.inform('text="Kill and save hexapod position..."')
         self._TCLScriptExecute('KillWithRegistration.tcl')
+
+        time.sleep(3)
 
     def getSystem(self, cmd, system):
         """| Get system from the controller and update the actor's current value.
