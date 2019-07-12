@@ -2,7 +2,7 @@
 
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
-from enuActor.utils import waitForHost
+from enuActor.utils import waitForTcpServer
 from enuActor.utils.wrap import threaded
 
 
@@ -128,11 +128,16 @@ class TopCmd(object):
     @threaded
     def startSlit(self, cmd):
         """ save hexapod position, turn power off and disconnect"""
+        cmd.inform('text="powering up hxp controller ..."')
+        self.actor.ownCall(cmd, cmdStr='power on=slit', failMsg='failed to power on hexapod controller')
 
-        ret = self.actor.ownCall(cmd, cmdStr='power on=slit', failMsg='failed to power on hexapod controller')
-        waitForHost(hostname=self.actor.config.get('slit', 'host'))
+        cmd.inform('text="waiting for tcp server ..."')
+        waitForTcpServer(host=self.actor.config.get('slit', 'host'), port=self.actor.config.get('slit', 'port'))
 
-        ret = self.actor.ownCall(cmd, cmdStr='connect controller=slit', failMsg='failed to connect slit controller')
-        ret = self.actor.ownCall(cmd, cmdStr='slit init skipHoming', failMsg='failed to init slit')
+        cmd.inform('text="connecting slit..."')
+        self.actor.ownCall(cmd, cmdStr='connect controller=slit', failMsg='failed to connect slit controller')
 
-        cmd.finish()
+        cmd.inform('text="init slit from saved position..."')
+        self.actor.ownCall(cmd, cmdStr='slit init skipHoming', failMsg='failed to init slit')
+
+        self.actor.controllers['slit'].generate(cmd)

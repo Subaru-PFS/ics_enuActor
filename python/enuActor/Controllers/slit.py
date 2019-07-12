@@ -466,6 +466,10 @@ class slit(FSMThread):
                 [errorCode, errorString] = self.myxps.ErrorStringGet(socketId, buf[0])
                 if buf[0] == -17:
                     raise UserWarning('[X, Y, Z, U, V, W] exceed : %s' % errorString)
+                elif buf[0] == -21:
+                    self.logger.debug('Hxp controller in initialization...')
+                    time.sleep(1)
+                    return self.errorChecker(func, *args, sockName=sockName)
                 elif errorCode != 0:
                     raise RuntimeError(func.__name__ + ' : ERROR ' + str(errorCode))
                 else:

@@ -1,15 +1,25 @@
-import os
+import socket
 import time
 
 
-def getVersion(productName):
-    return os.environ[f'{productName.upper()}_DIR']
+def connectSock(host, port, timeout=1):
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(timeout)
+        s.connect((host, port))
+        s.close()
+    except:
+        time.sleep(1)
+        return False
+
+    return True
 
 
-def waitForHost(hostname, timeout=30):
+def waitForTcpServer(host, port, timeout=60):
     start = time.time()
-    while os.system('ping -c 1 %s' % hostname) != 0:
+    port = int(port)
+    while not connectSock(host, port):
         if time.time() - start > timeout:
-            raise TimeoutError('host %s not on the network')
+            raise TimeoutError('tcp server %s:%d is not running'%(host, port))
 
-    return os.system('ping -c 1 %s' % hostname)
+    return True
