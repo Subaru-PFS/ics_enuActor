@@ -1,10 +1,8 @@
 #!/usr/bin/env python
-import time
 
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
-from enuActor.utils import waitForTcpServer
-from enuActor.utils.wrap import threaded
+from enuActor.utils.wrap import singleShot
 
 
 class TopCmd(object):
@@ -21,10 +19,9 @@ class TopCmd(object):
             ('ping', '', self.ping),
             ('status', '[@all]', self.status),
             ('monitor', '<controllers> <period>', self.monitor),
-            ('start', '', self.initControllers),
             ('set', '<controller> <mode>', self.changeMode),
-            ('slit', 'startup', self.startSlit),
-            ('power', 'outage', self.powerOutage)
+            ('start', '', self.start),
+            ('stop', '', self.stop),
         ]
 
         # Define typed command arguments for the above commands.
@@ -38,13 +35,6 @@ class TopCmd(object):
                                         keys.Key("period", types.Int(),
                                                  help='the period to sample at.'),
                                         )
-
-    @property
-    def controller(self):
-        try:
-            return self.actor.controllers['top']
-        except KeyError:
-            raise RuntimeError('top controller is not connected.')
 
     def monitor(self, cmd):
         """ Enable/disable/adjust period controller monitors. """
@@ -75,12 +65,6 @@ class TopCmd(object):
         key = 'controllers=%s' % (','.join([c for c in controllerNames]) if controllerNames else None)
 
         return key
-
-    def initControllers(self, cmd):
-        """Init all enu controllers"""
-        for c in self.actor.controllers:
-            self.actor.callCommand("%s init" % c)
-        cmd.finish()
 
     def ping(self, cmd):
         """Query the actor for liveness/happiness."""
@@ -127,42 +111,24 @@ class TopCmd(object):
 
         cmd.finish()
 
-    @threaded
-    def startSlit(self, cmd):
-        """ save hexapod position, turn power off and disconnect"""
-        cmd.inform('text="powering up hxp controller ..."')
-        self.actor.ownCall(cmd, cmdStr='power on=slit', failMsg='failed to power on hexapod controller')
-
-        cmd.inform('text="waiting for tcp server ..."')
-        waitForTcpServer(host=self.actor.config.get('slit', 'host'), port=self.actor.config.get('slit', 'port'))
-
-        cmd.inform('text="connecting slit..."')
-        self.actor.ownCall(cmd, cmdStr='connect controller=slit', failMsg='failed to connect slit controller')
-
-        cmd.inform('text="init slit from saved position..."')
-        self.actor.ownCall(cmd, cmdStr='slit init skipHoming', failMsg='failed to init slit')
-
-        self.actor.controllers['slit'].generate(cmd)
-
-    @threaded
-    def powerOutage(self, cmd):
-        """ save hexapod position, turn power off and disconnect"""
-        controllers = ['biasha', 'iis', 'rexm', 'slit', 'temps']
-        script = [('closing shutters, turn off bia ...', 'biasha init'),
-                  ('aborting slit move ...', 'slit abort'),
-                  ('aborting rexm move ...', 'rexm abort'),
-                  ('shutting down slit ...', 'slit shutdown'),
-                  ('power off everything else ...', 'power off=ctrl,pows,temps,hgar')]
-
-        script += [('disconnecting %s...' % c, 'disconnect controller=%s' % c) for c in controllers]
-
-        for info, cmdStr in script:
-            cmd.inform('text="%s"' % info)
+    @singleShot
+    def start(self, cmd):
+        """Init all enu controllers"""
+        for c in ['rexm', 'slit', 'biasha', 'temps', 'iis']:
             try:
-                self.actor.ownCall(cmd, cmdStr=cmdStr, failMsg='')
+                self.actor.ownCall(cmd, cmdStr='%s start' % c, failMsg='', timeLim=1)
             except RuntimeError:
                 pass
 
-            time.sleep(1)
+        cmd.finish()
+
+    @singleShot
+    def stop(self, cmd):
+        """Init all enu controllers"""
+        for c in ['rexm', 'slit', 'biasha', 'temps', 'iis']:
+            try:
+                self.actor.ownCall(cmd, cmdStr='%s stop' % c, failMsg='', timeLim=1)
+            except RuntimeError:
+                pass
 
         cmd.finish()
