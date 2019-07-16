@@ -29,6 +29,7 @@ class iis(pdu.pdu):
 
         self.addStateCB('WARMING', self.warming)
         self.sim = PduSim()
+        self.doStop = False
 
         self.logger = logging.getLogger(self.name)
         self.logger.setLevel(loglevel)
@@ -70,7 +71,7 @@ class iis(pdu.pdu):
 
         return state
 
-    def warming(self, cmd, arcOn):
+    def warming(self, cmd, arcOn, ti=0.01):
         """ switch on and warm up arc lamp
 
         :param cmd : current command
@@ -82,7 +83,13 @@ class iis(pdu.pdu):
             self.portStatus(cmd, outlet=outlet)
 
         if arcOn:
-            time.sleep(iis.warmingTime)
+            start = time.time()
+            self.doStop = False
+            while time.time() < start + iis.warmingTime:
+                time.sleep(ti)
+                self.handleTimeout()
+                if self.doStop:
+                    raise RuntimeError('iis warmup aborted')
 
     def isOff(self, arc):
         """| check if arc lamp is currently off

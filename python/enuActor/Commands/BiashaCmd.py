@@ -2,7 +2,8 @@
 
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
-from enuActor.utils.wrap import threaded, blocking
+from enuActor.utils import waitForTcpServer
+from enuActor.utils.wrap import threaded, blocking, singleShot
 from opscore.utility.qstr import qstr
 
 
@@ -30,7 +31,9 @@ class BiashaCmd(object):
             ('shutters', 'status', self.shutterStatus),
             ('shutters', '@(expose) <exptime> [blue|red]', self.expose),
             ('exposure', 'abort', self.abortExposure),
-            ('exposure', 'finish', self.finishExposure)
+            ('exposure', 'finish', self.finishExposure),
+            ('biasha', 'stop', self.stop),
+            ('biasha', 'start', self.start),
         ]
 
         # Define typed command arguments for the above commands.
@@ -167,12 +170,58 @@ class BiashaCmd(object):
         ret = self.controller.sendOneCommand(cmdStr, cmd=cmd)
         cmd.finish('text=%s' % (qstr('returned: %s' % (ret))))
 
-    def abortExposure(self, cmd):
+    def abortExposure(self, cmd, doFinish=True):
         """send a raw command to the biasha board"""
         self.controller.abortExposure = True
-        cmd.finish("text='aborting current exposure'")
+        while self.controller.currCmd:
+            pass
 
-    def finishExposure(self, cmd):
+        genKey = cmd.finish if doFinish else cmd.inform
+        genKey("text='exposure aborted'")
+
+    def finishExposure(self, cmd, doFinish=True):
         """send a raw command to the biasha board"""
         self.controller.finishExposure = True
-        cmd.finish("text='finishing current exposure'")
+        while self.controller.currCmd:
+            pass
+
+        genKey = cmd.finish if doFinish else cmd.inform
+        genKey("text='exposure finished'")
+
+    @singleShot
+    def stop(self, cmd):
+        """ finish current exposure, power off and disconnect"""
+
+        self.finishExposure(cmd, doFinish=False)
+
+        try:
+            self.controller.gotoState(cmd, 'init')
+        except Exception as e:
+            cmd.warn('text=%s' % self.actor.strTraceback(e))
+
+        self.controller.getStatus(cmd)
+
+        if 'rexm' not in self.actor.controllers.keys():
+            cmd.inform('text="powering down enu rack..."')
+            self.actor.ownCall(cmd, cmdStr='power off=ctrl,pows', failMsg='failed to power off enu rack')
+
+        self.controller.disconnect()
+
+        cmd.finish()
+
+    @singleShot
+    def start(self, cmd):
+        """ power on enu rack, wait for biasha host, connect controller"""
+        operation = self.actor.config.get('biasha', 'mode') == 'operation'
+
+        cmd.inform('text="powering up enu rack ..."')
+        self.actor.ownCall(cmd, cmdStr='power on=pows,ctrl', failMsg='failed to power on enu rack')
+
+        if operation:
+            cmd.inform('text="waiting for tcp server ..."')
+            waitForTcpServer(host=self.actor.config.get('biasha', 'host'), port=self.actor.config.get('biasha', 'port'))
+
+        cmd.inform('text="connecting biasha..."')
+        self.actor.ownCall(cmd, cmdStr='connect controller=biasha', failMsg='failed to connect biasha controller')
+
+        self.controller.generate(cmd)

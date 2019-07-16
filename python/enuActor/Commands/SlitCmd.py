@@ -3,7 +3,8 @@
 import numpy as np
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
-from enuActor.utils.wrap import threaded, blocking
+from enuActor.utils import waitForTcpServer
+from enuActor.utils.wrap import threaded, blocking, singleShot
 
 
 class SlitCmd(object):
@@ -24,7 +25,6 @@ class SlitCmd(object):
             ('slit', 'abort', self.abort),
             ('slit', 'enable', self.motionEnable),
             ('slit', 'disable', self.motionDisable),
-            ('slit', 'shutdown', self.shutdown),
             ('slit', '@(get) @(work|tool|base)', self.getSystem),
             ('slit', '@(set) @(work|tool) [<X>] [<Y>] [<Z>] [<U>] [<V>] [<W>]', self.setSystem),
             ('slit', 'move home', self.goHome),
@@ -35,6 +35,8 @@ class SlitCmd(object):
             ('slit', '<dither> [@(pixels|microns)]', self.dither),
             ('slit', '<shift> [@(pixels|microns)]', self.shift),
             ('slit', 'convert <X> <Y> <Z> <U> <V> <W>', self.convert),
+            ('slit', 'stop', self.stop),
+            ('slit', 'start [@(fullInit)]', self.start),
         ]
 
         # Define typed command arguments for the above commands.
@@ -211,9 +213,38 @@ class SlitCmd(object):
 
         self.controller.generate(cmd)
 
-    @threaded
-    def shutdown(self, cmd):
-        """ save hexapod position, turn power off and disconnect"""
+    def abort(self, cmd, doFinish=True):
+        """ Stop current motion."""
+
+        try:
+            self.controller.abort(cmd)
+        except Exception as e:
+            cmd.warn('text=%s' % self.actor.strTraceback(e))
+
+        while self.controller.currCmd:
+            pass
+
+        cmd.inform("text='motion aborted'")
+
+        if doFinish:
+            self.controller.generate(cmd)
+        else:
+            self.controller.getStatus(cmd)
+
+    def convert(self, cmd):
+        """ Convert measure in the slit coordinate system to the world coordinate"""
+
+        cmdKeys = cmd.cmd.keywords
+        coords = [cmdKeys[coord].values[0] for coord in self.coordsName]
+        coordsWorld = self.controller.convertToWorld(coords)
+        cmd.finish('system=%s' % ','.join(['%.5f' % coord for coord in coordsWorld]))
+
+    @singleShot
+    def stop(self, cmd):
+        """ stop current motion, save hexapod position, power off hxp controller and disconnect"""
+
+        self.abort(cmd, doFinish=False)
+
         self.controller.substates.shutdown(cmd)
         self.controller.getStatus(cmd)
 
@@ -223,20 +254,24 @@ class SlitCmd(object):
 
         cmd.finish()
 
-    def abort(self, cmd):
-        """ Stop current motion."""
+    @singleShot
+    def start(self, cmd):
+        """ power on hxp controller, connect slit controller, and init"""
+        cmdKeys = cmd.cmd.keywords
+        operation = self.actor.config.get('slit', 'mode') == 'operation'
+        skipHoming = '' if 'fullInit' in cmdKeys else 'skipHoming'
 
-        try:
-            self.controller.abort(cmd)
-        except Exception as e:
-            cmd.warn('text=%s' % self.actor.strTraceback(e))
+        cmd.inform('text="powering up hxp controller ..."')
+        self.actor.ownCall(cmd, cmdStr='power on=slit', failMsg='failed to power on hexapod controller')
+
+        if operation:
+            cmd.inform('text="waiting for tcp server ..."')
+            waitForTcpServer(host=self.actor.config.get('slit', 'host'), port=self.actor.config.get('slit', 'port'))
+
+        cmd.inform('text="connecting slit..."')
+        self.actor.ownCall(cmd, cmdStr='connect controller=slit', failMsg='failed to connect slit controller')
+
+        cmd.inform('text="slit %s ..."' % ('init from saved position' if skipHoming else 'fullInit'))
+        self.actor.ownCall(cmd, cmdStr='slit init %s' % skipHoming, failMsg='failed to init slit')
 
         self.controller.generate(cmd)
-
-    def convert(self, cmd):
-        """ Convert measure in the slit coordinate system to the world coordinate"""
-
-        cmdKeys = cmd.cmd.keywords
-        coords = [cmdKeys[coord].values[0] for coord in self.coordsName]
-        coordsWorld = self.controller.convertToWorld(coords)
-        cmd.finish('system=%s' % ','.join(['%.5f' % coord for coord in coordsWorld]))

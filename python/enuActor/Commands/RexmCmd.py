@@ -4,7 +4,8 @@
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
 from enuActor.drivers.rexm_drivers import TMCM
-from enuActor.utils.wrap import threaded, blocking
+from enuActor.utils import waitForTcpServer
+from enuActor.utils.wrap import threaded, blocking, singleShot
 
 
 class RexmCmd(object):
@@ -25,6 +26,8 @@ class RexmCmd(object):
             ('rexm', '@(move) <relative>', self.moveRelative),
             ('rexm', 'resetFlag', self.resetFlag),
             ('rexm', 'abort', self.abort),
+            ('rexm', 'stop', self.stop),
+            ('rexm', 'start', self.start),
 
         ]
 
@@ -82,8 +85,66 @@ class RexmCmd(object):
         self.controller.substates.idle(cmd)
         self.controller.generate(cmd)
 
-    def abort(self, cmd):
+    @singleShot
+    def shutdown(self, cmd):
+        """ save hexapod position, turn power off and disconnect"""
+        try:
+            self.controller.abort(cmd)
+        except Exception as e:
+            cmd.warn('text=%s' % self.actor.strTraceback(e))
+
+        self.controller.substates.shutdown(cmd)
+        self.controller.getStatus(cmd)
+
+        cmd.inform('text="powering down hxp controller ..."')
+        self.actor.ownCall(cmd, cmdStr='power off=slit', failMsg='failed to power off hexapod controller')
+        self.controller.disconnect()
+
+        cmd.finish()
+
+    def abort(self, cmd, doFinish=True):
         """ Abort current motion """
 
         self.controller.abortMotion = True
+        while self.controller.currCmd:
+            pass
+
+        cmd.inform("text='motion aborted'")
+
+        if doFinish:
+            self.controller.generate(cmd)
+        else:
+            self.controller.getStatus(cmd)
+
+    @singleShot
+    def stop(self, cmd):
+        """ abort current motion board, turn power off and disconnect"""
+        self.abort(cmd, doFinish=False)
+
+        if 'biasha' not in self.actor.controllers.keys():
+            cmd.inform('text="powering down enu rack..."')
+            self.actor.ownCall(cmd, cmdStr='power off=ctrl,pows', failMsg='failed to power off enu rack')
+
+        self.controller.disconnect()
+
         cmd.finish()
+
+    @singleShot
+    def start(self, cmd):
+        """ power on enu rack, wait for rexm host, connect controller"""
+        operation = self.actor.config.get('rexm', 'mode') == 'operation'
+
+        cmd.inform('text="powering up enu rack ..."')
+        self.actor.ownCall(cmd, cmdStr='power on=pows,ctrl', failMsg='failed to power on enu rack')
+
+        if operation:
+            cmd.inform('text="waiting for tcp server ..."')
+            waitForTcpServer(host=self.actor.config.get('rexm', 'host'), port=self.actor.config.get('rexm', 'port'))
+
+        cmd.inform('text="connecting rexm..."')
+        self.actor.ownCall(cmd, cmdStr='connect controller=rexm', failMsg='failed to connect rexm controller')
+
+        cmd.inform('text="rexm init"')
+        self.actor.ownCall(cmd, cmdStr='rexm init', failMsg='failed to init rexm')
+
+        self.controller.generate(cmd)
