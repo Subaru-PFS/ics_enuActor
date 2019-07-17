@@ -1,4 +1,7 @@
+import time
 from functools import partial
+
+from actorcore.QThread import QThread
 
 
 def putMsg(func):
@@ -32,5 +35,26 @@ def blocking(func):
             cmd.fail('text=%s' % self.actor.strTraceback(e))
         finally:
             self.controller.currCmd = False
+
+    return wrapper
+
+
+def putMsg2(func):
+    def wrapper(self, cmd, *args, **kwargs):
+        thr = QThread(self.actor, str(time.time()))
+        thr.start()
+        thr.putMsg(partial(func, self, cmd, *args, **kwargs))
+        thr.exitASAP = True
+
+    return wrapper
+
+
+def singleShot(func):
+    @putMsg2
+    def wrapper(self, cmd, *args, **kwargs):
+        try:
+            return func(self, cmd, *args, **kwargs)
+        except Exception as e:
+            cmd.fail('text=%s' % self.actor.strTraceback(e))
 
     return wrapper

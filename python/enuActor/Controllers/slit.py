@@ -67,9 +67,6 @@ class slit(FSMThread):
         else:
             return 'undef'
 
-    def disconnect(self):
-        self.actor.callCommand('disconnect controller=%s' % self.name)
-
     def _loadCfg(self, cmd, mode=None):
         """| Load Configuration file. called by FSMDev.loadDevice().
         | Convert to world tool and home.

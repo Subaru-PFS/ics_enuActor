@@ -3,7 +3,7 @@
 
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
-from enuActor.utils.wrap import threaded,blocking
+from enuActor.utils.wrap import threaded
 
 
 class PduCmd(object):
@@ -44,7 +44,7 @@ class PduCmd(object):
 
         self.controller.generate(cmd)
 
-    @blocking
+    @threaded
     def switch(self, cmd):
         cmdKeys = cmd.cmd.keywords
 
