@@ -24,7 +24,7 @@ class TempsCmd(object):
             ('temps', 'info', self.getInfo),
             ('temps', '<raw>', self.rawCommand),
             ('temps', 'stop', self.stop),
-            ('temps', 'start', self.start),
+            ('temps', 'start [@(operation|simulation)]', self.start),
 
         ]
 
@@ -74,27 +74,28 @@ class TempsCmd(object):
     @singleShot
     def stop(self, cmd):
         """ finish current exposure, power off and disconnect"""
+        self.actor.disconnect('temps', cmd=cmd)
 
         cmd.inform('text="powering down temps controller..."')
         self.actor.ownCall(cmd, cmdStr='power off=temps', failMsg='failed to power off temps')
-
-        self.controller.disconnect()
 
         cmd.finish()
 
     @singleShot
     def start(self, cmd):
         """ power on temps controller, wait for temps host, connect controller"""
-        operation = self.actor.config.get('temps', 'mode') == 'operation'
+        cmdKeys = cmd.cmd.keywords
+        mode = self.actor.config.get('temps', 'mode')
+        mode = 'operation' if 'operation' in cmdKeys else mode
+        mode = 'simulation' if 'simulation' in cmdKeys else mode
 
         cmd.inform('text="powering up temps controller ..."')
         self.actor.ownCall(cmd, cmdStr='power on=temps', failMsg='failed to power on temps')
 
-        if operation:
+        if mode == 'operation':
             cmd.inform('text="waiting for tcp server ..."')
             waitForTcpServer(host=self.actor.config.get('temps', 'host'), port=self.actor.config.get('temps', 'port'))
 
-        cmd.inform('text="connecting temps..."')
-        self.actor.ownCall(cmd, cmdStr='connect controller=temps', failMsg='failed to connect temps controller')
+        self.actor.connect('temps', cmd=cmd, mode=mode)
 
-        self.controller.generate(cmd)
+        cmd.finish()

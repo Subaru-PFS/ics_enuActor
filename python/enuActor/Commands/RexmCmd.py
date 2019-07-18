@@ -27,7 +27,7 @@ class RexmCmd(object):
             ('rexm', 'resetFlag', self.resetFlag),
             ('rexm', 'abort', self.abort),
             ('rexm', 'stop', self.stop),
-            ('rexm', 'start', self.start),
+            ('rexm', 'start [@(operation|simulation)]', self.start),
 
         ]
 
@@ -102,47 +102,38 @@ class RexmCmd(object):
 
         cmd.finish()
 
-    def abort(self, cmd, doFinish=True):
+    def abort(self, cmd):
         """ Abort current motion """
-
-        self.controller.abortMotion = True
-        while self.controller.currCmd:
-            pass
-
-        cmd.inform("text='motion aborted'")
-
-        if doFinish:
-            self.controller.generate(cmd)
-        else:
-            self.controller.getStatus(cmd)
+        self.controller.doAbort()
+        cmd.finish("text='motion aborted'")
 
     @singleShot
     def stop(self, cmd):
         """ abort current motion board, turn power off and disconnect"""
-        self.abort(cmd, doFinish=False)
+        self.actor.disconnect('rexm', cmd=cmd)
 
         if 'biasha' not in self.actor.controllers.keys():
             cmd.inform('text="powering down enu rack..."')
             self.actor.ownCall(cmd, cmdStr='power off=ctrl,pows', failMsg='failed to power off enu rack')
-
-        self.controller.disconnect()
 
         cmd.finish()
 
     @singleShot
     def start(self, cmd):
         """ power on enu rack, wait for rexm host, connect controller"""
-        operation = self.actor.config.get('rexm', 'mode') == 'operation'
+        cmdKeys = cmd.cmd.keywords
+        mode = self.actor.config.get('rexm', 'mode')
+        mode = 'operation' if 'operation' in cmdKeys else mode
+        mode = 'simulation' if 'simulation' in cmdKeys else mode
 
         cmd.inform('text="powering up enu rack ..."')
         self.actor.ownCall(cmd, cmdStr='power on=pows,ctrl', failMsg='failed to power on enu rack')
 
-        if operation:
+        if mode == 'operation':
             cmd.inform('text="waiting for tcp server ..."')
             waitForTcpServer(host=self.actor.config.get('rexm', 'host'), port=self.actor.config.get('rexm', 'port'))
 
-        cmd.inform('text="connecting rexm..."')
-        self.actor.ownCall(cmd, cmdStr='connect controller=rexm', failMsg='failed to connect rexm controller')
+        self.actor.connect('rexm', cmd=cmd, mode=mode)
 
         cmd.inform('text="rexm init"')
         self.actor.ownCall(cmd, cmdStr='rexm init', failMsg='failed to init rexm')

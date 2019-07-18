@@ -19,7 +19,6 @@ class TopCmd(object):
             ('ping', '', self.ping),
             ('status', '[@all]', self.status),
             ('monitor', '<controllers> <period>', self.monitor),
-            ('set', '<controller> <mode>', self.changeMode),
             ('start', '', self.start),
             ('stop', '', self.stop),
         ]
@@ -30,8 +29,6 @@ class TopCmd(object):
                                                  help='the names of 1 or more controllers to load'),
                                         keys.Key("controller", types.String(),
                                                  help='the names a controller.'),
-                                        keys.Key("mode", types.String(),
-                                                 help='controller mode'),
                                         keys.Key("period", types.Int(),
                                                  help='the period to sample at.'),
                                         )
@@ -87,29 +84,6 @@ class TopCmd(object):
                 self.actor.callCommand("%s status" % c)
 
         cmd.finish(self.controllerKey())
-
-    def changeMode(self, cmd):
-        """Change device mode operation|simulation"""
-        cmdKeys = cmd.cmd.keywords
-
-        controller = cmd.cmd.keywords['controller'].values[0]
-        mode = cmd.cmd.keywords['mode'].values[0]
-
-        knownControllers = [c.strip() for c in self.actor.config.get(self.actor.name, 'controllers').split(',')]
-
-        if controller not in knownControllers:
-            raise ValueError('unknown controller')
-
-        if mode not in ['operation', 'simulation']:
-            raise ValueError('unknown mode')
-
-        self.actor.attachController(name=controller,
-                                    cmd=cmd,
-                                    mode=mode)
-
-        self.actor.callCommand("%s status" % controller)
-
-        cmd.finish()
 
     @singleShot
     def start(self, cmd):

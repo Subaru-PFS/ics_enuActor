@@ -45,8 +45,9 @@ class FSMThread(FSMDevice, QThread):
     def _init(self, cmd, **kwargs):
         pass
 
-    def disconnect(self):
-        self.actor.callCommand('disconnect controller=%s' % self.name)
+    def leaveCleanly(self, cmd):
+        self.monitor = 0
+        self._closeComm(cmd=cmd)
 
     def start(self, cmd=None, doInit=None, mode=None):
         doInit = self.doInit if doInit is None else doInit
@@ -56,8 +57,8 @@ class FSMThread(FSMDevice, QThread):
         finally:
             QThread.start(self)
 
-    def stop(self, cmd=None):
-        self._closeComm(cmd=cmd)
+    def stop(self, cmd):
+        self.leaveCleanly(cmd=cmd)
         FSMDevice.stop(self, cmd=cmd)
         self.exit()
 

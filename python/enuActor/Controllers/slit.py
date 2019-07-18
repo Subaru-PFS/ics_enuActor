@@ -2,6 +2,7 @@ __author__ = 'alefur'
 import logging
 import socket
 import time
+
 import numpy as np
 from enuActor.Simulators.slit import SlitSim
 from enuActor.drivers import hxp_drivers
@@ -233,7 +234,7 @@ class slit(FSMThread):
         cmd.inform('text="Kill and save hexapod position..."')
         self._TCLScriptExecute('KillWithRegistration.tcl')
 
-        time.sleep(3)
+        time.sleep(6)
 
     def getSystem(self, cmd, system):
         """| Get system from the controller and update the actor's current value.
@@ -285,14 +286,39 @@ class slit(FSMThread):
         cmd.inform('text="Disabling Slit controller..."')
         self._hexapodDisable()
 
-    def abort(self, cmd):
+    def doAbort(self, cmd):
         """| Aborting current move
 
         :param cmd: on going command:
         :raise: RuntimeError if an error is raised by errorChecker
         """
-        cmd.inform('text="aborting move..._"')
-        self._abort()
+        if not self.currCmd:
+            return
+
+        cmd.inform('text="aborting motion..."')
+        try:
+            self._abort()
+        except Exception as e:
+            cmd.warn('text=%s' % self.actor.strTraceback(e))
+
+        while self.currCmd:
+            pass
+
+    def leaveCleanly(self, cmd):
+        """| Aborting current move
+
+        :param cmd: on going command:
+        :raise: RuntimeError if an error is raised by errorChecker
+        """
+        self.monitor = 0
+        self.doAbort(cmd)
+
+        try:
+            self.getStatus(cmd)
+        except Exception as e:
+            cmd.warn('text=%s' % self.actor.strTraceback(e))
+
+        self._closeComm(cmd=cmd)
 
     def _getCurrentPosition(self):
         """| Get current position.

@@ -29,7 +29,7 @@ class iis(pdu.pdu):
 
         self.addStateCB('WARMING', self.warming)
         self.sim = PduSim()
-        self.doStop = False
+        self.abortWarmup = False
 
         self.logger = logging.getLogger(self.name)
         self.logger.setLevel(loglevel)
@@ -84,11 +84,11 @@ class iis(pdu.pdu):
 
         if arcOn:
             start = time.time()
-            self.doStop = False
+            self.abortWarmup = False
             while time.time() < start + iis.warmingTime:
                 time.sleep(ti)
                 self.handleTimeout()
-                if self.doStop:
+                if self.abortWarmup:
                     raise RuntimeError('iis warmup aborted')
 
     def isOff(self, arc):
@@ -100,3 +100,23 @@ class iis(pdu.pdu):
         """
         state = self.actor.models[self.actor.name].keyVarDict[arc].getValue()
         return not bool(state)
+
+    def doAbort(self):
+        self.abortWarmup = True
+        while self.currCmd:
+            pass
+        return
+
+    def leaveCleanly(self, cmd):
+        self.monitor = 0
+        self.doAbort()
+
+        powerOff = dict([(self.powerPorts[name], 'off') for name in self.arcs])
+
+        try:
+            self.switching(cmd, powerPorts=powerOff)
+            self.getStatus(cmd)
+        except Exception as e:
+            cmd.warn('text=%s' % self.actor.strTraceback(e))
+
+        self._closeComm(cmd=cmd)

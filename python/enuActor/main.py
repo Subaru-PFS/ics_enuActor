@@ -76,6 +76,40 @@ class enuActor(actorcore.ICC.ICC):
 
         return ret
 
+    def controllerKey(self):
+        """ Return formatted keyword listing all loaded controllers. """
+
+        controllerNames = list(self.controllers.keys())
+        key = 'controllers=%s' % (','.join([c for c in controllerNames]) if controllerNames else None)
+
+        return key
+
+    def connect(self, controller, cmd=None, **kwargs):
+        cmd = self.actor.bcast if cmd is None else cmd
+        cmd.inform('text="attaching %s..."' % controller)
+        try:
+            actorcore.ICC.ICC.attachController(self, controller, cmd=cmd, **kwargs)
+        except:
+            cmd.warn(self.controllerKey())
+            cmd.warn('text="failed to connect controller %s' % controller)
+            raise
+
+        cmd.inform(self.controllerKey())
+
+    def disconnect(self, controller, cmd=None):
+        """ Disconnect the given, or all, controller objects. """
+        cmd = self.actor.bcast if cmd is None else cmd
+        cmd.inform('text="detaching %s..."' % controller)
+        try:
+            actorcore.ICC.ICC.detachController(self, controller, cmd=cmd)
+
+        except:
+            cmd.warn(self.controllerKey())
+            cmd.warn('text="failed to disconnect controller %s"')
+            raise
+
+        cmd.inform(self.controllerKey())
+
     def reloadConfiguration(self, cmd):
         cmd.inform('sections=%08x,%r' % (id(self.config),
                                          self.config))

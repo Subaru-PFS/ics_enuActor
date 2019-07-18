@@ -1,9 +1,10 @@
 __author__ = 'alefur'
 
 import logging
-import opscore.protocols.types as types
+
 import enuActor.utils.bufferedSocket as bufferedSocket
 import numpy as np
+import opscore.protocols.types as types
 from enuActor.Simulators.temps import TempsSim
 from enuActor.utils.fsmThread import FSMThread
 
@@ -55,6 +56,7 @@ class temps(FSMThread, bufferedSocket.EthComm):
     @property
     def biaTemp(self):
         bia = self.actor.models[self.actor.name].keyVarDict['temps1'].getValue(doRaise=False)[3]
+        bia = np.nan if bia is None else bia
         return np.nan if isinstance(bia, types.Invalid) else bia
 
     def getProbeCoeff(self, probe):

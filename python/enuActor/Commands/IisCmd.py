@@ -22,7 +22,7 @@ class IisCmd(object):
             ('iis', '[<on>] [<off>]', self.switch),
             ('iis', 'abort', self.abort),
             ('iis', 'stop', self.stop),
-            ('iis', 'start', self.start),
+            ('iis', 'start [@(operation|simulation)]', self.start),
         ]
 
         # Define typed command arguments for the above commands.
@@ -63,41 +63,28 @@ class IisCmd(object):
 
         self.controller.generate(cmd)
 
-    def abort(self, cmd, doFinish=True):
-        self.controller.doStop = True
-        while self.controller.currCmd:
-            pass
-
-        genKey = cmd.finish if doFinish else cmd.inform
-        genKey("text='warmup aborted'")
+    def abort(self, cmd):
+        self.controller.doAbort()
+        cmd.finish("text='warmup aborted'")
 
     @singleShot
     def stop(self, cmd):
         """ abort iis warmup, turn iis lamp off and disconnect"""
-        self.abort(cmd, doFinish=False)
-
-        powerOff = dict([(self.controller.powerPorts[name], 'off') for name in self.controller.arcs])
-
-        try:
-            self.controller.switching(cmd, powerPorts=powerOff)
-        except Exception as e:
-            cmd.warn('text=%s' % self.actor.strTraceback(e))
-
-        self.controller.getStatus(cmd)
-        self.controller.disconnect()
-
+        self.actor.disconnect('iis', cmd=cmd)
         cmd.finish()
 
     @singleShot
     def start(self, cmd):
         """ connect iis controller"""
-        operation = self.actor.config.get('iis', 'mode') == 'operation'
+        cmdKeys = cmd.cmd.keywords
+        mode = self.actor.config.get('iis', 'mode')
+        mode = 'operation' if 'operation' in cmdKeys else mode
+        mode = 'simulation' if 'simulation' in cmdKeys else mode
 
-        if operation:
+        if mode == 'operation':
             cmd.inform('text="waiting for tcp server ..."')
-            waitForTcpServer(host=self.actor.config.get('iis', 'host'), port=self.actor.config.get('iis', 'port'))
+            waitForTcpServer(host=self.actor.config.get('pdu', 'host'), port=self.actor.config.get('pdu', 'port'))
 
         cmd.inform('text="connecting iis..."')
-        self.actor.ownCall(cmd, cmdStr='connect controller=iis', failMsg='failed to connect iis controller')
-
-        self.controller.generate(cmd)
+        self.actor.connect('iis', cmd=cmd, mode=mode)
+        cmd.finish()

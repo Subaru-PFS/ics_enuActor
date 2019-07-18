@@ -36,7 +36,7 @@ class SlitCmd(object):
             ('slit', '<shift> [@(pixels|microns)]', self.shift),
             ('slit', 'convert <X> <Y> <Z> <U> <V> <W>', self.convert),
             ('slit', 'stop', self.stop),
-            ('slit', 'start [@(fullInit)]', self.start),
+            ('slit', 'start [@(fullInit)] [@(operation|simulation)]', self.start),
         ]
 
         # Define typed command arguments for the above commands.
@@ -213,23 +213,10 @@ class SlitCmd(object):
 
         self.controller.generate(cmd)
 
-    def abort(self, cmd, doFinish=True):
+    def abort(self, cmd):
         """ Stop current motion."""
-
-        try:
-            self.controller.abort(cmd)
-        except Exception as e:
-            cmd.warn('text=%s' % self.actor.strTraceback(e))
-
-        while self.controller.currCmd:
-            pass
-
-        cmd.inform("text='motion aborted'")
-
-        if doFinish:
-            self.controller.generate(cmd)
-        else:
-            self.controller.getStatus(cmd)
+        self.controller.doAbort(cmd)
+        cmd.finish("text='motion aborted'")
 
     def convert(self, cmd):
         """ Convert measure in the slit coordinate system to the world coordinate"""
@@ -243,14 +230,15 @@ class SlitCmd(object):
     def stop(self, cmd):
         """ stop current motion, save hexapod position, power off hxp controller and disconnect"""
 
-        self.abort(cmd, doFinish=False)
+        self.controller.doAbort(cmd)
 
         self.controller.substates.shutdown(cmd)
         self.controller.getStatus(cmd)
 
         cmd.inform('text="powering down hxp controller ..."')
         self.actor.ownCall(cmd, cmdStr='power off=slit', failMsg='failed to power off hexapod controller')
-        self.controller.disconnect()
+
+        self.actor.disconnect('slit', cmd=cmd)
 
         cmd.finish()
 
@@ -258,18 +246,20 @@ class SlitCmd(object):
     def start(self, cmd):
         """ power on hxp controller, connect slit controller, and init"""
         cmdKeys = cmd.cmd.keywords
-        operation = self.actor.config.get('slit', 'mode') == 'operation'
+        mode = self.actor.config.get('slit', 'mode')
+        mode = 'operation' if 'operation' in cmdKeys else mode
+        mode = 'simulation' if 'simulation' in cmdKeys else mode
+
         skipHoming = '' if 'fullInit' in cmdKeys else 'skipHoming'
 
         cmd.inform('text="powering up hxp controller ..."')
         self.actor.ownCall(cmd, cmdStr='power on=slit', failMsg='failed to power on hexapod controller')
 
-        if operation:
+        if mode == 'operation':
             cmd.inform('text="waiting for tcp server ..."')
             waitForTcpServer(host=self.actor.config.get('slit', 'host'), port=self.actor.config.get('slit', 'port'))
 
-        cmd.inform('text="connecting slit..."')
-        self.actor.ownCall(cmd, cmdStr='connect controller=slit', failMsg='failed to connect slit controller')
+        self.actor.connect('slit', cmd=cmd, mode=mode)
 
         cmd.inform('text="slit %s ..."' % ('init from saved position' if skipHoming else 'fullInit'))
         self.actor.ownCall(cmd, cmdStr='slit init %s' % skipHoming, failMsg='failed to init slit')

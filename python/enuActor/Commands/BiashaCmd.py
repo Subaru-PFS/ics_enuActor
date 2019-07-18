@@ -33,7 +33,7 @@ class BiashaCmd(object):
             ('exposure', 'abort', self.abortExposure),
             ('exposure', 'finish', self.finishExposure),
             ('biasha', 'stop', self.stop),
-            ('biasha', 'start', self.start),
+            ('biasha', 'start [@(operation|simulation)]', self.start),
         ]
 
         # Define typed command arguments for the above commands.
@@ -170,58 +170,41 @@ class BiashaCmd(object):
         ret = self.controller.sendOneCommand(cmdStr, cmd=cmd)
         cmd.finish('text=%s' % (qstr('returned: %s' % (ret))))
 
-    def abortExposure(self, cmd, doFinish=True):
+    def abortExposure(self, cmd):
         """send a raw command to the biasha board"""
-        self.controller.abortExposure = True
-        while self.controller.currCmd:
-            pass
+        self.controller.doAbort()
+        cmd.finish("text='exposure aborted'")
 
-        genKey = cmd.finish if doFinish else cmd.inform
-        genKey("text='exposure aborted'")
-
-    def finishExposure(self, cmd, doFinish=True):
+    def finishExposure(self, cmd):
         """send a raw command to the biasha board"""
-        self.controller.finishExposure = True
-        while self.controller.currCmd:
-            pass
-
-        genKey = cmd.finish if doFinish else cmd.inform
-        genKey("text='exposure finished'")
+        self.controller.doFinish()
+        cmd.finish("text='exposure finished'")
 
     @singleShot
     def stop(self, cmd):
         """ finish current exposure, power off and disconnect"""
-
-        self.finishExposure(cmd, doFinish=False)
-
-        try:
-            self.controller.gotoState(cmd, 'init')
-        except Exception as e:
-            cmd.warn('text=%s' % self.actor.strTraceback(e))
-
-        self.controller.getStatus(cmd)
+        self.actor.disconnect('biasha', cmd=cmd)
 
         if 'rexm' not in self.actor.controllers.keys():
             cmd.inform('text="powering down enu rack..."')
             self.actor.ownCall(cmd, cmdStr='power off=ctrl,pows', failMsg='failed to power off enu rack')
-
-        self.controller.disconnect()
 
         cmd.finish()
 
     @singleShot
     def start(self, cmd):
         """ power on enu rack, wait for biasha host, connect controller"""
-        operation = self.actor.config.get('biasha', 'mode') == 'operation'
+        cmdKeys = cmd.cmd.keywords
+        mode = self.actor.config.get('biasha', 'mode')
+        mode = 'operation' if 'operation' in cmdKeys else mode
+        mode = 'simulation' if 'simulation' in cmdKeys else mode
 
         cmd.inform('text="powering up enu rack ..."')
         self.actor.ownCall(cmd, cmdStr='power on=pows,ctrl', failMsg='failed to power on enu rack')
 
-        if operation:
+        if mode == 'operation':
             cmd.inform('text="waiting for tcp server ..."')
             waitForTcpServer(host=self.actor.config.get('biasha', 'host'), port=self.actor.config.get('biasha', 'port'))
 
-        cmd.inform('text="connecting biasha..."')
-        self.actor.ownCall(cmd, cmdStr='connect controller=biasha', failMsg='failed to connect biasha controller')
-
-        self.controller.generate(cmd)
+        self.actor.connect('biasha', cmd=cmd, mode=mode)
+        cmd.finish()

@@ -3,7 +3,8 @@
 
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
-from enuActor.utils.wrap import threaded
+from enuActor.utils import waitForTcpServer
+from enuActor.utils.wrap import threaded, singleShot
 
 
 class PduCmd(object):
@@ -20,6 +21,8 @@ class PduCmd(object):
             ('pdu', 'status', self.status),
             ('power', 'status', self.status),
             ('power', '[<on>] [<off>]', self.switch),
+            ('pdu', 'stop', self.stop),
+            ('pdu', 'start [@(operation|simulation)]', self.start),
 
         ]
 
@@ -60,3 +63,24 @@ class PduCmd(object):
 
         self.controller.substates.switch(cmd, powerPorts=powerPorts)
         self.controller.generate(cmd)
+
+    @singleShot
+    def stop(self, cmd):
+        """ abort pdu warmup, turn pdu lamp off and disconnect"""
+        self.actor.disconnect('pdu', cmd=cmd)
+        cmd.finish()
+
+    @singleShot
+    def start(self, cmd):
+        """ connect pdu controller"""
+        cmdKeys = cmd.cmd.keywords
+        mode = self.actor.config.get('pdu', 'mode')
+        mode = 'operation' if 'operation' in cmdKeys else mode
+        mode = 'simulation' if 'simulation' in cmdKeys else mode
+
+        if mode == 'operation':
+            cmd.inform('text="waiting for tcp server ..."')
+            waitForTcpServer(host=self.actor.config.get('pdu', 'host'), port=self.actor.config.get('pdu', 'port'))
+
+        self.actor.connect('pdu', cmd=cmd, mode=mode)
+        cmd.finish()

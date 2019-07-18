@@ -193,6 +193,7 @@ class biasha(FSMThread, bufferedSocket.EthComm):
             self.gotoState(cmd=cmd, cmdStr='%s_close' % shutter)
 
             if not integEnd:
+                self.shutterStatus(cmd)
                 raise RuntimeWarning('exposure aborted')
 
             end = dt.utcnow()
@@ -360,6 +361,30 @@ class biasha(FSMThread, bufferedSocket.EthComm):
             time.sleep(ti)
 
         return dt.utcnow()
+
+    def doAbort(self):
+        self.abortExposure = True
+        while self.currCmd:
+            pass
+        return
+
+    def doFinish(self):
+        self.finishExposure = True
+        while self.currCmd:
+            pass
+        return
+
+    def leaveCleanly(self, cmd):
+        self.monitor = 0
+        self.doFinish()
+
+        try:
+            self.gotoState(cmd, 'init')
+            self.getStatus(cmd)
+        except Exception as e:
+            cmd.warn('text=%s' % self.actor.strTraceback(e))
+
+        self._closeComm(cmd=cmd)
 
     def sendOneCommand(self, cmdStr, doClose=False, cmd=None):
         ret = bufferedSocket.EthComm.sendOneCommand(self, cmdStr=cmdStr, doClose=doClose, cmd=cmd)

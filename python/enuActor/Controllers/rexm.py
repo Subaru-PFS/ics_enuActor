@@ -595,3 +595,20 @@ class rexm(FSMThread, bufferedSocket.EthComm):
             s = bufferedSocket.EthComm.createSock(self)
 
         return s
+
+    def doAbort(self):
+        self.abortMotion = True
+        while self.currCmd:
+            pass
+        return
+
+    def leaveSafely(self, cmd):
+        self.monitor = 0
+        self.doAbort()
+
+        try:
+            self.getStatus(cmd)
+        except Exception as e:
+            cmd.warn('text=%s' % self.actor.strTraceback(e))
+
+        self._closeComm(cmd=cmd)
