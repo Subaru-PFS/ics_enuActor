@@ -1,11 +1,11 @@
 __author__ = 'alefur'
 import logging
 import socket
-import time
 
 import numpy as np
 from enuActor.Simulators.slit import SlitSim
 from enuActor.drivers import hxp_drivers
+from enuActor.utils import wait
 from enuActor.utils.fsmThread import FSMThread
 
 
@@ -39,7 +39,7 @@ class slit(FSMThread):
         FSMThread.__init__(self, actor, name, events=events, substates=substates, doInit=False)
 
         self.addStateCB('MOVING', self.moving)
-        self.addStateCB('SHUTDOWN', self.shutdown)
+
         self.sim = SlitSim()
 
         # Hexapod Attributes
@@ -233,8 +233,7 @@ class slit(FSMThread):
                 """
         cmd.inform('text="Kill and save hexapod position..."')
         self._TCLScriptExecute('KillWithRegistration.tcl')
-
-        time.sleep(6)
+        wait(secs=10)
 
     def getSystem(self, cmd, system):
         """| Get system from the controller and update the actor's current value.
@@ -292,9 +291,6 @@ class slit(FSMThread):
         :param cmd: on going command:
         :raise: RuntimeError if an error is raised by errorChecker
         """
-        if not self.currCmd:
-            return
-
         cmd.inform('text="aborting motion..."')
         try:
             self._abort()
@@ -312,6 +308,9 @@ class slit(FSMThread):
         """
         self.monitor = 0
         self.doAbort(cmd)
+
+        if self.substates.current == 'SHUTDOWN':
+            self.shutdown(cmd)
 
         try:
             self.getStatus(cmd)
@@ -491,7 +490,7 @@ class slit(FSMThread):
                     raise UserWarning('[X, Y, Z, U, V, W] exceed : %s' % errorString)
                 elif buf[0] == -21:
                     self.logger.debug('Hxp controller in initialization...')
-                    time.sleep(1)
+                    wait(secs=1)
                     return self.errorChecker(func, *args, sockName=sockName)
                 elif errorCode != 0:
                     raise RuntimeError(func.__name__ + ' : ERROR ' + str(errorCode))

@@ -229,16 +229,11 @@ class SlitCmd(object):
     @singleShot
     def stop(self, cmd):
         """ stop current motion, save hexapod position, power off hxp controller and disconnect"""
-
-        self.controller.doAbort(cmd)
-
-        self.controller.substates.shutdown(cmd)
-        self.controller.getStatus(cmd)
+        self.controller.substates.shutdown()
+        self.actor.disconnect('slit', cmd=cmd)
 
         cmd.inform('text="powering down hxp controller ..."')
         self.actor.ownCall(cmd, cmdStr='power off=slit', failMsg='failed to power off hexapod controller')
-
-        self.actor.disconnect('slit', cmd=cmd)
 
         cmd.finish()
 
