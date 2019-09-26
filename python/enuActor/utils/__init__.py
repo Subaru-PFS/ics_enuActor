@@ -3,7 +3,7 @@ import time
 
 
 def wait(secs=5):
-    time.sleep(secs=secs)
+    time.sleep(secs)
 
 
 def connectSock(host, port, timeout=1):
