@@ -144,7 +144,7 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         :raise: Exception if a communication error occurs.
         :raise: Timeout if the command takes too long.
         """
-        self.checkStatus(cmd)
+        self.stopAndCheck(cmd)
         start = time.time()
 
         while self.isMoving:
