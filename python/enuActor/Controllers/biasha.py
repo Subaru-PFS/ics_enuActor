@@ -71,6 +71,15 @@ class biasha(FSMThread, bufferedSocket.EthComm):
         else:
             raise ValueError('unknown mode')
 
+    @property
+    def biaOverHeat(self):
+        try:
+            ret = self.actor.controllers['temps'].biaOverHeat
+        except KeyError:
+            ret = False
+
+        return ret
+
     def _loadCfg(self, cmd, mode=None):
         """| Load Configuration file
 
@@ -402,14 +411,15 @@ class biasha(FSMThread, bufferedSocket.EthComm):
 
         return s
 
-    def biaOverHeat(self, cmd=None):
+    def checkOverHeat(self, cmd=None):
+
         cmd = self.actor.bcast if cmd is None else cmd
 
-        if self.substates.current == 'BIA' and self.actor.controllers['temps'].biaOverHeat:
+        if self.substates.current == 'BIA' and self.biaOverHeat:
             cmd.warn('text="bia temp above safety threshold, turning off ..."')
             self.gotoState(cmd, cmdStr='bia_off')
             self.biaStatus(cmd)
 
     def handleTimeout(self, cmd=None):
         FSMThread.handleTimeout(self, cmd=cmd)
-        self.biaOverHeat(cmd=cmd)
+        self.checkOverHeat(cmd=cmd)
