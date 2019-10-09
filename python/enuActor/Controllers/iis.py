@@ -5,6 +5,7 @@ import time
 from enuActor.Controllers import pdu
 from enuActor.Simulators.pdu import PduSim
 from enuActor.utils.fsmThread import FSMThread
+from enuActor.utils import wait
 
 
 class iis(pdu.pdu):
@@ -67,7 +68,8 @@ class iis(pdu.pdu):
         """
         state = self.sendOneCommand('read status o%s simple' % self.powerPorts[arc], cmd=cmd)
         if state == 'pending':
-            return self.getState(arc, cmd=cmd)
+            wait(secs=2)
+            return self.arcState(arc, cmd=cmd)
 
         return state
 
