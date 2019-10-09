@@ -124,7 +124,7 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         self.checkConfig(cmd)
 
         if doHome:
-            self._goToPosition(cmd, position='low')
+            self.moving(cmd, position='low')
 
             cmd.inform('text="setting origin at 0..."')
             self._setHome(cmd=cmd)
@@ -137,14 +137,14 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         self.checkSafeStop(cmd)
         self.checkStatus(cmd)
 
-    def stopMotion(self, cmd):
+    def stopMotion(self, cmd, forceStop=False):
         """| Abort current motion and retry until speed=0
 
         :param cmd: on going command
         :raise: Exception if a communication error occurs.
         :raise: Timeout if the command takes too long.
         """
-        self.stopAndCheck(cmd)
+        self.stopAndCheck(cmd) if forceStop else self.checkStatus(cmd)
         start = time.time()
 
         while self.isMoving:
@@ -179,6 +179,8 @@ class rexm(FSMThread, bufferedSocket.EthComm):
             self._goToPosition(cmd, position)
         else:
             self._moveRelative(cmd, **kwargs)
+
+        self.stopMotion(cmd, forceStop=True)
 
     def checkStatus(self, cmd, genKeys=True):
         """| Check current status from controller and generate rexmInfo keywords
@@ -342,6 +344,7 @@ class rexm(FSMThread, bufferedSocket.EthComm):
                     raise SystemExit()
 
                 if self.limitSwitch(direction, hitSwitch=hitSwitch):
+                    self.stopMotion(cmd)
                     break
 
                 if elapsedTime > rexm.startingTimeout and not self.hasStarted(startCount=startCount):
@@ -353,8 +356,9 @@ class rexm(FSMThread, bufferedSocket.EthComm):
                 if self.abortMotion:
                     raise UserWarning('Abort motion requested')
 
-        finally:
-            self.stopMotion(cmd)
+        except:
+            self.stopMotion(cmd, forceStop=True)
+            raise
 
     def hasStarted(self, startCount):
         """| demonstrate that motion that effectively started
