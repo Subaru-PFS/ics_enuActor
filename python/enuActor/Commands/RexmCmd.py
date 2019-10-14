@@ -85,23 +85,6 @@ class RexmCmd(object):
         self.controller.substates.idle(cmd)
         self.controller.generate(cmd)
 
-    @singleShot
-    def shutdown(self, cmd):
-        """ save hexapod position, turn power off and disconnect"""
-        try:
-            self.controller.abort(cmd)
-        except Exception as e:
-            cmd.warn('text=%s' % self.actor.strTraceback(e))
-
-        self.controller.substates.shutdown(cmd)
-        self.controller.getStatus(cmd)
-
-        cmd.inform('text="powering down hxp controller ..."')
-        self.actor.ownCall(cmd, cmdStr='power off=slit', failMsg='failed to power off hexapod controller')
-        self.controller.disconnect()
-
-        cmd.finish()
-
     def abort(self, cmd):
         """ Abort current motion """
         self.controller.doAbort()
@@ -136,6 +119,6 @@ class RexmCmd(object):
         self.actor.connect('rexm', cmd=cmd, mode=mode)
 
         cmd.inform('text="rexm init"')
-        self.actor.ownCall(cmd, cmdStr='rexm init', failMsg='failed to init rexm')
+        self.actor.ownCall(cmd, cmdStr='rexm init', failMsg='failed to init rexm', timeLim=180)
 
         self.controller.generate(cmd)
