@@ -6,6 +6,7 @@ import enuActor.utils.bufferedSocket as bufferedSocket
 import numpy as np
 from enuActor.Simulators.rexm import RexmSim
 from enuActor.drivers.rexm_drivers import recvPacket, TMCM
+from enuActor.utils import wait
 from enuActor.utils.fsmThread import FSMThread
 
 
@@ -163,7 +164,7 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         cmd.inform('text="stopping rexm motion"')
         self._stop(cmd=cmd)
 
-        time.sleep(1)
+        wait(secs=1)
         self.checkStatus(cmd)
 
     def moving(self, cmd, position=None, **kwargs):
@@ -180,6 +181,7 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         else:
             self._moveRelative(cmd, **kwargs)
 
+        wait()
         self.stopMotion(cmd, forceStop=True)
 
     def checkStatus(self, cmd, genKeys=True):
