@@ -346,7 +346,6 @@ class rexm(FSMThread, bufferedSocket.EthComm):
                     raise SystemExit()
 
                 if self.limitSwitch(direction, hitSwitch=hitSwitch):
-                    self.stopMotion(cmd)
                     break
 
                 if elapsedTime > rexm.startingTimeout and not self.hasStarted(startCount=startCount):
@@ -361,6 +360,8 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         except:
             self.stopMotion(cmd, forceStop=True)
             raise
+
+        self.stopMotion(cmd)
 
     def hasStarted(self, startCount):
         """| demonstrate that motion that effectively started
