@@ -65,16 +65,15 @@ class enuActor(actorcore.ICC.ICC):
     def monitors(self):
         return dict([(name, controller.monitor) for name, controller in self.controllers.items()])
 
-    def ownCall(self, cmd, cmdStr, failMsg, timeLim=20):
+    def ownCall(self, cmd, cmdStr, failMsg, doRaise=True, timeLim=20):
         cmdVar = self.cmdr.call(actor=self.name, cmdStr=cmdStr, forUserCmd=cmd, timeLim=timeLim)
 
-        ret = cmdVar.replyList[-1].keywords.canonical(delimiter=';')
-
         if cmdVar.didFail:
-            cmd.warn(ret)
-            raise RuntimeError(failMsg)
+            cmd.warn(cmdVar.replyList[-1].keywords.canonical(delimiter=';'))
+            if doRaise:
+                raise RuntimeError(failMsg)
 
-        return ret
+        return cmdVar
 
     def controllerKey(self):
         """ Return formatted keyword listing all loaded controllers. """

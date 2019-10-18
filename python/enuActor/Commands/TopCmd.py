@@ -2,6 +2,7 @@
 
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
+from enuActor.utils.sync import SyncCmd
 from enuActor.utils.wrap import singleShot
 
 
@@ -88,21 +89,21 @@ class TopCmd(object):
     @singleShot
     def start(self, cmd):
         """Init all enu controllers"""
-        for c in ['rexm', 'slit', 'biasha', 'temps', 'iis']:
-            try:
-                self.actor.ownCall(cmd, cmdStr='%s start' % c, failMsg='', timeLim=1)
-            except RuntimeError:
-                pass
+        cmdList = [f'{c} start' for c in ['rexm', 'slit', 'biasha', 'temps', 'iis']]
+        syncCmd = SyncCmd(self.actor, cmdList)
+        syncCmd.call(cmd)
+        syncCmd.sync()
+        syncCmd.exit()
 
         cmd.finish()
 
     @singleShot
     def stop(self, cmd):
         """Init all enu controllers"""
-        for c in ['rexm', 'slit', 'biasha', 'temps', 'iis']:
-            try:
-                self.actor.ownCall(cmd, cmdStr='%s stop' % c, failMsg='', timeLim=1)
-            except RuntimeError:
-                pass
+        cmdList = [f'{c} stop' for c in ['rexm', 'slit', 'biasha', 'temps', 'iis']]
+        syncCmd = SyncCmd(self.actor, cmdList)
+        syncCmd.call(cmd)
+        syncCmd.sync()
+        syncCmd.exit()
 
         cmd.finish()
