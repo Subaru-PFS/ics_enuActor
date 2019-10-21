@@ -6,7 +6,6 @@ import logging
 
 import actorcore.ICC
 import numpy as np
-from enuActor.utils.fsmThread import FSMThread
 
 
 class enuActor(actorcore.ICC.ICC):
@@ -28,20 +27,16 @@ class enuActor(actorcore.ICC.ICC):
         self.onsubstate = 'IDLE'
 
     @property
-    def devices(self):
-        return dict([(name, ctrl) for name, ctrl in self.controllers.items() if isinstance(ctrl, FSMThread)])
-
-    @property
     def states(self):
-        return [controller.states.current for controller in self.devices.values()]
+        return [controller.states.current for controller in self.controllers.values()]
 
     @property
     def substates(self):
-        return [controller.substates.current for controller in self.devices.values()]
+        return [controller.substates.current for controller in self.controllers.values()]
 
     @property
     def state(self):
-        if not self.devices.values():
+        if not self.controllers.values():
             return 'OFF'
 
         minLogic = np.min([enuActor.state2logic[state] for state in self.states])
@@ -49,7 +44,7 @@ class enuActor(actorcore.ICC.ICC):
 
     @property
     def substate(self):
-        if not self.devices.values():
+        if not self.controllers.values():
             return 'IDLE'
 
         if 'FAILED' in self.substates:
