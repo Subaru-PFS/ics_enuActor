@@ -154,14 +154,15 @@ class pdu(FSMThread, bufferedSocket.EthComm):
 
         return self.sock
 
-    def authenticate(self):
+    def authenticate(self, pwd=None):
         """| log to the telnet server
 
         :param cmd : current command,
         """
+        pwd = f'pdu.{self.actor.name}' if pwd is None else pwd
         try:
             self.loginCommand('teladmin', ioEOL='Password: ')
-            self.loginCommand('pdu.%s' % self.actor.name, ioEOL='Telnet server 1.1\r\n\r\n> ')
+            self.loginCommand(pwd, ioEOL='Telnet server 1.1\r\n\r\n> ')
 
             self.ioBuffer.EOL = '\r\n\r\n> '
         except:

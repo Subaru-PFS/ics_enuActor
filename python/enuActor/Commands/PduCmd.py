@@ -8,21 +8,21 @@ from enuActor.utils.wrap import threaded, singleShot
 
 
 class PduCmd(object):
-    def __init__(self, actor):
+    def __init__(self, actor, name='pdu'):
         # This lets us access the rest of the actor.
         self.actor = actor
-
+        self.name = name
         # Declare the commands we implement. When the actor is started
         # these are registered with the parser, which will call the
         # associated methods when matched. The callbacks will be
         # passed a single argument, the parsed and typed command.
         #
         self.vocab = [
-            ('pdu', 'status', self.status),
+            (self.name, 'status', self.status),
             ('power', 'status', self.status),
             ('power', '[<on>] [<off>]', self.switch),
-            ('pdu', 'stop', self.stop),
-            ('pdu', 'start [@(operation|simulation)]', self.start),
+            (self.name, 'stop', self.stop),
+            (self.name, 'start [@(operation|simulation)]', self.start),
 
         ]
 
@@ -37,7 +37,7 @@ class PduCmd(object):
     @property
     def controller(self):
         try:
-            return self.actor.controllers['pdu']
+            return self.actor.controllers[self.name]
         except KeyError:
             raise RuntimeError('pdu controller is not connected.')
 
@@ -67,7 +67,7 @@ class PduCmd(object):
     @singleShot
     def stop(self, cmd):
         """ abort pdu warmup, turn pdu lamp off and disconnect"""
-        self.actor.disconnect('pdu', cmd=cmd)
+        self.actor.disconnect(self.name, cmd=cmd)
         cmd.finish()
 
     @singleShot
@@ -82,5 +82,5 @@ class PduCmd(object):
             cmd.inform('text="waiting for tcp server ..."')
             waitForTcpServer(host=self.actor.config.get('pdu', 'host'), port=self.actor.config.get('pdu', 'port'))
 
-        self.actor.connect('pdu', cmd=cmd, mode=mode)
+        self.actor.connect(self.name, cmd=cmd, mode=mode)
         cmd.finish()

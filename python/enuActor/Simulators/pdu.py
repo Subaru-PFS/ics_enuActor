@@ -11,7 +11,7 @@ class PduSim(socket.socket):
 
         self.buf = []
         self.channels = {}
-        for nb in ['o%s' % (str(i + 1).zfill(2)) for i in range(8)]:
+        for nb in ['o%s' % (str(i + 1).zfill(2)) for i in range(16)]:
             self.channels[nb] = 'off'
 
         self.vals = {'volt': '240',
@@ -37,12 +37,19 @@ class PduSim(socket.socket):
         elif 'pdu.enu_sm' in cmdStr:
             self.buf.append('Telnet server 1.1\r\n\r\n> ')
 
+        elif 'pfsait' in cmdStr:
+            self.buf.append('Telnet server 1.1\r\n\r\n> ')
+
         elif 'read status' in cmdStr:
             __, __, nb, __ = cmdStr.split(' ')
             self.buf.append('%s%s\r\n\r\n> ' % (cmdStr, self.channels[nb]))
 
         elif 'read meter olt' in cmdStr:
             _, _, _, _, val, _ = cmdStr.split(' ')
+            self.buf.append('%s%s\r\n\r\n> ' % (cmdStr, self.vals[val]))
+
+        elif 'read meter dev' in cmdStr:
+            _, _, _, val, _ = cmdStr.split(' ')
             self.buf.append('%s%s\r\n\r\n> ' % (cmdStr, self.vals[val]))
 
         elif 'sw o' in cmdStr:
