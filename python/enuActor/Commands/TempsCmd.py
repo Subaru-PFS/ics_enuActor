@@ -3,7 +3,7 @@
 
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
-from enuActor.utils import waitForTcpServer
+from enuActor.utils import waitForTcpServer, serverIsUp
 from enuActor.utils.wrap import threaded, singleShot
 
 
@@ -86,15 +86,15 @@ class TempsCmd(object):
         """ power on temps controller, wait for temps host, connect controller"""
         cmdKeys = cmd.cmd.keywords
         mode = self.actor.config.get('temps', 'mode')
+        host = self.actor.config.get('temps', 'host')
+        port = self.actor.config.get('temps', 'port')
         mode = 'operation' if 'operation' in cmdKeys else mode
         mode = 'simulation' if 'simulation' in cmdKeys else mode
 
-        cmd.inform('text="powering up temps controller ..."')
-        self.actor.ownCall(cmd, cmdStr='power on=temps', failMsg='failed to power on temps')
-
-        if mode == 'operation':
-            cmd.inform('text="waiting for tcp server ..."')
-            waitForTcpServer(host=self.actor.config.get('temps', 'host'), port=self.actor.config.get('temps', 'port'))
+        if not serverIsUp(host=host, port=port):
+            cmd.inform('text="powering up temps controller ..."')
+            self.actor.ownCall(cmd, cmdStr='power on=temps', failMsg='failed to power on temps')
+            waitForTcpServer(host=host, port=port, cmd=cmd, mode=mode)
 
         self.actor.connect('temps', cmd=cmd, mode=mode)
 

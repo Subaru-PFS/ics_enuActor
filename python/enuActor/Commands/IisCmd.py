@@ -78,12 +78,12 @@ class IisCmd(object):
         """ connect iis controller"""
         cmdKeys = cmd.cmd.keywords
         mode = self.actor.config.get('iis', 'mode')
+        host = self.actor.config.get('pdu', 'host')
+        port = self.actor.config.get('pdu', 'port')
         mode = 'operation' if 'operation' in cmdKeys else mode
         mode = 'simulation' if 'simulation' in cmdKeys else mode
 
-        if mode == 'operation':
-            cmd.inform('text="waiting for tcp server ..."')
-            waitForTcpServer(host=self.actor.config.get('pdu', 'host'), port=self.actor.config.get('pdu', 'port'))
+        waitForTcpServer(host=host, port=port, cmd=cmd, mode=mode)
 
         cmd.inform('text="connecting iis..."')
         self.actor.connect('iis', cmd=cmd, mode=mode)

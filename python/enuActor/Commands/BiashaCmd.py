@@ -2,7 +2,7 @@
 
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
-from enuActor.utils import waitForTcpServer
+from enuActor.utils import waitForTcpServer, serverIsUp
 from enuActor.utils.wrap import threaded, blocking, singleShot
 from opscore.utility.qstr import qstr
 
@@ -196,15 +196,15 @@ class BiashaCmd(object):
         """ power on enu rack, wait for biasha host, connect controller"""
         cmdKeys = cmd.cmd.keywords
         mode = self.actor.config.get('biasha', 'mode')
+        host = self.actor.config.get('biasha', 'host')
+        port = self.actor.config.get('biasha', 'port')
         mode = 'operation' if 'operation' in cmdKeys else mode
         mode = 'simulation' if 'simulation' in cmdKeys else mode
 
-        cmd.inform('text="powering up enu rack ..."')
-        self.actor.ownCall(cmd, cmdStr='power on=pows,ctrl', failMsg='failed to power on enu rack')
-
-        if mode == 'operation':
-            cmd.inform('text="waiting for tcp server ..."')
-            waitForTcpServer(host=self.actor.config.get('biasha', 'host'), port=self.actor.config.get('biasha', 'port'))
+        if not serverIsUp(host=host, port=port):
+            cmd.inform('text="powering up enu rack ..."')
+            self.actor.ownCall(cmd, cmdStr='power on=pows,ctrl', failMsg='failed to power on enu rack')
+            waitForTcpServer(host=host, port=port, cmd=cmd, mode=mode)
 
         self.actor.connect('biasha', cmd=cmd, mode=mode)
         cmd.finish()

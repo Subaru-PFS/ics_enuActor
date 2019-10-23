@@ -6,7 +6,7 @@ def wait(secs=5):
     time.sleep(secs)
 
 
-def connectSock(host, port, timeout=1):
+def serverIsUp(host, port, timeout=1):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.settimeout(timeout)
     try:
@@ -20,10 +20,16 @@ def connectSock(host, port, timeout=1):
     return True
 
 
-def waitForTcpServer(host, port, timeout=60):
+def waitForTcpServer(host, port, cmd=None, mode='operation', timeout=60):
     start = time.time()
     port = int(port)
-    while not connectSock(host, port):
+
+    if cmd is not None:
+        cmd.inform(f'text="waiting for {host}:{port} server..."')
+
+    while not serverIsUp(host, port):
+        if mode != 'operation':
+            break
         if time.time() - start > timeout:
             raise TimeoutError('tcp server %s:%d is not running' % (host, port))
 

@@ -4,7 +4,7 @@
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
 from enuActor.drivers.rexm_drivers import TMCM
-from enuActor.utils import waitForTcpServer
+from enuActor.utils import waitForTcpServer, serverIsUp
 from enuActor.utils.wrap import threaded, blocking, singleShot
 
 
@@ -106,15 +106,15 @@ class RexmCmd(object):
         """ power on enu rack, wait for rexm host, connect controller"""
         cmdKeys = cmd.cmd.keywords
         mode = self.actor.config.get('rexm', 'mode')
+        host = self.actor.config.get('rexm', 'host')
+        port = self.actor.config.get('rexm', 'port')
         mode = 'operation' if 'operation' in cmdKeys else mode
         mode = 'simulation' if 'simulation' in cmdKeys else mode
 
-        cmd.inform('text="powering up enu rack ..."')
-        self.actor.ownCall(cmd, cmdStr='power on=pows,ctrl', failMsg='failed to power on enu rack')
-
-        if mode == 'operation':
-            cmd.inform('text="waiting for tcp server ..."')
-            waitForTcpServer(host=self.actor.config.get('rexm', 'host'), port=self.actor.config.get('rexm', 'port'))
+        if not serverIsUp(host=host, port=port):
+            cmd.inform('text="powering up enu rack ..."')
+            self.actor.ownCall(cmd, cmdStr='power on=pows,ctrl', failMsg='failed to power on enu rack')
+            waitForTcpServer(host=host, port=port, cmd=cmd, mode=mode)
 
         self.actor.connect('rexm', cmd=cmd, mode=mode)
 

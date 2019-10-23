@@ -3,7 +3,7 @@
 import numpy as np
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
-from enuActor.utils import waitForTcpServer
+from enuActor.utils import waitForTcpServer, serverIsUp
 from enuActor.utils.wrap import threaded, blocking, singleShot
 
 
@@ -242,17 +242,17 @@ class SlitCmd(object):
         """ power on hxp controller, connect slit controller, and init"""
         cmdKeys = cmd.cmd.keywords
         mode = self.actor.config.get('slit', 'mode')
+        host = self.actor.config.get('slit', 'host')
+        port = self.actor.config.get('slit', 'port')
         mode = 'operation' if 'operation' in cmdKeys else mode
         mode = 'simulation' if 'simulation' in cmdKeys else mode
 
         skipHoming = '' if 'fullInit' in cmdKeys else 'skipHoming'
 
-        cmd.inform('text="powering up hxp controller ..."')
-        self.actor.ownCall(cmd, cmdStr='power on=slit', failMsg='failed to power on hexapod controller')
-
-        if mode == 'operation':
-            cmd.inform('text="waiting for tcp server ..."')
-            waitForTcpServer(host=self.actor.config.get('slit', 'host'), port=self.actor.config.get('slit', 'port'))
+        if not serverIsUp(host=host, port=port):
+            cmd.inform('text="powering up hxp controller ..."')
+            self.actor.ownCall(cmd, cmdStr='power on=slit', failMsg='failed to power on hexapod controller')
+            waitForTcpServer(host=host, port=port, cmd=cmd, mode=mode)
 
         self.actor.connect('slit', cmd=cmd, mode=mode)
 
