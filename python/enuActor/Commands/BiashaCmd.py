@@ -55,24 +55,24 @@ class BiashaCmd(object):
 
     @threaded
     def status(self, cmd):
-        """Report state, mode, position"""
+        """Report state, mode, statuses."""
         self.controller.generate(cmd)
 
     @threaded
     def shutterStatus(self, cmd):
-        """get shutters status"""
+        """Get shutters status."""
         self.controller.shutterStatus(cmd)
         cmd.finish()
 
     @threaded
     def biaStatus(self, cmd):
-        """get bia status"""
+        """Get bia status."""
         self.controller.biaStatus(cmd)
         cmd.finish()
 
     @blocking
     def biaOn(self, cmd):
-        """Switch bia on"""
+        """Switch bia on."""
         cmdKeys = cmd.cmd.keywords
 
         strobe = 'on' if 'strobe' in cmdKeys else None
@@ -88,14 +88,14 @@ class BiashaCmd(object):
 
     @blocking
     def biaOff(self, cmd):
-        """Switch bia off"""
+        """Switch bia off."""
         self.controller.gotoState(cmd, cmdStr='bia_off')
         self.controller.biaStatus(cmd)
         cmd.finish()
 
     @threaded
     def strobeOn(self, cmd):
-        """Activate|desactivate bia strobe mode  """
+        """Activate bia strobe mode. """
         cmdKeys = cmd.cmd.keywords
         period = cmdKeys['period'].values[0] if 'period' in cmdKeys else None
         duty = cmdKeys['duty'].values[0] if 'duty' in cmdKeys else None
@@ -107,14 +107,14 @@ class BiashaCmd(object):
 
     @threaded
     def strobeOff(self, cmd):
-        """Activate|desactivate bia strobe mode  """
+        """Deactivate bia strobe mode. """
         self.controller.setBiaConfig(cmd, strobe='off')
         self.controller.biaStatus(cmd)
         cmd.finish()
 
     @threaded
     def biaConfig(self, cmd):
-        """Activate|desactivate bia strobe mode  """
+        """Set new bia config. """
         cmdKeys = cmd.cmd.keywords
         period = cmdKeys['period'].values[0] if 'period' in cmdKeys else None
         duty = cmdKeys['duty'].values[0] if 'duty' in cmdKeys else None
@@ -126,7 +126,7 @@ class BiashaCmd(object):
 
     @blocking
     def shutterSwitch(self, cmd):
-        """Open/close shutters (red/blue or both)"""
+        """Open/close shutters (red/blue or both)."""
         cmdKeys = cmd.cmd.keywords
         shutter = 'shut'
         shutter = 'red' if 'red' in cmdKeys else shutter
@@ -139,7 +139,7 @@ class BiashaCmd(object):
 
     @blocking
     def expose(self, cmd):
-        """send a raw command to the biasha board"""
+        """Shutters expose routine."""
         cmdKeys = cmd.cmd.keywords
 
         exptime = cmdKeys["exptime"].values[0]
@@ -158,31 +158,31 @@ class BiashaCmd(object):
 
     @threaded
     def init(self, cmd):
-        """Report state, mode, position"""
+        """Go to biasha init state."""
         self.controller.gotoState(cmd, 'init')
         self.controller.generate(cmd)
 
     @threaded
     def rawCommand(self, cmd):
-        """send a raw command to the biasha board"""
+        """Send a raw command to the biasha board."""
         cmdKeys = cmd.cmd.keywords
         cmdStr = cmdKeys['raw'].values[0]
         ret = self.controller.sendOneCommand(cmdStr, cmd=cmd)
         cmd.finish('text=%s' % (qstr('returned: %s' % (ret))))
 
     def abortExposure(self, cmd):
-        """send a raw command to the biasha board"""
+        """Abort current exposure."""
         self.controller.doAbort()
         cmd.finish("text='exposure aborted'")
 
     def finishExposure(self, cmd):
-        """send a raw command to the biasha board"""
+        """Finish current exposure."""
         self.controller.doFinish()
         cmd.finish("text='exposure finished'")
 
     @singleShot
     def stop(self, cmd):
-        """ finish current exposure, power off and disconnect"""
+        """Finish current exposure, power off and disconnect."""
         self.actor.disconnect('biasha', cmd=cmd)
 
         if 'rexm' not in self.actor.controllers.keys():
@@ -193,7 +193,7 @@ class BiashaCmd(object):
 
     @singleShot
     def start(self, cmd):
-        """ power on enu rack, wait for biasha host, connect controller"""
+        """Power on enu rack, wait for biasha host, connect controller."""
         cmdKeys = cmd.cmd.keywords
         mode = self.actor.config.get('biasha', 'mode')
         host = self.actor.config.get('biasha', 'host')

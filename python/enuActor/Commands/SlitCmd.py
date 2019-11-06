@@ -61,12 +61,12 @@ class SlitCmd(object):
 
     @threaded
     def status(self, cmd):
-        """Report state, mode, position"""
+        """Report state, mode, position."""
         self.controller.generate(cmd)
 
     @blocking
     def initialise(self, cmd):
-        """Initialise Slit, call fsm startInit event """
+        """Initialise slit, reload from saved position if skipHoming."""
         doHome = 'skipHoming' not in cmd.cmd.keywords
 
         self.controller.substates.init(cmd, doHome=doHome)
@@ -74,9 +74,7 @@ class SlitCmd(object):
 
     @blocking
     def moveAbs(self, cmd):
-        """ Move to (X, Y, Z, U, V, W) rel. to home if absolute specified\
-                else if relative then incremental move. NB: In relative move parameters are optional.
-        """
+        """Move to (X, Y, Z, U, V, W) in absolute."""
         cmdKeys = cmd.cmd.keywords
         current = self.controller.coords
         coords = [cmdKeys[c].values[0] if c in cmdKeys else current[i] for i, c in enumerate(self.coordsName)]
@@ -86,9 +84,7 @@ class SlitCmd(object):
 
     @blocking
     def moveRel(self, cmd):
-        """ Move to (X, Y, Z, U, V, W) rel. to home if absolute specified\
-                else if relative then incremental move. NB: In relative move parameters are optional.
-        """
+        """Move to (X, Y, Z, U, V, W) rel. to home."""
         cmdKeys = cmd.cmd.keywords
         coords = [cmdKeys[coord].values[0] if coord in cmdKeys else 0.0 for coord in self.coordsName]
 
@@ -97,7 +93,7 @@ class SlitCmd(object):
 
     @blocking
     def goHome(self, cmd):
-        """   Go to home related to work : [0,0,0,0,0,0] """
+        """Go to home related to work : [0,0,0,0,0,0]."""
         reference = 'absolute'
         coords = 6 * [0.]
 
@@ -106,7 +102,7 @@ class SlitCmd(object):
 
     @blocking
     def focus(self, cmd):
-        """ Move wrt focus axis."""
+        """Move wrt focus axis."""
         cmdKeys = cmd.cmd.keywords
         shift = cmd.cmd.keywords['focus'].values[0]
         fact = 0.001 if 'microns' in cmdKeys else 1
@@ -119,7 +115,7 @@ class SlitCmd(object):
 
     @blocking
     def dither(self, cmd):
-        """ Move wrt dither axis."""
+        """Move wrt dither axis."""
         cmdKeys = cmd.cmd.keywords
         shift = cmd.cmd.keywords['dither'].values[0]
 
@@ -139,7 +135,7 @@ class SlitCmd(object):
 
     @blocking
     def shift(self, cmd):
-        """ Move wrt shift axis."""
+        """Move wrt shift axis."""
         cmdKeys = cmd.cmd.keywords
         shift = cmd.cmd.keywords['shift'].values[0]
 
@@ -159,9 +155,9 @@ class SlitCmd(object):
 
     @threaded
     def getSystem(self, cmd):
-        """ Return system coordinate value position (Work or Tool)"""
-
+        """Return system coordinate value position (Work or Tool)."""
         cmdKeys = cmd.cmd.keywords
+
         if 'work' in cmdKeys:
             system = 'Work'
         elif 'tool' in cmdKeys:
@@ -174,8 +170,7 @@ class SlitCmd(object):
 
     @threaded
     def setSystem(self, cmd):
-        """ set new system coordinate value position (Work or Tool)"""
-
+        """Set new system coordinate value position (Work or Tool)."""
         cmdKeys = cmd.cmd.keywords
 
         if 'work' in cmdKeys:
@@ -195,7 +190,7 @@ class SlitCmd(object):
 
     @threaded
     def motionEnable(self, cmd):
-        """ Enable hexapod actuators"""
+        """Enable hexapod actuators."""
         try:
             self.controller.motionEnable(cmd=cmd)
         except Exception as e:
@@ -205,7 +200,7 @@ class SlitCmd(object):
 
     @threaded
     def motionDisable(self, cmd):
-        """ Disable hexapod actuators"""
+        """Disable hexapod actuators."""
         try:
             self.controller.motionDisable(cmd=cmd)
         except Exception as e:
@@ -214,12 +209,12 @@ class SlitCmd(object):
         self.controller.generate(cmd)
 
     def abort(self, cmd):
-        """ Stop current motion."""
+        """Stop current motion."""
         self.controller.doAbort(cmd)
         cmd.finish("text='motion aborted'")
 
     def convert(self, cmd):
-        """ Convert measure in the slit coordinate system to the world coordinate"""
+        """Convert measure in the slit coordinate system to the world coordinate."""
 
         cmdKeys = cmd.cmd.keywords
         coords = [cmdKeys[coord].values[0] for coord in self.coordsName]
@@ -228,7 +223,7 @@ class SlitCmd(object):
 
     @singleShot
     def stop(self, cmd):
-        """ stop current motion, save hexapod position, power off hxp controller and disconnect"""
+        """Stop current motion, save hexapod position, power off hxp controller and disconnect."""
         self.controller.substates.shutdown()
         self.actor.disconnect('slit', cmd=cmd)
 
@@ -239,7 +234,7 @@ class SlitCmd(object):
 
     @singleShot
     def start(self, cmd):
-        """ power on hxp controller, connect slit controller, and init"""
+        """Power on hxp controller, connect slit controller, and init."""
         cmdKeys = cmd.cmd.keywords
         mode = self.actor.config.get('slit', 'mode')
         host = self.actor.config.get('slit', 'host')

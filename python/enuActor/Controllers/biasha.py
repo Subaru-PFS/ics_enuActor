@@ -26,11 +26,10 @@ class biasha(FSMThread, bufferedSocket.EthComm):
                  'openred': '010100'}
 
     def __init__(self, actor, name, loglevel=logging.DEBUG):
-        """__init__.
-        This sets up the connections to/from the hub, the logger, and the twisted reactor.
+        """This sets up the connections to/from the hub, the logger, and the twisted reactor.
 
-        :param actor: enuActor
-        :param name: controller name
+        :param actor: enuActor.
+        :param name: controller name.
         :type name: str
         """
         substates = ['IDLE', 'FAILED', 'BUSY', 'EXPOSING', 'OPENRED', 'OPENBLUE', 'BIA']
@@ -64,6 +63,7 @@ class biasha(FSMThread, bufferedSocket.EthComm):
 
     @property
     def simulated(self):
+        """Return True if self.mode=='simulation', return False if self.mode='operation'."""
         if self.mode == 'simulation':
             return True
         elif self.mode == 'operation':
@@ -73,6 +73,7 @@ class biasha(FSMThread, bufferedSocket.EthComm):
 
     @property
     def biaOverHeat(self):
+        """Check temps biaOverHeat flag."""
         try:
             ret = self.actor.controllers['temps'].biaOverHeat
         except KeyError:
@@ -81,12 +82,12 @@ class biasha(FSMThread, bufferedSocket.EthComm):
         return ret
 
     def _loadCfg(self, cmd, mode=None):
-        """| Load Configuration file
+        """Load biasha configuration.
 
-        :param cmd: on going command
-        :param mode: operation|simulation, loaded from config file if None
+        :param cmd: current command.
+        :param mode: operation|simulation, loaded from config file if None.
         :type mode: str
-        :raise: Exception Config file badly formatted
+        :raise: Exception if config file is badly formatted.
         """
         self.mode = self.actor.config.get('biasha', 'mode') if mode is None else mode
         bufferedSocket.EthComm.__init__(self,
@@ -99,65 +100,66 @@ class biasha(FSMThread, bufferedSocket.EthComm):
                                      strobe=self.actor.config.get('biasha', 'bia_strobe'))
 
     def _openComm(self, cmd):
-        """| Open socket with biasha board or simulate it.
-        | Called by FSMDev.loadDevice()
-
-        :param cmd: on going command
-        :raise: socket.error if the communication has failed with the controller
+        """Open socket with biasha board or simulate it.
+        
+        :param cmd: current command.
+        :raise: socket.error if the communication has failed.
         """
         self.ioBuffer = bufferedSocket.BufferedSocket(self.name + "IO", EOL='\r\n')
         s = self.connectSock()
 
     def _closeComm(self, cmd):
-        """| Close communication.
-        | Called by FSMThread.stop()
+        """Close socket.
 
-        :param cmd: on going command
+        :param cmd: current command.
         """
         self.closeSock()
 
     def _testComm(self, cmd):
-        """| test communication
-        | Called by FSMDev.loadDevice()
+        """Test communication.
 
-        :param cmd: on going command,
-        :raise: Exception if the communication has failed with the controller
+        :param cmd: current command.
+        :raise: Exception if the communication has failed with the controller.
         """
         self.getState(cmd=cmd)
 
     def _init(self, cmd):
-        """| Initialise the interlock board
+        """Initialise biasha board : send default bia config and init biasha embedded state machine.
 
-        - Send the bia config to the interlock board
-        - Init the interlock state machine
-
-        :param cmd: on going command
-        :raise: Exception if a command fail, user if warned with error
+        :param cmd: current command.
+        :raise: Exception with warning message.
         """
         self.setBiaConfig(cmd, **self.defaultBiaParams)
         self._gotoState('init', cmd=cmd)
 
     def getStatus(self, cmd):
-        """| Call biasha.biaStatus() and biasha.shutterStatus()
+        """Get bia and shutters status.
 
-        :param cmd: on going command
-        :raise: Exception if a command has failed
+        :param cmd: current command.
+        :raise: Exception with warning message.
         """
         state = self.getState(cmd=cmd)
         self.biaStatus(cmd=cmd, state=state)
         self.shutterStatus(cmd=cmd, state=state)
 
     def getState(self, cmd):
-        """| Call biasha.biaStatus() and biasha.shutterStatus()
+        """Get biasha current state from embedded state machine.
 
-        :param cmd: on going command
-        :raise: Exception if a command has failed
+        :param cmd: current command.
+        :raise: Exception with warning message.
         """
         state = self._state(cmd)
         cmd.inform('biasha=%d' % state)
         return state
 
     def gotoState(self, cmd, cmdStr):
+        """trigger cmdStr transition.
+
+        :param cmd: current command.
+        :param cmdStr: transition command.
+        :type cmdStr: str
+        :raise: Exception with warning message.
+        """
         current = self.substates.current
 
         if self.substates.can(cmdStr):
@@ -174,14 +176,11 @@ class biasha(FSMThread, bufferedSocket.EthComm):
         self.substates.trigger(cmdStr)
 
     def expose(self, cmd, exptime, shutter):
-        """| Command opening and closing of shutters with a chosen exposure time and generate keywords:
-        | dateobs : exposure starting time isoformatted
-        | transientTime : opening+closing shutters transition time
-        | exptime : absolute exposure time
+        """exposure routine with given exptime and shutter. Generate dateobs, transientTime and exptime keywords.
 
-        :param cmd: on going command
-        :param exptime: Exposure time
-        :param shutter: which shutter to open
+        :param cmd: current command.
+        :param exptime: Exposure time.
+        :param shutter: which shutter to open : shut (both), blue, red.
         :type exptime: float
         :type shutter: str
         """
@@ -220,10 +219,10 @@ class biasha(FSMThread, bufferedSocket.EthComm):
             raise
 
     def shutterStatus(self, cmd, state=None):
-        """| Get shutters status and generate shutters keywords
+        """Get shutters status and generate shutters keywords.
 
-        :param cmd: on going command
-        :raise: RuntimeError if statword and current state are incoherent
+        :param cmd: current command.
+        :raise: RuntimeError if statword and current state are incoherent.
         """
         try:
             state = self.getState(cmd) if state is None else state
@@ -244,9 +243,9 @@ class biasha(FSMThread, bufferedSocket.EthComm):
         return shutters
 
     def biaStatus(self, cmd, state=None):
-        """| Get bia status and generate bia keywords
+        """Get bia status and generate bia keywords.
 
-        :param cmd: on going command
+        :param cmd: current command.
         :raise: Exception if communication has failed
         """
         try:
@@ -263,18 +262,17 @@ class biasha(FSMThread, bufferedSocket.EthComm):
             raise
 
     def setBiaConfig(self, cmd, period=None, duty=None, strobe=None):
-        """| Send new parameters for bia
+        """Send new parameters for bia.
 
-        :param cmd: current command,
-        :param period: bia period for strobe mode
-        :param duty: bia duty cycle
-        :param strobe: **on** | **off**
+        :param cmd: current command.
+        :param period: bia period for strobe mode.
+        :param duty: bia duty cycle.
+        :param strobe: **on** | **off**.
         :type period: int
         :type duty: int
         :type strobe: str
-        :raise: Exception if a command has failed
+        :raise: Exception with warning message.
         """
-
         if period is not None:
             if not (0 <= period < 65536):
                 raise ValueError('period not in range 0:65535')
@@ -291,29 +289,29 @@ class biasha(FSMThread, bufferedSocket.EthComm):
             self.sendOneCommand('pulse_%s' % strobe, cmd=cmd)
 
     def _state(self, cmd):
-        """| check and return biasha board current state .
+        """Check and return biasha board current state.
 
-        :param cmd: current command,
-        :raise: Exception if a command has failed
+        :param cmd: current command.
+        :raise: Exception with warning message.
         """
         state = self.sendOneCommand("status", cmd=cmd)
         return int(state)
 
     def _statword(self, cmd):
-        """| check and return shutter status word .
+        """Check and return shutter status word.
 
-        :param cmd: current command,
-        :raise: Exception if a command has failed
+        :param cmd: current command.
+        :raise: Exception with warning message.
         """
         statword = self.sendOneCommand("statword", cmd=cmd)
 
         return bin(int(statword))[-6:]
 
     def _biaConfig(self, cmd):
-        """| check and return current bia configuration : strobe_mode_on, strobe_period, duty_cycle.
+        """Check and return current bia configuration : strobeOn, strobePeriod, strobeDutyCycle.
 
-        :param cmd: current command,
-        :raise: Exception if a command has failed
+        :param cmd: current command.
+        :raise: Exception with warning message.
         """
         biastat = self.sendOneCommand("get_param", cmd=cmd)
         strobe, period, duty = biastat.split(',')
@@ -321,10 +319,10 @@ class biasha(FSMThread, bufferedSocket.EthComm):
         return int(strobe), int(period), int(duty)
 
     def _photores(self, cmd):
-        """| check and return current photoresistances values.
+        """Check and return current photoresistances values.
 
-        :param cmd: current command,
-        :raise: Exception if a command has failed
+        :param cmd: current command.
+        :raise: Exception with warning message.
         """
         photores = self.sendOneCommand("read_phr", cmd=cmd)
         phr1, phr2 = photores.split(',')
@@ -332,27 +330,28 @@ class biasha(FSMThread, bufferedSocket.EthComm):
         return int(phr1), int(phr2)
 
     def _gotoState(self, cmdStr, cmd):
-        """| try to reach required state in bsh low level state machine
-        :param cmdStr: command string
-        :param cmd: current command,
-        :raise: RuntimeError if a command has failed
+        """Try to reach required state in biasha embedded state machine.
+
+        :param cmdStr: command string.
+        :param cmd: current command.
+        :raise: Exception with warning message.
         """
         reply = self.sendOneCommand(cmdStr, cmd=cmd)
 
         if reply == '':
             return reply
         elif reply == 'n':
-            raise RuntimeError('bsh has replied nok, %s inappropriate in current state ' % cmdStr)
+            raise RuntimeError('biasha has replied nok, %s inappropriate in current state ' % cmdStr)
         else:
             raise RuntimeError('error : %s' % reply)
 
     def _waitUntil(self, cmd, start, exptime, ti=0.001):
-        """| Temporization, check every 0.01 sec for a user abort command.
+        """Temporization, check every 0.001 sec for an abort command.
 
-        :param cmd: current command,
-        :param exptime: exposure time,
+        :param cmd: current command.
+        :param exptime: exposure time.
         :type exptime: float
-        :raise: Exception("Exposure aborted by user") if the an abort command has been received
+        :return: end as datetime.datetime, 0 if abortExposure.
         """
         tlim = start + timedelta(seconds=exptime)
         inform = dt.utcnow()
@@ -372,18 +371,26 @@ class biasha(FSMThread, bufferedSocket.EthComm):
         return dt.utcnow()
 
     def doAbort(self):
+        """Abort current exposure.
+        """
         self.abortExposure = True
         while self.currCmd:
             pass
         return
 
     def doFinish(self):
+        """Finish current exposure.
+        """
         self.finishExposure = True
         while self.currCmd:
             pass
         return
 
     def leaveCleanly(self, cmd):
+        """clear and leave.
+
+        :param cmd: current command.
+        """
         self.monitor = 0
         self.doFinish()
 
@@ -396,6 +403,15 @@ class biasha(FSMThread, bufferedSocket.EthComm):
         self._closeComm(cmd=cmd)
 
     def sendOneCommand(self, cmdStr, doClose=False, cmd=None):
+        """Send cmdStr to biasha board and handle response, raise IOError if ok not in ret.
+
+        :param cmdStr: string to send.
+        :param doClose: close socket.
+        :param cmd: current command.
+        :type cmdStr: str
+        :type doClose: bool
+        :return: response with ok stripped.
+        """
         ret = bufferedSocket.EthComm.sendOneCommand(self, cmdStr=cmdStr, doClose=doClose, cmd=cmd)
 
         if 'ok' in ret:
@@ -404,6 +420,8 @@ class biasha(FSMThread, bufferedSocket.EthComm):
             raise IOError('unexpected return from biasha ret:%s' % ret)
 
     def createSock(self):
+        """create socket in operation, simulator otherwise.
+        """
         if self.simulated:
             s = self.sim
         else:
@@ -411,15 +429,15 @@ class biasha(FSMThread, bufferedSocket.EthComm):
 
         return s
 
-    def checkOverHeat(self, cmd=None):
+    def handleTimeout(self, cmd=None):
+        """call FSMThread.handleTimeout, if bia is on check for biaOverHeat.
 
+        :param cmd: current command.
+        """
+        FSMThread.handleTimeout(self, cmd=cmd)
         cmd = self.actor.bcast if cmd is None else cmd
 
         if self.substates.current == 'BIA' and self.biaOverHeat:
             cmd.warn('text="bia temp above safety threshold, turning off ..."')
             self.gotoState(cmd, cmdStr='bia_off')
             self.biaStatus(cmd)
-
-    def handleTimeout(self, cmd=None):
-        FSMThread.handleTimeout(self, cmd=cmd)
-        self.checkOverHeat(cmd=cmd)

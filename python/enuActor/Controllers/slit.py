@@ -25,8 +25,8 @@ class slit(FSMThread):
     def __init__(self, actor, name, loglevel=logging.DEBUG):
         """This sets up the connections to/from the hub, the logger, and the twisted reactor.
 
-        :param actor: enuActor
-        :param name: controller name
+        :param actor: enuActor.
+        :param name: controller name.
         :type name: str
         """
         substates = ['IDLE', 'MOVING', 'SHUTDOWN', 'FAILED']
@@ -53,6 +53,7 @@ class slit(FSMThread):
 
     @property
     def simulated(self):
+        """Return True if self.mode=='simulation', return False if self.mode='operation'."""
         if self.mode == 'simulation':
             return True
         elif self.mode == 'operation':
@@ -62,6 +63,7 @@ class slit(FSMThread):
 
     @property
     def position(self):
+        """Interpret slit position from current coordinates."""
         delta = np.sum(np.abs(np.zeros(6) - self.coords))
         if ~np.isnan(delta) and delta < 0.005:
             return 'home'
@@ -69,13 +71,12 @@ class slit(FSMThread):
             return 'undef'
 
     def _loadCfg(self, cmd, mode=None):
-        """| Load Configuration file. called by FSMDev.loadDevice().
-        | Convert to world tool and home.
+        """Load slit configuration.
 
-        :param cmd: on going command
-        :param mode: operation|simulation, loaded from config file if None
+        :param cmd: current command.
+        :param mode: operation|simulation, loaded from config file if None.
         :type mode: str
-        :raise: RuntimeError Config file badly formatted
+        :raise: Exception if config file is badly formatted.
         """
         self.coords = np.nan * np.ones(6)
         self.mode = self.actor.config.get('slit', 'mode') if mode is None else mode
@@ -96,47 +97,44 @@ class slit(FSMThread):
         self.toolSystem = [sum(i) for i in zip(tool, [0, 0, self.thicknessCarriage, 0, 0, 0])]
 
     def _openComm(self, cmd):
-        """| Open socket with hexapod controller or simulate it.
-        | Called by FSMDev.loadDevice()
+        """Open socket slit hexapod controller or simulate it.
 
-        :param cmd: on going command
-        :raise: socket.error if the communication has failed with the controller
+        :param cmd: current command.
+        :raise: socket.error if the communication has failed.
         """
         self.myxps = self.createSock()
         self.connectSock(sockName='main')
         self.connectSock(sockName='emergency')
 
     def _closeComm(self, cmd):
-        """| Close communication.
-        | Called by FSMThread.stop()
+        """Close socket.
 
-        :param cmd: on going command
+        :param cmd: current command.
         """
         self.closeSock(sockName='main')
         self.closeSock(sockName='emergency')
 
     def _testComm(self, cmd):
-        """| test communication
-        | Called by FSMDev.loadDevice()
+        """Test communication.
 
-        :param cmd: on going command,
-        :raise: RuntimeError if the communication has failed with the controller
+        :param cmd: current command.
+        :raise: Exception if the communication has failed with the controller.
         """
         self.checkPosition(cmd)
 
     def _init(self, cmd, doHome=True):
-        """| Initialise hexapod, called by self.initDevice().
+        """Initialise hexapod:
 
         - kill socket
         - init hxp
         - search home
-        - set home and tool system
+        - set work and tool coordinate system
         - go home
 
-        :param cmd: on going command
-        :param doHome: requesting homeSearch
-        :type doHome:bool
-        :raise: RuntimeError if a command fail, user if warned with error
+        :param cmd: current command.
+        :param doHome: if true requesting homeSearch.
+        :type doHome: bool
+        :raise: Exception with warning message.
         """
         hxpStatus = int(self._getHxpStatus())
         if doHome:
@@ -176,20 +174,17 @@ class slit(FSMThread):
         self._hexapodMoveAbsolute([0, 0, 0, 0, 0, 0])
 
     def getStatus(self, cmd):
-        """| Get status from the controller and generates slit keywords.
+        """Get status and generates slit keywords.
 
-        - slit = state, mode, pos_x, pos_y, pos_z, pos_u, pos_v, pos_w
-        - slitInfo = str : *an interpreted status returned by the controller*
-
-        :param cmd: on going command
+        :param cmd: current command.
         """
         self.checkPosition(cmd=cmd)
         self.checkStatus(cmd=cmd)
 
     def checkPosition(self, cmd):
-        """| Get current coordinates from the controller and generate slit position.
+        """Get 6-tuple current coordinates, generate slit and slitPosition keywords.
 
-        :param cmd: on going command
+        :param cmd: current command.
         """
         self.coords = [np.nan] * 6
 
@@ -201,22 +196,22 @@ class slit(FSMThread):
             genKeys('slitPosition=%s' % self.position)
 
     def checkStatus(self, cmd):
-        """|  Get status from hxp100 controller
+        """Get status code and string from hxp100 controller. Generate hxpStatus keyword.
 
-        :param cmd: on going command
+        :param cmd: current command.
         """
         hxpStatus = self._getHxpStatus()
         cmd.inform('hxpStatus=%d,"%s' % (int(hxpStatus), self._getHxpStatusString(hxpStatus)))
 
     def moving(self, cmd, reference, coords):
-        """| Move to coords in the reference,
+        """Move to coords in the reference.
 
-        :param cmd: on going command
-        :param reference: 'absolute' or 'relative'
-        :param coords: [x, y, z, u, v, w]
+        :param cmd: current command.
+        :param reference: 'absolute' or 'relative'.
+        :param coords: [x, y, z, u, v, w].
         :type reference: str
         :type coords: list
-        :raise: RuntimeError if move command fails
+        :raise: Exception with warning message.
         """
         if reference == 'absolute':
             ret = self._hexapodMoveAbsolute(coords)
@@ -226,22 +221,22 @@ class slit(FSMThread):
             raise ValueError('unknown ref')
 
     def shutdown(self, cmd):
-        """| Save current controller position
+        """Save current controller position and kill connection.
 
-        :param cmd: on going command
-        :raise: RuntimeError if TCLScriptExecute fails
-                """
+        :param cmd: current command.
+        :raise: Exception with warning message.
+        """
         cmd.inform('text="Kill and save hexapod position..."')
         self._TCLScriptExecute('KillWithRegistration.tcl')
         wait(secs=10)
 
     def getSystem(self, cmd, system):
-        """| Get system from the controller and update the actor's current value.
+        """Get system from the controller and update the actor's current value.
 
-        :param system: Work|Tool|Base
+        :param system: Work|Tool|Base.
         :type system: str
-        :return:  [x, y, z, u, v, w] coordinate system definition
-        :raise: RuntimeError if the coordinate system does not exist
+        :return:  [x, y, z, u, v, w] coordinate system definition.
+        :raise: ValueError if the coordinate system does not exist
         """
         ret = self._hexapodCoordinateSysGet(system)
         if system == 'Work':
@@ -257,39 +252,39 @@ class slit(FSMThread):
         return ret
 
     def setSystem(self, system, coords):
-        """| Send new coordinate system to the controller
+        """Send new coordinate system to the controller.
 
-        :param system: Work|Tool
-        :param coords: [x, y, z, u, v, w]
+        :param system: Work|Tool.
+        :param coords: [x, y, z, u, v, w].
         :type system: str
         :type coords: list
-        :raise: RuntimeError if an error is raised by errorChecker
+        :raise: RuntimeError if an error is raised by errorChecker.
         """
         return self._hexapodCoordinateSysSet(system, coords)
 
     def motionEnable(self, cmd):
-        """| Enabling controller actuators
+        """Enabling hexapod actuators.
 
-        :param cmd: on going command:
-        :raise: RuntimeError if an error is raised by errorChecker
+        :param cmd: current command.
+        :raise: RuntimeError if an error is raised by errorChecker.
         """
         cmd.inform('text="Enabling Slit controller..."')
         self._hexapodEnable()
 
     def motionDisable(self, cmd):
-        """| Disabling controller actuators
+        """Disabling hexapod actuators.
 
-        :param cmd: on going command:
-        :raise: RuntimeError if an error is raised by errorChecker
+        :param cmd: current command.
+        :raise: RuntimeError if an error is raised by errorChecker.
         """
         cmd.inform('text="Disabling Slit controller..."')
         self._hexapodDisable()
 
     def doAbort(self, cmd):
-        """| Aborting current move
+        """Aborting current move.
 
-        :param cmd: on going command:
-        :raise: RuntimeError if an error is raised by errorChecker
+        :param cmd: current command.
+        :raise: RuntimeError if an error is raised by errorChecker.
         """
         cmd.inform('text="aborting motion..."')
         try:
@@ -301,10 +296,10 @@ class slit(FSMThread):
             pass
 
     def leaveCleanly(self, cmd):
-        """| Aborting current move
+        """Aborting current move.
 
-        :param cmd: on going command:
-        :raise: RuntimeError if an error is raised by errorChecker
+        :param cmd: current command.
+        :raise: RuntimeError if an error is raised by errorChecker.
         """
         self.monitor = 0
         self.doAbort(cmd)
@@ -320,89 +315,90 @@ class slit(FSMThread):
         self._closeComm(cmd=cmd)
 
     def _getCurrentPosition(self):
-        """| Get current position.
+        """Get current position.
 
-        :return: position [x, y, z, u, v, w]
+        :return: position [x, y, z, u, v, w].
         :rtype: list
-        :raise: RuntimeError if an error is raised by errorChecker
+        :raise: RuntimeError if an error is raised by errorChecker.
         """
         return self.errorChecker(self.myxps.GroupPositionCurrentGet, self.groupName, 6)
 
     def _getHxpStatus(self):
-        """| Get hexapod status as an integer.
+        """Get hexapod status as an integer.
 
-        :return: error code
+        :return: error code.
         :rtype: int
-        :raise: RuntimeError if an error is raised by errorChecker
+        :raise: RuntimeError if an error is raised by errorChecker.
         """
         return self.errorChecker(self.myxps.GroupStatusGet, self.groupName)
 
     def _getHxpStatusString(self, code):
-        """| Get hexapod status interpreted as a string.
+        """Get hexapod status interpreted as a string.
 
-        :param code: error code
-        :return: status_string
+        :param code: error code.
+        :return: status_string.
         :rtype: str
-        :raise: RuntimeError if an error is raised by errorChecker
+        :raise: RuntimeError if an error is raised by errorChecker.
         """
         return self.errorChecker(self.myxps.GroupStatusStringGet, code)
 
     def _kill(self):
-        """| Kill socket.
+        """Kill socket.
 
         :return: ''
-        :raise: RuntimeError if an error is raised by errorChecker
+        :raise: RuntimeError if an error is raised by errorChecker.
         """
         return self.errorChecker(self.myxps.GroupKill, self.groupName)
 
     def _initialize(self):
-        """| Initialize communication.
+        """Initialize communication.
 
         :return: ''
-        :raise: RuntimeError if an error is raised by errorChecker
+        :raise: RuntimeError if an error is raised by errorChecker.
         """
         return self.errorChecker(self.myxps.GroupInitialize, self.groupName)
 
     def _homeSearch(self):
-        """| Home searching.
+        """Home searching.
 
         :return: ''
-        :raise: RuntimeError if an error is raised by errorChecker
+        :raise: RuntimeError if an error is raised by errorChecker.
         """
         return self.errorChecker(self.myxps.GroupHomeSearch, self.groupName)
 
     def _hexapodCoordinateSysGet(self, coordSystem):
-        """| Get coordinates system definition from hexapod memory.
+        """Get coordinates system definition from hexapod memory.
 
         :param coordSystem: Work|Tool
         :type coordSystem: str
         :rtype: list
         :return: coordSystem [x, y, z, u, v, w]
-        :raise: RuntimeError if an error is raised by errorChecker
+        :raise: RuntimeError if an error is raised by errorChecker.
         """
         return self.errorChecker(self.myxps.HexapodCoordinateSystemGet, self.groupName, coordSystem)
 
     def _hexapodCoordinateSysSet(self, coordSystem, coords):
-        """| Set coordinates system from parameters.
+        """Set coordinates system from parameters.
 
         :param coordSystem: Work|Tool
         :param coords: [x, y, z, u, v, w]
         :type coords: list
         :return: ''
-        :raise: RuntimeError if an error is raised by errorChecker
+        :raise: RuntimeError if an error is raised by errorChecker.
         """
         return self.errorChecker(self.myxps.HexapodCoordinateSystemSet, self.groupName, coordSystem,
                                  *coords)
 
     def _hexapodMoveAbsolute(self, absCoords):
-        """| Move hexapod in absolute.
-        | In our application, hexapod has a smaller range of motion due to the mechanical interfaces.
-        | Software limits are set to prevent any risk of collision.
+        """
+        Move hexapod in absolute.
+        In our application, hexapod has a smaller range of motion due to the mechanical interfaces.
+        Therefore software limits are set to prevent any risk of collision.
 
         :param coords: [x, y, z, u, v, w].
         :type coords: list
         :return: ''
-        :raise: RuntimeError if an error is raised by errorChecker
+        :raise: RuntimeError if an error is raised by errorChecker.
         """
         for lim_inf, lim_sup, coord in zip(self.lowerBounds, self.upperBounds, absCoords):
             if not lim_inf <= coord <= lim_sup:
@@ -411,14 +407,15 @@ class slit(FSMThread):
         return self.errorChecker(self.myxps.HexapodMoveAbsolute, self.groupName, 'Work', *absCoords)
 
     def _hexapodMoveIncremental(self, coordSystem, relCoords):
-        """| Move hexapod in relative.
-        | In our application, hexapod has a smaller range of motion due to the mechanical interfaces.
-        | Therefore software limits are set to prevent any risk of collision.
+        """
+        Move hexapod in relative.
+        In our application, hexapod has a smaller range of motion due to the mechanical interfaces.
+        Therefore software limits are set to prevent any risk of collision.
 
-        :param coords: [x, y, z, u, v, w]
+        :param coords: [x, y, z, u, v, w].
         :type coords: list
         :return: ''
-        :raise: RuntimeError if an error is raised by errorChecker
+        :raise: RuntimeError if an error is raised by errorChecker.
         """
         for lim_inf, lim_sup, relCoord, coord in zip(self.lowerBounds, self.upperBounds, relCoords, self.coords):
             if not lim_inf <= relCoord + coord <= lim_sup:
@@ -428,50 +425,54 @@ class slit(FSMThread):
                                  *relCoords)
 
     def _hexapodDisable(self):
-        """| Disable hexapod.
-        :return: ''
-        :raise: RuntimeError if an error is raised by errorChecker
+        """Disable hexapod.
+
+        :raise: RuntimeError if an error is raised by errorChecker.
         """
         return self.errorChecker(self.myxps.GroupMotionDisable, self.groupName)
 
     def _hexapodEnable(self):
-        """| Enable hexapod.
+        """Enable hexapod.
+
         :return: ''
-        :raise: RuntimeError if an error is raised by errorChecker
+        :raise: RuntimeError if an error is raised by errorChecker.
         """
         return self.errorChecker(self.myxps.GroupMotionEnable, self.groupName)
 
     def _initializeFromRegistration(self):
-        """| Initialize hexapod from saved position
+        """Initialize hexapod from saved position.
+
         :return: ''
-        :raise: RuntimeError if an error is raised by errorChecker
+        :raise: RuntimeError if an error is raised by errorChecker.
         """
         return self._TCLScriptExecute('InitializeFromRegistration.tcl')
 
     def _TCLScriptExecute(self, fileName, taskName='0', parametersList='0'):
-        """| Execute TCL Script and wait for return
-        :return: ''
-        :raise: RuntimeError if an error is raised by errorChecker
+        """Execute TCL Script and wait for return.
+
+        :param fileName: filename.
+        :raise: RuntimeError if an error is raised by errorChecker.
+        :return: ''.
         """
         return self.errorChecker(self.myxps.TCLScriptExecuteAndWait, fileName, taskName, parametersList)
 
     def _abort(self):
-        """| Abort current motion
+        """Abort current motion.
+
         :return: ''
-        :raise: RuntimeError if an error is raised by errorChecker
+        :raise: RuntimeError if an error is raised by errorChecker.
         """
         return self.errorChecker(self.myxps.GroupMoveAbort, self.groupName, sockName='emergency')
 
     def errorChecker(self, func, *args, sockName='main'):
-        """| Decorator for slit lower level functions.
+        """Decorator for slit lower level functions.
 
-        :param func: function to check
-        :param args: function arguments
+        :param func: function to check.
+        :param args: function arguments.
         :returns: ret
         :rtype: str
-        :raise: RuntimeError if an error is returned by hxp drivers
+        :raise: RuntimeError if an error is returned by hxp drivers.
         """
-
         socketId = self.connectSock(sockName)
 
         buf = func(socketId, *args)
@@ -500,6 +501,12 @@ class slit(FSMThread):
         return buf[1:] if len(buf) > 2 else buf[1]
 
     def connectSock(self, sockName):
+        """Connect socket using hexapod drivers.
+
+        :param sockName: socketName to connect.
+        :type sockName: str
+        :raise: socket.error if connection fails
+        """
         if self.socks[sockName] == -1:
             socketId = self.myxps.TCP_ConnectToServer(self.host, self.port, slit.timeout)
 
@@ -511,12 +518,18 @@ class slit(FSMThread):
         return self.socks[sockName]
 
     def closeSock(self, sockName='main'):
+        """close socket.
+
+        :param sockName: socketName to close.
+        :type sockName: str
+        """
         socketId = self.socks[sockName]
 
         self.socks[sockName] = -1
         self.myxps.TCP_CloseSocket(socketId)
 
     def createSock(self):
+        """create socket in operation, simulator otherwise."""
         if self.simulated:
             s = self.sim
         else:

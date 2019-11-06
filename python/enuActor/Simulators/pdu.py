@@ -5,10 +5,8 @@ import time
 class PduSim(socket.socket):
 
     def __init__(self):
+        """Fake pdu tcp server."""
         socket.socket.__init__(self, socket.AF_INET, socket.SOCK_STREAM)
-        self.sendall = self.fakeSend
-        self.recv = self.fakeRecv
-
         self.buf = []
         self.channels = {}
         for nb in ['o%s' % (str(i + 1).zfill(2)) for i in range(16)]:
@@ -19,6 +17,7 @@ class PduSim(socket.socket):
                      'pow': '120'}
 
     def connect(self, server):
+        """Fake the connection to tcp server."""
         (ip, port) = server
         time.sleep(0.2)
         if type(ip) is not str:
@@ -28,7 +27,8 @@ class PduSim(socket.socket):
 
         self.buf.append('Login: \r\n>')
 
-    def fakeSend(self, cmdStr):
+    def sendall(self, cmdStr, flags=None):
+        """Send fake packets, append fake response to buffer."""
         cmdStr = cmdStr.decode()
         time.sleep(0.05)
         if cmdStr == 'teladmin\r\n':
@@ -57,7 +57,8 @@ class PduSim(socket.socket):
             self.channels[nb] = state
             self.buf.append('%sOutlet<%s> command is setting\r\n\r\n> ' % (cmdStr, nb))
 
-    def fakeRecv(self, buffer_size):
+    def recv(self, buffersize, flags=None):
+        """Return and remove fake response from buffer."""
         ret = self.buf[0]
         self.buf = self.buf[1:]
         return str(ret).encode()

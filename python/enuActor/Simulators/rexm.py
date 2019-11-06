@@ -46,6 +46,7 @@ class RexmSim(socket.socket):
     DISTANCE_MAX = 414.39
 
     def __init__(self):
+        """Fake rexm through moxa ethernet server."""
         socket.socket.__init__(self, socket.AF_INET, socket.SOCK_STREAM)
 
         self.currSpeed = 0.
@@ -61,6 +62,7 @@ class RexmSim(socket.socket):
         self.buf = []
 
     def connect(self, server):
+        """Fake the connection to tcp server."""
         (ip, port) = server
         time.sleep(0.2)
         if type(ip) is not str:
@@ -89,6 +91,7 @@ class RexmSim(socket.socket):
         return self.motorConfig[4]
 
     def sendall(self, cmdBytes, flags=None):
+        """Send fake packets, append fake response to buffer."""
         time.sleep(0.01)
         packet = recvFake(*unpack('>BBBBIB', cmdBytes))
 
@@ -140,6 +143,7 @@ class RexmSim(socket.socket):
             self.buf.append(sendFake(cmd=TMCM.TMCL_GAP, data=0, status=2))
 
     def fakeMove(self, distance, tempo=0.01):
+        """Fake a motion."""
         if self.safeStop:
             self.safeStop = False
 
@@ -200,6 +204,7 @@ class RexmSim(socket.socket):
         self.motorConfig[1] += step
 
     def recv(self, buffersize, flags=None):
+        """Return and remove fake response from buffer."""
         time.sleep(0.01)
         ret = self.buf[0]
         self.buf = self.buf[1:]

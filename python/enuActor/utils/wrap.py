@@ -1,10 +1,11 @@
 import time
-from functools import partial
+from functools import partial, wraps
 
 from actorcore.QThread import QThread
 
 
 def putMsg(func):
+    @wraps(func)
     def wrapper(self, cmd, *args, **kwargs):
         if self.controller.currCmd:
             raise RuntimeWarning('%s thread is busy' % self.controller.name)
@@ -15,6 +16,7 @@ def putMsg(func):
 
 
 def threaded(func):
+    @wraps(func)
     @putMsg
     def wrapper(self, cmd, *args, **kwargs):
         try:
@@ -26,6 +28,7 @@ def threaded(func):
 
 
 def blocking(func):
+    @wraps(func)
     @putMsg
     def wrapper(self, cmd, *args, **kwargs):
         try:
@@ -40,6 +43,7 @@ def blocking(func):
 
 
 def putMsg2(func):
+    @wraps(func)
     def wrapper(self, cmd, *args, **kwargs):
         thr = QThread(self.actor, str(time.time()))
         thr.start()
@@ -50,6 +54,7 @@ def putMsg2(func):
 
 
 def singleShot(func):
+    @wraps(func)
     @putMsg2
     def wrapper(self, cmd, *args, **kwargs):
         try:

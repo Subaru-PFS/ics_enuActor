@@ -35,7 +35,7 @@ class TopCmd(object):
                                         )
 
     def monitor(self, cmd):
-        """ Enable/disable/adjust period controller monitors. """
+        """Enable/disable/adjust period controller monitors."""
 
         period = cmd.cmd.keywords['period'].values[0]
         controllers = cmd.cmd.keywords['controllers'].values
@@ -57,8 +57,7 @@ class TopCmd(object):
             cmd.fail('text="no controllers found"')
 
     def controllerKey(self):
-        """Return controllers keyword
-        """
+        """Return controllers keyword."""
         controllerNames = list(self.actor.controllers.keys())
         key = 'controllers=%s' % (','.join([c for c in controllerNames]) if controllerNames else None)
 
@@ -66,12 +65,11 @@ class TopCmd(object):
 
     def ping(self, cmd):
         """Query the actor for liveness/happiness."""
-
         cmd.warn("text='I am an empty and fake actor'")
         cmd.finish("text='Present and (probably) well'")
 
     def status(self, cmd):
-        """Report enu status, actor version and each controller status """
+        """Report enu status, actor version and each controller status."""
 
         self.actor.sendVersionKey(cmd)
 
@@ -88,7 +86,7 @@ class TopCmd(object):
 
     @singleShot
     def start(self, cmd):
-        """Init all enu controllers"""
+        """Start all enu controllers."""
         cmdList = [f'{c} start' for c in ['rexm', 'slit', 'biasha', 'temps', 'iis']]
         syncCmd = SyncCmd(self.actor, cmdList)
         syncCmd.call(cmd)
@@ -99,7 +97,7 @@ class TopCmd(object):
 
     @singleShot
     def stop(self, cmd):
-        """Init all enu controllers"""
+        """Stop all enu controllers."""
         cmdList = [f'{c} stop' for c in ['rexm', 'slit', 'biasha', 'temps', 'iis']]
         syncCmd = SyncCmd(self.actor, cmdList)
         syncCmd.call(cmd)

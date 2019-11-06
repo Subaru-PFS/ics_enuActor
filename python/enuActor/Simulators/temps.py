@@ -10,11 +10,13 @@ class TempsSim(socket.socket):
     nProbes = 10
 
     def __init__(self):
+        """Fake keysight tcp server."""
         socket.socket.__init__(self, socket.AF_INET, socket.SOCK_STREAM)
         self.offsets = np.zeros(TempsSim.nProbes)
         self.buf = []
 
     def connect(self, server):
+        """Fake the connection to tcp server."""
         (ip, port) = server
         time.sleep(0.5)
         if type(ip) is not str:
@@ -23,6 +25,7 @@ class TempsSim(socket.socket):
             raise TypeError
 
     def sendall(self, cmdStr, flags=None):
+        """Send fake packets, append fake response to buffer."""
         cmdStr = cmdStr.decode()
         if 'MEAS:TEMP' in cmdStr:
             temps = np.random.normal(20, 0.035, size=TempsSim.nProbes)
@@ -44,6 +47,7 @@ class TempsSim(socket.socket):
         self.offsets[3] = 0
 
     def recv(self, buffersize, flags=None):
+        """Return and remove fake response from buffer."""
         ret = self.buf[0]
         self.buf = self.buf[1:]
         return str(ret).encode()

@@ -13,6 +13,7 @@ class SlitSim(object):
     __nbSockets = 0
 
     def __init__(self):
+        """Fake slit hexapod tcp server."""
         object.__init__(self)
         SlitSim.__nbSockets = 0
         for socketId in range(self.MAX_NB_SOCKETS):
@@ -26,6 +27,7 @@ class SlitSim(object):
         self.emergencyStop = False
 
     def TCP_ConnectToServer(self, IP, port, timeOut):
+        """Fake the connection to tcp server."""
         if type(IP) is not str:
             raise TypeError
         if type(port) is not int:

@@ -44,12 +44,12 @@ class RexmCmd(object):
 
     @threaded
     def status(self, cmd):
-        """Report state, mode, position"""
+        """Report state, mode, position."""
         self.controller.generate(cmd)
 
     @blocking
     def initialise(self, cmd):
-        """Initialise Slit, call fsm startInit event """
+        """Initialise rexm, dont home if skipHoming."""
 
         doHome = 'skipHoming' not in cmd.cmd.keywords
 
@@ -58,7 +58,7 @@ class RexmCmd(object):
 
     @blocking
     def moveTo(self, cmd):
-        """ Move to low|med resolution position """
+        """Move to low|med resolution position. """
         cmdKeys = cmd.cmd.keywords
         position = 'low' if 'low' in cmdKeys else 'med'
 
@@ -67,7 +67,7 @@ class RexmCmd(object):
 
     @blocking
     def moveRelative(self, cmd):
-        """ Move to low|med resolution position """
+        """Move relative in mm."""
         cmdKeys = cmd.cmd.keywords
         direction = int(cmdKeys['relative'].values[0] > 0)
         distance = abs(cmdKeys['relative'].values[0])
@@ -80,19 +80,19 @@ class RexmCmd(object):
 
     @threaded
     def resetFlag(self, cmd):
-        """Report state, mode, position"""
+        """Reset emergency flag."""
         self.controller.resetEmergencyFlag(cmd)
         self.controller.substates.idle(cmd)
         self.controller.generate(cmd)
 
     def abort(self, cmd):
-        """ Abort current motion """
+        """Abort current motion."""
         self.controller.doAbort()
         cmd.finish("text='motion aborted'")
 
     @singleShot
     def stop(self, cmd):
-        """ abort current motion board, turn power off and disconnect"""
+        """Abort current motion, turn off power and disconnect."""
         self.actor.disconnect('rexm', cmd=cmd)
 
         if 'biasha' not in self.actor.controllers.keys():
@@ -103,7 +103,7 @@ class RexmCmd(object):
 
     @singleShot
     def start(self, cmd):
-        """ power on enu rack, wait for rexm host, connect controller"""
+        """Power on enu rack, wait for rexm host, connect controller."""
         cmdKeys = cmd.cmd.keywords
         mode = self.actor.config.get('rexm', 'mode')
         host = self.actor.config.get('rexm', 'host')

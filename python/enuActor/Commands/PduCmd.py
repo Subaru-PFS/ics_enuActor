@@ -43,12 +43,12 @@ class PduCmd(object):
 
     @threaded
     def status(self, cmd):
-        """Report status and version; obtain and send current data"""
-
+        """Report state, mode, status."""
         self.controller.generate(cmd)
 
     @threaded
     def switch(self, cmd):
+        """Switch on/off outlets."""
         cmdKeys = cmd.cmd.keywords
 
         switchOn = cmdKeys['on'].values if 'on' in cmdKeys else []
@@ -66,13 +66,13 @@ class PduCmd(object):
 
     @singleShot
     def stop(self, cmd):
-        """ abort pdu warmup, turn pdu lamp off and disconnect"""
+        """Disconnect controller."""
         self.actor.disconnect(self.name, cmd=cmd)
         cmd.finish()
 
     @singleShot
     def start(self, cmd):
-        """ connect pdu controller"""
+        """Connect pdu controller."""
         cmdKeys = cmd.cmd.keywords
         mode = self.actor.config.get('pdu', 'mode')
         host = self.actor.config.get('pdu', 'host')

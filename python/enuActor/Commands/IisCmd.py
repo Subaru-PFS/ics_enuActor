@@ -42,11 +42,12 @@ class IisCmd(object):
 
     @threaded
     def status(self, cmd):
-        """Report status and version; obtain and send current data"""
+        """Report state, mode, status."""
         self.controller.generate(cmd)
 
     @blocking
     def switch(self, cmd):
+        """Switch on/off arc lamps."""
         cmdKeys = cmd.cmd.keywords
         arcOn = cmdKeys['on'].values if 'on' in cmdKeys else []
         arcOff = cmdKeys['off'].values if 'off' in cmdKeys else []
@@ -64,18 +65,19 @@ class IisCmd(object):
         self.controller.generate(cmd)
 
     def abort(self, cmd):
+        """Abort iis warmup."""
         self.controller.doAbort()
         cmd.finish("text='warmup aborted'")
 
     @singleShot
     def stop(self, cmd):
-        """ abort iis warmup, turn iis lamp off and disconnect"""
+        """Abort iis warmup, turn iis lamp off and disconnect."""
         self.actor.disconnect('iis', cmd=cmd)
         cmd.finish()
 
     @singleShot
     def start(self, cmd):
-        """ connect iis controller"""
+        """Wait for pdu host, connect iis controller."""
         cmdKeys = cmd.cmd.keywords
         mode = self.actor.config.get('iis', 'mode')
         host = self.actor.config.get('pdu', 'host')

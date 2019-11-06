@@ -42,30 +42,30 @@ class TempsCmd(object):
 
     @threaded
     def status(self, cmd):
-        """Report state, substate, mode, temperatures"""
+        """Report state, substate, mode, temperatures."""
         self.controller.generate(cmd)
 
     @threaded
     def getResistance(self, cmd):
-        """Report resistance value for all sensors"""
+        """Report resistance value for all sensors."""
         self.controller.getResistance(cmd)
         cmd.finish()
 
     @threaded
     def getError(self, cmd):
-        """Report controller error"""
+        """Report controller error."""
         self.controller.getError(cmd)
         cmd.finish()
 
     @threaded
     def getInfo(self, cmd):
-        """Report controller info"""
+        """Report controller info."""
         self.controller.getInfo(cmd)
         cmd.finish()
 
     @threaded
     def rawCommand(self, cmd):
-        """send a raw command to the controller"""
+        """Send a raw command to the controller."""
         cmdKeys = cmd.cmd.keywords
         cmdStr = cmdKeys["raw"].values[0]
 
@@ -73,7 +73,7 @@ class TempsCmd(object):
 
     @singleShot
     def stop(self, cmd):
-        """ finish current exposure, power off and disconnect"""
+        """Finish current exposure, power off and disconnect."""
         self.actor.disconnect('temps', cmd=cmd)
 
         cmd.inform('text="powering down temps controller..."')
@@ -83,7 +83,7 @@ class TempsCmd(object):
 
     @singleShot
     def start(self, cmd):
-        """ power on temps controller, wait for temps host, connect controller"""
+        """Power on temps controller, wait for temps host, connect controller."""
         cmdKeys = cmd.cmd.keywords
         mode = self.actor.config.get('temps', 'mode')
         host = self.actor.config.get('temps', 'host')

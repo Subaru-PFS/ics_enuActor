@@ -4,8 +4,8 @@ import time
 
 from enuActor.Controllers import pdu
 from enuActor.Simulators.pdu import PduSim
-from enuActor.utils.fsmThread import FSMThread
 from enuActor.utils import wait
+from enuActor.utils.fsmThread import FSMThread
 
 
 class iis(pdu.pdu):
@@ -13,11 +13,10 @@ class iis(pdu.pdu):
     arcs = ['hgar']
 
     def __init__(self, actor, name, loglevel=logging.DEBUG):
-        """__init__.
-        This sets up the connections to/from the hub, the logger, and the twisted reactor.
+        """This sets up the connections to/from the hub, the logger, and the twisted reactor.
 
-        :param actor: enuActor
-        :param name: controller name
+        :param actor: enuActor.
+        :param name: controller name.
         :type name: str
         """
         substates = ['IDLE', 'WARMING', 'FAILED']
@@ -36,12 +35,12 @@ class iis(pdu.pdu):
         self.logger.setLevel(loglevel)
 
     def _loadCfg(self, cmd, mode=None):
-        """| Load Configuration file.
+        """Load iis configuration.
 
-        :param cmd: on going command
-        :param mode: operation|simulation, loaded from config file if None
+        :param cmd: current command.
+        :param mode: operation|simulation, loaded from config file if None.
         :type mode: str
-        :raise: Exception Config file badly formatted
+        :raise: Exception if config file is badly formatted.
         """
         mode = self.actor.config.get('iis', 'mode') if mode is None else mode
         pdu.pdu._loadCfg(self, cmd=cmd, mode=mode)
@@ -51,20 +50,20 @@ class iis(pdu.pdu):
                 raise ValueError(f'{arc} : unknown arc')
 
     def getStatus(self, cmd):
-        """| get and generate iis keywords
+        """Get and generate iis keywords.
 
-        :param cmd: on going command,
-        :raise: Exception if the communication has failed with the controller
+        :param cmd: current command.
+        :raise: Exception with warning message.
         """
         for arc in iis.arcs:
             state = self.arcState(arc, cmd=cmd)
             cmd.inform(f'{arc}={state}')
 
     def arcState(self, arc, cmd):
-        """| get arc state
+        """Get current arc lamp state.
 
-        :param cmd: on going command,
-        :raise: Exception if the communication has failed with the controller
+        :param cmd: current command.
+        :raise: Exception with warning message.
         """
         state = self.sendOneCommand('read status o%s simple' % self.powerPorts[arc], cmd=cmd)
         if state == 'pending':
@@ -74,11 +73,12 @@ class iis(pdu.pdu):
         return state
 
     def warming(self, cmd, arcOn, ti=0.01):
-        """ switch on and warm up arc lamp
+        """Switch on arc lamp and wait for iis.warmingTime.
 
-        :param cmd : current command
-        :param arcOn : arc lamp list to switch on,
-        :raise: Exception if the communication has failed with the controller
+        :param cmd: current command.
+        :param arcOn: arc lamp list to switch on.
+        :type arcOn: list
+        :raise: Exception with warning message.
         """
         for outlet in arcOn:
             self.sendOneCommand('sw o%s on imme' % outlet, cmd=cmd)
@@ -94,22 +94,29 @@ class iis(pdu.pdu):
                     raise RuntimeError('iis warmup aborted')
 
     def isOff(self, arc):
-        """| check if arc lamp is currently off
+        """Check if arc lamp is currently off.
 
-        :param arc: arc lamp
-        :type arc:str
-        :return state
+        :param arc: arc lamp.
+        :type arc: str
+        :return: state
+        :rtype: bool
         """
         state = self.actor.models[self.actor.name].keyVarDict[arc].getValue()
         return not bool(state)
 
     def doAbort(self):
+        """Abort warmup.
+        """
         self.abortWarmup = True
         while self.currCmd:
             pass
         return
 
     def leaveCleanly(self, cmd):
+        """Clear and leave.
+
+        :param cmd: current command.
+        """
         self.monitor = 0
         self.doAbort()
 

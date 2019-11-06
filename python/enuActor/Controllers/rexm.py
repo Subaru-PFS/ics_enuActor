@@ -20,11 +20,10 @@ class rexm(FSMThread, bufferedSocket.EthComm):
     toDir = {'low': 0, 'med': 1}
 
     def __init__(self, actor, name, loglevel=logging.DEBUG):
-        """__init__.
-        This sets up the connections to/from the hub, the logger, and the twisted reactor.
+        """This sets up the connections to/from the hub, the logger, and the twisted reactor.
 
-        :param actor: enuActor
-        :param name: controller name
+        :param actor: enuActor.
+        :param name: controller name.
         :type name: str
         """
         substates = ['IDLE', 'MOVING', 'FAILED', 'SAFESTOP']
@@ -49,6 +48,7 @@ class rexm(FSMThread, bufferedSocket.EthComm):
 
     @property
     def simulated(self):
+        """Return True if self.mode=='simulation', return False if self.mode='operation'."""
         if self.mode == 'simulation':
             return True
         elif self.mode == 'operation':
@@ -58,27 +58,31 @@ class rexm(FSMThread, bufferedSocket.EthComm):
 
     @property
     def position(self):
+        """Interpret rexm current position from limit switches state."""
         return rexm.switch[self.switchA, self.switchB]
 
     @property
     def isMoving(self):
+        """True if self.speed>0 else False."""
         return 1 if abs(self.speed) > 0 else 0
 
     @property
     def pulseDivisor(self):
+        """The exponent of the scaling factor for the pulse (step) generator."""
         return self.motorConfig[154]
 
     @property
     def stepIdx(self):
+        """Microstep resolution"""
         return self.motorConfig[140]
 
     def _loadCfg(self, cmd, mode=None):
-        """| Load Configuration file, called by device.loadDevice().
+        """Load rexm configuration.
 
-        :param cmd: on going command
-        :param mode: operation|simulation, loaded from config file if None
+        :param cmd: current command.
+        :param mode: operation|simulation, loaded from config file if None.
         :type mode: str
-        :raise: Exception Config file badly formatted
+        :raise: Exception if config file is badly formatted.
         """
         self.mode = self.actor.config.get('rexm', 'mode') if mode is None else mode
         bufferedSocket.EthComm.__init__(self,
@@ -86,39 +90,33 @@ class rexm(FSMThread, bufferedSocket.EthComm):
                                         port=int(self.actor.config.get('rexm', 'port')))
 
     def _openComm(self, cmd):
-        """| Open socket with rexm controller or simulate it.
-        | Called by FSMDev.loadDevice()
-
-        :param cmd: on going command
-        :raise: socket.error if the communication has failed with the controller
+        """Open socket with rexm controller or simulate it.
+        
+        :param cmd: current command.
+        :raise: socket.error if the communication has failed.
         """
         s = self.connectSock()
 
     def _closeComm(self, cmd):
-        """| Close communication.
-        | Called by FSMThread.stop()
+        """Close socket.
 
-        :param cmd: on going command
+        :param cmd: current command.
         """
         self.closeSock()
 
     def _testComm(self, cmd):
-        """| test communication
-        | Called by FSMDev.loadDevice()
+        """Test communication.
 
-        :param cmd: on going command,
-        :raise: RuntimeError if the communication has failed with the controller
+        :param cmd: current command.
+        :raise: Exception if the communication has failed with the controller.
         """
         self.checkConfig(cmd)
 
     def _init(self, cmd, doHome=True):
-        """| Initialise rexm controller, called by self.initDevice().
-        - set motor config
-        - go to low resolution position
-        - set this position at 0 => Home
+        """Set motor config, go to low resolution position, set this position at 0 (steps).
 
-        :param cmd: on going command
-        :raise: Exception if a command fail, user is warned with error ret.
+        :param cmd: current command.
+        :raise: Exception with warning message.
         """
         cmd.inform('text="setting motor config ..."')
         self._setConfig(cmd)
@@ -131,19 +129,19 @@ class rexm(FSMThread, bufferedSocket.EthComm):
             self._setHome(cmd=cmd)
 
     def getStatus(self, cmd):
-        """| Get status from the controller and generate rexm keywords.
+        """Get status and generate rexm keywords.
 
-        :param cmd: on going command
+        :param cmd: current command.
         """
         self.checkSafeStop(cmd)
         self.checkStatus(cmd)
 
     def stopMotion(self, cmd, forceStop=False):
-        """| Abort current motion and retry until speed=0
+        """Abort current motion and retry until speed=0.
 
-        :param cmd: on going command
-        :raise: Exception if a communication error occurs.
-        :raise: Timeout if the command takes too long.
+        :param cmd: current command.
+        :param forceStop: if True send MST command directly.
+        :raise: Exception with warning message.
         """
         self.stopAndCheck(cmd) if forceStop else self.checkStatus(cmd)
         start = time.time()
@@ -157,9 +155,9 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         self.getStatus(cmd)
 
     def stopAndCheck(self, cmd):
-        """| Abort current motion and check status
+        """Send MST command and check status.
 
-        :param cmd: on going command
+        :param cmd: current command.
         """
         cmd.inform('text="stopping rexm motion"')
         self._stop(cmd=cmd)
@@ -168,11 +166,11 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         self.checkStatus(cmd)
 
     def moving(self, cmd, position=None, **kwargs):
-        """| Go to desired position (low|med), or relative move
+        """Go to desired position (low|med), or relative move, forceStop to stop holding current.
 
-        :param cmd: on going command
-        :param kwargs: keywords arguments
-        :raise: Exception if move command fails
+        :param cmd: current command.
+        :param kwargs: keywords arguments.
+        :raise: Exception with warning message.
         """
         self.abortMotion = False
 
@@ -185,11 +183,10 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         self.stopMotion(cmd, forceStop=True)
 
     def checkStatus(self, cmd, genKeys=True):
-        """| Check current status from controller and generate rexmInfo keywords
-        - rexmInfo = switchA state, switchB state, speed, position(ustep from origin)
+        """Check current status and generate rexm and rexmInfo keywords.
 
-        :param cmd: on going command
-        :raise: Exception if communication error occurs
+        :param cmd: current command.
+        :raise: Exception with warning message.
         """
         try:
             self.switchA = self._getAxisParameter(paramId=11, cmd=cmd)
@@ -209,10 +206,10 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         cmd.inform('rexm=%s' % self.position)
 
     def checkConfig(self, cmd):
-        """| Check current config from controller and generate rexmConfig keywords)
+        """Check current config from controller and generate rexmConfig keywords.
 
-        :param cmd: on going command
-        :raise: Exception if communication error occurs
+        :param cmd: current command.
+        :raise: Exception with warning message.
         """
         self.motorConfig = dict([(paramId, self._getAxisParameter(paramId=paramId, cmd=cmd))
                                  for paramId in TMCM.defaultConfig.keys()])
@@ -220,15 +217,15 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         cmd.inform('rexmConfig=%s' % (','.join(['%d' % value for value in self.motorConfig.values()])))
 
     def checkParameters(self, direction, distance, speed):
-        """| Check relative move parameters
+        """Check relative move parameters.
 
-        :param direction: 0 (go to low position ) 1 (go to medium position)
+        :param direction: (0 : low resolution, 1 : medium resolution).
+        :param distance: distance in mm.
+        :param speed: distance in mm/sec.
         :type direction: int
-        :param distance: distance in mm
         :type distance: float
-        :param speed: distance in mm/sec
         :type speed: float
-        :raise: ValueError if a value is out of range
+        :raise: ValueError if a value is out of range.
         """
         if direction not in [0, 1]:
             raise ValueError('unknown direction')
@@ -240,12 +237,11 @@ class rexm(FSMThread, bufferedSocket.EthComm):
             raise ValueError(f'{speed} out of range : {TMCM.SPEED_MIN} <= speed <= {TMCM.SPEED_MAX}')
 
     def checkSafeStop(self, cmd):
-        """| Check emergency button and emergency flag
+        """Check emergency button and emergency flag. generate rexmStop keyword.
 
-        :param cmd: on going command
-        :raise: Exception if communication error occurs
+        :param cmd: current command.
+        :raise: Exception with warning message.
         """
-
         buttonState = self._getEmergencyButtonState(cmd=cmd)
         flagState = self._getEmergencyFlag(cmd=cmd)
 
@@ -264,11 +260,10 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         - adjusting position backward to unswitch at nominal speed/3
         - adjusting position forward to switch at nominal speed/3
 
-        :param cmd: on going command
-        :param position: low|med
+        :param cmd: current command.
+        :param position: low|med .
         :type position: str
-        :raise: Exception if communication error occurs
-        :raise: Timeout if the command takes too long
+        :raise: Exception with warning message.
         """
         direction = rexm.toDir[position]
         self.checkStatus(cmd)
@@ -309,16 +304,15 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         - Stop motion
         - Check status until limit switch is reached
 
-        :param cmd: on going command
-        :param direction: 0 (go to low position ) 1 (go to medium position)
-        :param distance: distance to go in mm
-        :param speed: specified speed in ustep/s
-        :param bool: switch state at the beginning of motion
+        :param cmd: current command.
+        :param direction: (0 : low resolution, 1 : medium resolution).
+        :param distance: distance to go in mm.
+        :param speed: specified speed in ustep/s .
+        :param bool: switch state at the beginning of motion.
         :type direction: int
         :type distance: float
         :type speed: float
-        :raise: Exception if communication error occurs
-        :raise: TimeoutError if commanding takes too long
+        :raise: Exception with warning message.
         """
         self.stopMotion(cmd)
 
@@ -364,19 +358,20 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         self.stopMotion(cmd)
 
     def hasStarted(self, startCount):
-        """| demonstrate that motion that effectively started
+        """Demonstrate that motion that effectively started.
 
-        :param startCount: starting stepCount
+        :param startCount: starting stepCount.
         :type startCount: int
         """
         return abs(startCount - self.stepCount) > 500
 
     def limitSwitch(self, direction, hitSwitch=True):
-        """| Return limit switch state which will be reached by going in that direction.
+        """Return limit switch state which will be reached by going in that direction.
 
-        :param direction: 0 (go to low position ) 1 (go to medium position)
+        :param direction: (0 : low resolution, 1 : medium resolution).
+        :param hitSwitch: if True return switch expected to be triggered going in that direction.
         :type direction: int
-        :return: limit switch state
+        :return: limit switch state.
         """
         if hitSwitch:
             return self.switchA if direction == 0 else self.switchB
@@ -384,10 +379,10 @@ class rexm(FSMThread, bufferedSocket.EthComm):
             return not self.switchB if direction == 0 else not self.switchA
 
     def resetEmergencyFlag(self, cmd):
-        """| reset emergency flag state
+        """Reset emergency flag state.
 
-        :param cmd: on going command
-        :raise: Exception if communication error occur
+        :param cmd: current command.
+        :raise: Exception with warning message.
         """
         if self._getEmergencyButtonState(cmd=cmd):
             raise ValueError('Emergency stop is still triggered')
@@ -395,14 +390,10 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         return self._setGlobalParameter(paramId=11, motorAddress=2, data=0, cmd=cmd)  # reset emergency stop flag
 
     def _setConfig(self, cmd=None):
-        """| Set motor parameters.
-        - set stepIdx = 2
-        - set pulseDivisor = 5
-        - set holding current = 0 * 9.3A / 255 = 0 A
-        - set power down delay = 20 * 10 ms = 200 ms
+        """Set motor parameters.
 
-        :param cmd: on going command
-        :raise: Exception if communication error occurs
+        :param cmd: current command.
+        :raise: Exception with warning message.
         """
         self._setGlobalParameter(paramId=80, motorAddress=0, data=2, cmd=cmd)  # shutdown pin set to low active
         self.resetEmergencyFlag(cmd=cmd)
@@ -411,52 +402,52 @@ class rexm(FSMThread, bufferedSocket.EthComm):
             self._setAxisParameter(paramId=paramId, data=value, cmd=cmd)
 
     def _getStepCount(self, cmd=None):
-        """| Get current step count.at
+        """Get current step count.
 
-        :param cmd: on going command
-        :raise: Exception if communication error occurs
+        :param cmd: current command.
+        :raise: Exception with warning message.
         """
         ustep = self._getAxisParameter(1, cmd=cmd)  # get microstep count
         return ustep / (2 ** self.stepIdx)
 
     def _getSpeed(self, cmd=None):
-        """| Get current speed.
+        """Get current speed.
 
-        :param cmd: on going command
-        :raise: Exception if communication error occurs
+        :param cmd: current command.
+        :raise: Exception with warning message.
         """
         velocity = self._getAxisParameter(paramId=3, cmd=cmd)
         return velocity / (2 ** (self.pulseDivisor + self.stepIdx) * (65536 / 16e6))  # speed in step/sec
 
     def _setSpeed(self, speedMm, cmd=None):
-        """| Set motor speed.
+        """Set motor speed.
 
-        :param speedMm motor speed in mm/s
+        :param speedMm: motor speed in mm per s.
+        :param cmd: current command.
         :type speedMm: float
-        :param cmd: on going command
-        :raise: Exception if communication error occurs
+        :raise: Exception with warning message.
         """
         freq = TMCM.mm2counts(stepIdx=self.stepIdx, valueMm=speedMm)
         velocity = freq * (2 ** self.pulseDivisor * (65536 / 16e6))
         return self._setAxisParameter(paramId=4, data=velocity, cmd=cmd)
 
     def _setHome(self, cmd=None):
-        """| Set low position as 0.
+        """Set low position as 0.
 
-        :param cmd: on going command
-        :raise: Exception if communication error occurs
+        :param cmd: current command.
+        :raise: Exception with warning message.
         """
         self._setAxisParameter(paramId=1, data=0, cmd=cmd)
 
     def _MVP(self, direction, distance, cmd=None):
-        """| Move in relative for a specified distance and direction.
+        """Move in relative for a specified distance and direction.
 
-        :param direction 0 => to low, direction 1=> to med
+        :param direction: (0 : low resolution, 1 : medium resolution).
+        :param distance: distance in mm.
+        :param cmd: current command.
         :type direction: int
-        :param distance distance in mm
         :type distance: float
-        :param cmd: on going command
-        :raise: Exception if communication error occurs
+        :raise: Exception with warning message.
         """
         counts = np.int32(TMCM.mm2counts(stepIdx=self.stepIdx, valueMm=distance))
         cmdBytes = TMCM.MVP(direction, counts)
@@ -464,93 +455,86 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         return self.sendOneCommand(cmdBytes=cmdBytes, cmd=cmd)
 
     def _stop(self, cmd):
-        """| Stop current motion
+        """Stop current motion.
 
-        :param cmd: on going command
-        :raise: Exception if communication error occurs
+        :param cmd: current command.
+        :raise: Exception with warning message.
         """
         cmdBytes = TMCM.stop()
         return self.sendOneCommand(cmdBytes=cmdBytes, cmd=cmd)
 
     def _getEmergencyFlag(self, cmd):
-        """| Get emergency flag state
+        """Get emergency flag state.
 
-        :param cmd: on going command
-        :raise: Exception if communication error occur
+        :param cmd: current command.
+        :raise: Exception with warning message.
         """
         return self._getGlobalParameter(paramId=11, motorAddress=2, cmd=cmd)  # emergency stop flag
 
     def _getEmergencyButtonState(self, cmd):
-        """| Get emergency button state
+        """Get emergency button state.
 
-        :param cmd: on going command
-        :raise: Exception if communication error occur
+        :param cmd: current command.
+        :raise: Exception with warning message.
         """
         cmdBytes = TMCM.gio(paramId=10, motorAddress=0)
         return not (int(self.sendOneCommand(cmdBytes=cmdBytes, cmd=cmd)))
 
     def _getAxisParameter(self, paramId, cmd=None):
-        """| Get axis parameter
+        """Get axis parameter.
 
-        :param paramId: parameter id
-        :type paramId:int
-        :param fmtRet: return format to convert bytes to numeric value
-        :type fmtRet:str
-        :raise: Exception if communication error occurs
+        :param paramId: parameter id.
+        :type paramId: int
+        :raise: Exception with warning message.
         """
         cmdBytes = TMCM.gap(paramId=paramId)
         return self.sendOneCommand(cmdBytes=cmdBytes, cmd=cmd)
 
     def _setAxisParameter(self, paramId, data, cmd=None):
-        """| Set axis parameter
+        """Set axis parameter.
 
-        :param paramId: parameter id
-        :type paramId:int
-        :param data: data to be sent
-        :param fmtRet: return format to convert bytes to numeric value
-        :type fmtRet:str
-        :raise: Exception if communication error occur
+        :param paramId: parameter id.
+        :param data: parameter value.
+        :type paramId: int 
+        :raise: Exception with warning message.
         """
         cmdBytes = TMCM.sap(paramId=paramId, data=data)
         return self.sendOneCommand(cmdBytes=cmdBytes, cmd=cmd)
 
     def _getGlobalParameter(self, paramId, motorAddress, cmd=None):
-        """| Get global parameter
+        """Get global parameter.
 
-        :param paramId: parameter id
-        :type paramId:int
-        :param motorAddress: address
-        :type motorAddress:int
-        :param fmtRet: return format to convert bytes to numeric value
-        :type fmtRet:str
-        :raise: Exception if communication error occurs
+        :param paramId: parameter id.
+        :type paramId: int
+        :param motorAddress: motor address.
+        :type motorAddress: int
+        :raise: Exception with warning message.
         """
         cmdBytes = TMCM.ggp(paramId=paramId, motorAddress=motorAddress)
         return self.sendOneCommand(cmdBytes=cmdBytes, cmd=cmd)
 
     def _setGlobalParameter(self, paramId, motorAddress, data, cmd=None):
-        """| Set global parameter
+        """Set global parameter.
 
-        :param paramId: parameter id
-        :type paramId:int
-        :param motorAddress: address
-        :type motorAddress:int
-        :param data: data to be sent
-        :param fmtRet: return format to convert bytes to numeric value
-        :type fmtRet:str
-        :raise: Exception if communication error occur
+        :param paramId: parameter id.
+        :param motorAddress: motor address.
+        :param data: parameter value.
+        :type motorAddress: int
+        :type paramId: int
+        :raise: Exception with warning message.
         """
         cmdBytes = TMCM.sgp(paramId=paramId, motorAddress=motorAddress, data=data)
         return self.sendOneCommand(cmdBytes=cmdBytes, cmd=cmd)
 
     def sendOneCommand(self, cmdBytes, doClose=False, cmd=None):
-        """| Send one command and return one response.
+        """Send cmdBytes to rexm controller.
 
-        :param cmdStr: (str) The command to send.
-        :param doClose: If True (the default), the device socket is closed before returning.
-        :param cmd: on going command
-        :return: reply : the single response string, with EOLs stripped.
-        :raise: IOError : from any communication errors.
+        :param cmdBytes: bytes to send.
+        :param doClose: close socket.
+        :param cmd: current command.
+        :type cmdStr: bytes
+        :type doClose: bool
+        :return: response decoded
         """
         if cmd is None:
             cmd = self.actor.bcast
@@ -575,10 +559,10 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         return reply
 
     def getOneResponse(self, sock=None, cmd=None):
-        """| Attempt to receive data from the socket.
+        """Attempt to receive data from the socket.
 
-        :param sock: socket
-        :param cmd: command
+        :param sock: socket.
+        :param cmd: command.
         :return: reply : the single response string, with EOLs stripped.
         :raise: IOError : from any communication errors.
         """
@@ -596,6 +580,8 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         return reply
 
     def createSock(self):
+        """Create socket in operation, simulator otherwise.
+        """
         if self.simulated:
             s = self.sim
         else:
@@ -604,12 +590,18 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         return s
 
     def doAbort(self):
+        """Abort current motion.
+        """
         self.abortMotion = True
         while self.currCmd:
             pass
         return
 
     def leaveSafely(self, cmd):
+        """clear and leave.
+
+        :param cmd: current command.
+        """
         self.monitor = 0
         self.doAbort()
 

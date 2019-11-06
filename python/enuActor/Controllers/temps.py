@@ -17,7 +17,7 @@ class temps(FSMThread, bufferedSocket.EthComm):
 
     @staticmethod
     def polyval(resistances, calib):
-        """|  convert resistance to temperature using lab calibration
+        """Convert resistance to temperature using lab calibration.
 
         :param resistances: resistance value
         :param calib: polynomial coeffient
@@ -29,11 +29,10 @@ class temps(FSMThread, bufferedSocket.EthComm):
         return np.array([np.polyval(calib[i], resistances[i]) for i in range(len(resistances))])
 
     def __init__(self, actor, name, loglevel=logging.DEBUG):
-        """__init__.
-        This sets up the connections to/from the hub, the logger, and the twisted reactor.
+        """This sets up the connections to/from the hub, the logger, and the twisted reactor.
 
-        :param actor: enuActor
-        :param name: controller name
+        :param actor: enuActor.
+        :param name: controller name.
         :type name: str
         """
         FSMThread.__init__(self, actor, name, doInit=True)
@@ -46,6 +45,7 @@ class temps(FSMThread, bufferedSocket.EthComm):
 
     @property
     def simulated(self):
+        """Return True if self.mode=='simulation', return False if self.mode='operation'."""
         if self.mode == 'simulation':
             return True
         elif self.mode == 'operation':
@@ -55,20 +55,27 @@ class temps(FSMThread, bufferedSocket.EthComm):
 
     @property
     def biaTemp(self):
+        """Return current bia temperature, np.nan if Invalid."""
         bia = self.actor.models[self.actor.name].keyVarDict['temps1'].getValue(doRaise=False)[3]
         bia = np.nan if bia is None else bia
         return np.nan if isinstance(bia, types.Invalid) else bia
 
     def getProbeCoeff(self, probe):
+        """Load probe calibration 4-tuple coefficients.
+
+        :param probe: channel number(101).
+        :type probe: str.
+        :raise: Exception if config file is badly formatted.
+        """
         return np.array([float(c) for c in self.actor.config.get('temps', str(probe)).split(',')])
 
     def _loadCfg(self, cmd, mode=None):
-        """| Load Configuration file. called by device.loadDevice().
+        """Load temps configuration.
 
-        :param cmd: on going command
-        :param mode: operation|simulation, loaded from config file if None
-        :type mode: str
-        :raise: Exception Config file badly formatted
+        :param cmd: current command.
+        :param mode: operation|simulation, loaded from config file if None.
+        :type mode: str.
+        :raise: Exception if config file is badly formatted.
         """
         self.mode = self.actor.config.get('temps', 'mode') if mode is None else mode
         bufferedSocket.EthComm.__init__(self,
@@ -82,95 +89,91 @@ class temps(FSMThread, bufferedSocket.EthComm):
                       2: np.array([self.getProbeCoeff(probe) for probe in range(201, 211)])}
 
     def _openComm(self, cmd):
-        """| Open socket with keysight controller or simulate it.
-        | Called by FSMDev.loadDevice()
-
-        :param cmd: on going command
-        :raise: socket.error if the communication has failed with the controller
+        """Open socket with keysight temperature controller or simulate it.
+        
+        :param cmd: current command.
+        :raise: socket.error if the communication has failed.
         """
         self.ioBuffer = bufferedSocket.BufferedSocket(self.name + "IO", EOL='\n')
         s = self.connectSock()
 
     def _closeComm(self, cmd):
-        """| Close communication.
-        | Called by FSMThread.stop()
+        """Close socket.
 
-        :param cmd: on going command
+        :param cmd: current command.
         """
         self.closeSock()
 
     def _testComm(self, cmd):
-        """| test communication
-        | Called by FSMDev.loadDevice()
+        """Test communication.
 
-        :param cmd: on going command,
-        :raise: Exception if the communication has failed with the controller
+        :param cmd: current command.
+        :raise: Exception if the communication has failed with the controller.
         """
         self.getInfo(cmd=cmd)
 
     def _init(self, cmd):
-        """| Initialise temperature controller, called by self.initDevice().
-        - get error
+        """Initialise temperature controller, get error string.
 
-        :param cmd: on going command
-        :raise: Exception if a command fail, user if warned with error
+        :param cmd: current command.
+        :raise: Exception with warning message., user if warned with error.
         """
         self.getError(cmd=cmd)
 
     def getStatus(self, cmd):
-        """| Get status and generate temps keywords.
+        """Get status and generate temps keywords.
 
-        :param cmd: on going command
-        :raise: Exception if a command fail
+        :param cmd: current command.
+        :raise: Exception with warning message.
         """
         self.getTemps(cmd=cmd)
 
     def getTemps(self, cmd):
-        """| generate temps keyword
+        """Generate temps1 and temps2 keywords.
 
-        :param cmd: on going command
-        :raise: Exception if a command fail
+        :param cmd: current command.
+        :raise: Exception with warning message.
         """
         self.genKey(cmd, self.calibTemps, key='temps1', slot=1)
         self.genKey(cmd, self.calibTemps, key='temps2', slot=2)
 
     def getResistance(self, cmd):
-        """|  generate resistance keywords
+        """Generate resistance keywords.
 
-        :param cmd: on going command
-        :param slot: temperature slot
-        :type slot:int
-        :raise: Exception if a command fail
+        :param cmd: current command.
+        :param slot: temperature slot.
+        :type slot: int
+        :raise: Exception with warning message.
         """
         self.genKey(cmd, self._fetchResistance, key='res1', slot=1)
         self.genKey(cmd, self._fetchResistance, key='res2', slot=2)
 
     def getInfo(self, cmd):
-        """|  fetch controller info.
+        """Fetch controller info.
 
-        :param cmd: on going command
-        :raise: Exception if a command fail
+        :param cmd: current command.
+        :raise: Exception with warning message.
         """
         cmd.inform('tempsSlot1=%s' % self._fetchSlotInfo(cmd, slot=1))
         cmd.inform('tempsSlot2=%s' % self._fetchSlotInfo(cmd, slot=2))
         cmd.inform('tempsVersion=%s' % self.sendOneCommand('SYST:VERS?', cmd=cmd))
 
     def getError(self, cmd):
-        """|  fetch controller error
+        """Fetch controller error string.
 
-        :param cmd: on going command
-        :raise: RuntimeError if the controller returns an error
+        :param cmd: current command.
+        :raise: RuntimeError if the controller returns an error.
         """
         errorCode, errorMsg = self._fetchError(cmd)
         cmd.inform('tempsStatus=%d,%s' % (errorCode, errorMsg))
 
     def calibTemps(self, cmd, slot):
-        """|  fetch resistance and use lab calibration if doCalib else fetch temps
+        """Fetch resistance and use lab calibration if doCalib else fetch temps.
 
-        :param cmd: on going command
-        :param slot: temperature slot
-        :type slot:int
-        :raise: RuntimeError if the controller returns an error
+        :param cmd: current command.
+        :param slot: temperature slot number.
+        :type slot: int
+        :raise: Exception with warning message.
         """
         if not self.doCalib:
             return self._fetchTemps(slot=slot, cmd=cmd)
@@ -179,10 +182,10 @@ class temps(FSMThread, bufferedSocket.EthComm):
         return temps.polyval(resistances, calib=self.calib[slot])
 
     def genKey(self, cmd, retrieveData, key, **kwargs):
-        """|  generate key using retrieveData func
+        """Generate key using retrieveData func.
 
-        :param cmd: on going command
-        :raise: RuntimeError if the controller returns an error
+        :param cmd: current command.
+        :raise: Exception with warning message.
         """
         values = np.ones(10) * np.nan
         try:
@@ -193,12 +196,12 @@ class temps(FSMThread, bufferedSocket.EthComm):
         cmd.inform('%s=%s' % (key, ','.join(['%.3f' % float(val) for val in values])))
 
     def _fetchTemps(self, cmd, slot):
-        """|  fetch temperature values for a specified slot.
+        """Fetch temperature values for a specified slot.
 
-        :param cmd: on going command
-        :param slot: temperature slot
-        :type slot:int
-        :raise: Exception if a command fail
+        :param cmd: current command.
+        :param slot: temperature slot.
+        :type slot: int
+        :raise: Exception with warning message.
         """
         channels = self.channels[slot]
 
@@ -206,12 +209,12 @@ class temps(FSMThread, bufferedSocket.EthComm):
         return np.array([float(t) if temps.tempMin < float(t) < temps.tempMax else np.nan for t in ret.split(',')])
 
     def _fetchResistance(self, cmd, slot):
-        """|  fetch resistance values for a specified slot.
+        """Fetch resistance values for a specified slot.
 
-        :param cmd: on going command
-        :param slot: temperature slot
-        :type slot:int
-        :raise: Exception if a command fail
+        :param cmd: current command.
+        :param slot: temperature slot.
+        :type slot: int
+        :raise: Exception with warning message.
         """
         channels = self.channels[slot]
 
@@ -219,22 +222,22 @@ class temps(FSMThread, bufferedSocket.EthComm):
         return np.array([float(res) if temps.resMin < float(res) < temps.resMax else np.nan for res in ret.split(',')])
 
     def _fetchSlotInfo(self, cmd, slot):
-        """|  fetch slot info
+        """Fetch slot info.
 
-        :param cmd: on going command
-        :param slot: temperature slot
-        :type slot:int
-        :raise: RuntimeError if the controller returns an error
+        :param cmd: current command.
+        :param slot: temperature slot.
+        :type slot: int
+        :raise: Exception with warning message.
         """
         ret = self.sendOneCommand('SYST:CTYP? %d00' % slot, cmd=cmd)
         company, modelNumber, serialNumber, firmware = ret.split(',')
         return '"%s", "%s", %s, %s' % (company, modelNumber, serialNumber, firmware)
 
     def _fetchError(self, cmd):
-        """|  fetch controller error
+        """Fetch controller error.
 
-        :param cmd: on going command
-        :raise: RuntimeError if the controller returns an error
+        :param cmd: current command.
+        :raise: RuntimeError if the controller returns an error.
         """
         errorCode, errorMsg = self.sendOneCommand('SYST:ERR?', cmd=cmd).split(',')
 
@@ -245,9 +248,7 @@ class temps(FSMThread, bufferedSocket.EthComm):
         return int(errorCode), errorMsg
 
     def createSock(self):
-        """| create socket or fake it returning a simulator.
-
-        :raise: Exception if a command fail
+        """Create socket in operation, simulator otherwise.
         """
         if self.simulated:
             s = self.sim
@@ -257,5 +258,7 @@ class temps(FSMThread, bufferedSocket.EthComm):
         return s
 
     def handleTimeout(self, cmd=None):
+        """Call FSMThread.handleTimeout, if bia is on check for biaOverHeat.
+        """
         FSMThread.handleTimeout(self, cmd=cmd)
         self.biaOverHeat = self.biaTemp > self.biaTempLimit
