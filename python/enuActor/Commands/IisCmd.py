@@ -59,8 +59,10 @@ class IisCmd(object):
         powerOff = dict([(self.controller.powerPorts[name], 'off') for name in arcOff])
         powerOn = [self.controller.powerPorts[name] for name in arcOn if self.controller.isOff(name)]
 
+        warmingTime = max([self.controller.warmingTime[arc] for arc in arcOn]) if arcOn else 0
+
         self.controller.switching(cmd, powerPorts=powerOff)
-        self.controller.substates.warming(cmd, arcOn=powerOn)
+        self.controller.substates.warming(cmd, arcOn=powerOn, warmingTime=warmingTime)
 
         self.controller.generate(cmd)
 
