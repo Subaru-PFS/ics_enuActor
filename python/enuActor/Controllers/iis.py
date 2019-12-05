@@ -9,8 +9,8 @@ from enuActor.utils.fsmThread import FSMThread
 
 
 class iis(pdu.pdu):
-    warmingTime = 15.0
-    arcs = ['hgar']
+    warmingTime = dict(hgar=15, neon=15)
+    arcs = ['hgar', 'neon']
 
     def __init__(self, actor, name, loglevel=logging.DEBUG):
         """This sets up the connections to/from the hub, the logger, and the twisted reactor.
@@ -72,7 +72,7 @@ class iis(pdu.pdu):
 
         return state
 
-    def warming(self, cmd, arcOn, ti=0.01):
+    def warming(self, cmd, arcOn, warmingTime, ti=0.01):
         """Switch on arc lamp and wait for iis.warmingTime.
 
         :param cmd: current command.
@@ -87,7 +87,7 @@ class iis(pdu.pdu):
         if arcOn:
             start = time.time()
             self.abortWarmup = False
-            while time.time() < start + iis.warmingTime:
+            while time.time() < start + warmingTime:
                 time.sleep(ti)
                 self.handleTimeout()
                 if self.abortWarmup:
