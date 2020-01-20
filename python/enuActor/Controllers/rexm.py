@@ -395,7 +395,7 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         :param cmd: current command.
         :raise: Exception with warning message.
         """
-        usteps = self._getAxisParameter(1, cmd=cmd) - TMCM.mm2ustep(stepIdx=self.stepIdx, valueMm=TMCM.PARKING)
+        usteps = TMCM.mm2ustep(stepIdx=self.stepIdx, valueMm=TMCM.PARKING) - self._getAxisParameter(1, cmd=cmd)
         return TMCM.ustep2mm(stepIdx=self.stepIdx, usteps=usteps)
 
     def _setConfig(self, cmd=None):

@@ -87,7 +87,7 @@ class RexmCmd(object):
         direction = int(relative > 0)
         distance = abs(relative)
 
-        self.controller.substates.move(cmd, direction=direction, distance=distance, speed=(TMCM.g_speed / 3))
+        self.controller.substates.move(cmd, direction=direction, distance=distance, speed=TMCM.g_speed)
         self.controller.generate(cmd)
 
     @threaded

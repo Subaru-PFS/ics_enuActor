@@ -57,7 +57,7 @@ class TMCM(object):
 
     DISTANCE_MIN = 5.0
     DISTANCE_MAX = 420.0  # 410mm + 10mm margin
-    PARKING = 200         # Parking position
+    PARKING = 207.0       # Parking position
 
     g_speed = 3.2  # mm/s
 
