@@ -24,6 +24,7 @@ class RexmCmd(object):
             ('rexm', '@(low|med)', self.moveTo),
             ('rexm', '@moveTo @(low|med)', self.moveTo),
             ('rexm', '@(move) <relative>', self.moveRelative),
+            ('rexm', 'park', self.park),
             ('rexm', 'resetFlag', self.resetFlag),
             ('rexm', 'abort', self.abort),
             ('rexm', 'stop', self.stop),
@@ -76,6 +77,17 @@ class RexmCmd(object):
             raise ValueError('requested distance out of range')
 
         self.controller.substates.move(cmd, direction=direction, distance=distance, speed=(TMCM.g_speed / 3))
+        self.controller.generate(cmd)
+
+    @blocking
+    def park(self, cmd):
+        """Move to parking position."""
+
+        relative = self.controller.distFromParking(cmd=cmd)
+        direction = int(relative > 0)
+        distance = abs(relative)
+
+        self.controller.substates.move(cmd, direction=direction, distance=distance, speed=TMCM.g_speed)
         self.controller.generate(cmd)
 
     @threaded

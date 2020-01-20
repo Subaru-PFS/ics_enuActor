@@ -57,6 +57,7 @@ class TMCM(object):
 
     DISTANCE_MIN = 5.0
     DISTANCE_MAX = 420.0  # 410mm + 10mm margin
+    PARKING = 207.0       # Parking position
 
     g_speed = 3.2  # mm/s
 
@@ -214,8 +215,8 @@ class TMCM(object):
         return packet.cmdBytes
 
     @staticmethod
-    def mm2counts(stepIdx, valueMm):
-        """| Convert mm to counts
+    def mm2ustep(stepIdx, valueMm):
+        """| Convert mm to ustep
 
         :param valueMm: value in mm
         :type valueMm:float
@@ -229,11 +230,11 @@ class TMCM(object):
         return np.float64((valueMm * reducer * nbStepByRev * step) / screwStep)
 
     @staticmethod
-    def counts2mm(stepIdx, counts):
-        """| Convert counts to mm
+    def ustep2mm(stepIdx, usteps):
+        """| Convert ustep to mm
 
         :param counts: count value
         :type counts:float
         :rtype:float
         """
-        return np.float64(counts / TMCM.mm2counts(stepIdx, 1.0))
+        return np.float64(usteps / TMCM.mm2ustep(stepIdx, 1.0))

@@ -106,7 +106,7 @@ class RexmSim(socket.socket):
 
         elif packet.cmd == TMCM.TMCL_GAP:
             dmin = 0
-            dmax = TMCM.mm2counts(stepIdx=self.stepIdx, valueMm=self.DISTANCE_MAX)
+            dmax = TMCM.mm2ustep(stepIdx=self.stepIdx, valueMm=self.DISTANCE_MAX)
 
             if packet.ctype == 3:
                 ret = self.currSpeed * self.direction
@@ -149,7 +149,7 @@ class RexmSim(socket.socket):
 
         self.direction = -1 if distance < 0 else 1
         dmin = 0
-        dmax = TMCM.mm2counts(stepIdx=self.stepIdx, valueMm=self.DISTANCE_MAX)
+        dmax = TMCM.mm2ustep(stepIdx=self.stepIdx, valueMm=self.DISTANCE_MAX)
 
         goal = self.realPos + distance
         self.currSpeed = self.maxSpeed
