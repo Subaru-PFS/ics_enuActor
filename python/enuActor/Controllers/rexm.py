@@ -192,7 +192,7 @@ class rexm(FSMThread, bufferedSocket.EthComm):
             self.switchA = self._getAxisParameter(paramId=11, cmd=cmd)
             self.switchB = self._getAxisParameter(paramId=10, cmd=cmd)
             self.speed = self._getSpeed(cmd=cmd)
-            self.stepCount = self._getStepCount(cmd=cmd)
+            self.steps = self._getSteps(cmd=cmd)
 
         except:
             cmd.warn('rexm=undef')
@@ -202,8 +202,8 @@ class rexm(FSMThread, bufferedSocket.EthComm):
             return
 
         self.last = time.time()
-        cmd.inform('rexmInfo=%i,%i,%i,%i' % (self.switchA, self.switchB, self.speed, self.stepCount))
-        cmd.inform('rexm=%s' % self.position)
+        cmd.inform(f'rexmInfo={self.switchA},{self.switchB},{self.speed},{self.steps}')
+        cmd.inform(f'rexm={self.position}')
 
     def checkConfig(self, cmd):
         """Check current config from controller and generate rexmConfig keywords.
@@ -317,7 +317,7 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         self.stopMotion(cmd)
 
         self.checkParameters(direction, distance, speed)
-        startCount = copy.deepcopy(self.stepCount)
+        startCount = copy.deepcopy(self.steps)
 
         if self.limitSwitch(direction):
             cmd.inform('text="limit switch already triggered"')
@@ -363,7 +363,7 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         :param startCount: starting stepCount.
         :type startCount: int
         """
-        return abs(startCount - self.stepCount) > 500
+        return abs(startCount - self.steps) > 500
 
     def limitSwitch(self, direction, hitSwitch=True):
         """Return limit switch state which will be reached by going in that direction.
@@ -389,6 +389,15 @@ class rexm(FSMThread, bufferedSocket.EthComm):
 
         return self._setGlobalParameter(paramId=11, motorAddress=2, data=0, cmd=cmd)  # reset emergency stop flag
 
+    def distFromParking(self, cmd):
+        """Return distance from parking in mm
+
+        :param cmd: current command.
+        :raise: Exception with warning message.
+        """
+        usteps = self._getAxisParameter(1, cmd=cmd) - TMCM.mm2ustep(stepIdx=self.stepIdx, valueMm=TMCM.PARKING)
+        return TMCM.ustep2mm(stepIdx=self.stepIdx, usteps=usteps)
+
     def _setConfig(self, cmd=None):
         """Set motor parameters.
 
@@ -401,14 +410,14 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         for paramId, value in TMCM.defaultConfig.items():
             self._setAxisParameter(paramId=paramId, data=value, cmd=cmd)
 
-    def _getStepCount(self, cmd=None):
+    def _getSteps(self, cmd=None):
         """Get current step count.
 
         :param cmd: current command.
         :raise: Exception with warning message.
         """
         ustep = self._getAxisParameter(1, cmd=cmd)  # get microstep count
-        return ustep / (2 ** self.stepIdx)
+        return int(round(ustep / (2 ** self.stepIdx)))
 
     def _getSpeed(self, cmd=None):
         """Get current speed.
@@ -417,7 +426,7 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         :raise: Exception with warning message.
         """
         velocity = self._getAxisParameter(paramId=3, cmd=cmd)
-        return velocity / (2 ** (self.pulseDivisor + self.stepIdx) * (65536 / 16e6))  # speed in step/sec
+        return int(round(velocity / (2 ** (self.pulseDivisor + self.stepIdx) * (65536 / 16e6))))  # speed in step/sec
 
     def _setSpeed(self, speedMm, cmd=None):
         """Set motor speed.
@@ -427,8 +436,8 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         :type speedMm: float
         :raise: Exception with warning message.
         """
-        freq = TMCM.mm2counts(stepIdx=self.stepIdx, valueMm=speedMm)
-        velocity = freq * (2 ** self.pulseDivisor * (65536 / 16e6))
+        ustepPerSec = TMCM.mm2ustep(stepIdx=self.stepIdx, valueMm=speedMm)
+        velocity = ustepPerSec * (2 ** self.pulseDivisor * (65536 / 16e6))
         return self._setAxisParameter(paramId=4, data=velocity, cmd=cmd)
 
     def _setHome(self, cmd=None):
@@ -449,8 +458,8 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         :type distance: float
         :raise: Exception with warning message.
         """
-        counts = np.int32(TMCM.mm2counts(stepIdx=self.stepIdx, valueMm=distance))
-        cmdBytes = TMCM.MVP(direction, counts)
+        usteps = np.int32(TMCM.mm2ustep(stepIdx=self.stepIdx, valueMm=distance))
+        cmdBytes = TMCM.MVP(direction, usteps)
 
         return self.sendOneCommand(cmdBytes=cmdBytes, cmd=cmd)
 
