@@ -31,9 +31,9 @@ class SlitCmd(object):
             ('slit', 'home', self.goHome),
             ('slit', 'move absolute [<X>] [<Y>] [<Z>] [<U>] [<V>] [<W>]', self.moveAbs),
             ('slit', 'move relative [<X>] [<Y>] [<Z>] [<U>] [<V>] [<W>]', self.moveRel),
-            ('slit', '<focus> [@(microns)]', self.focus),
-            ('slit', '<dither> [@(pixels|microns)]', self.dither),
-            ('slit', '<shift> [@(pixels|microns)]', self.shift),
+            ('slit', '<focus> [@(microns)] [abs]', self.focus),
+            ('slit', 'dither [<X>] [<Y>] [@(pixels|microns)] [abs]', self.dither),
+
             ('slit', 'convert <X> <Y> <Z> <U> <V> <W>', self.convert),
             ('slit', 'stop', self.stop),
             ('slit', 'start [@(fullInit)] [@(operation|simulation)]', self.start),
@@ -58,6 +58,9 @@ class SlitCmd(object):
             return self.actor.controllers['slit']
         except KeyError:
             raise RuntimeError('slit controller is not connected.')
+
+    def config(self, option):
+        return self.actor.config.get('slit', option)
 
     @threaded
     def status(self, cmd):
@@ -104,11 +107,13 @@ class SlitCmd(object):
     def focus(self, cmd):
         """Move wrt focus axis."""
         cmdKeys = cmd.cmd.keywords
-        shift = cmd.cmd.keywords['focus'].values[0]
-        fact = 0.001 if 'microns' in cmdKeys else 1
-        focus_axis = np.array([float(val) for val in self.actor.config.get('slit', 'focus_axis').split(',')])
-        coords = focus_axis * fact * shift
-        reference = 'relative'
+        value = cmd.cmd.keywords['focus'].values[0]
+        coeff = 0.001 if 'microns' in cmdKeys else 1
+        reference = 'absolute' if 'abs' in cmdKeys else 'relative'
+        focus_axis = np.array([float(val) for val in self.config('focus_axis').split(',')], dtype=bool)
+
+        coords = np.array([c for c in self.controller.coords], dtype=float) if reference == 'absolute' else np.zeros(6)
+        coords[focus_axis] = coeff * value
 
         self.controller.substates.move(cmd, reference=reference, coords=coords)
         self.controller.generate(cmd)
@@ -116,39 +121,23 @@ class SlitCmd(object):
     @blocking
     def dither(self, cmd):
         """Move wrt dither axis."""
+        ditherXaxis = np.array([float(v) for v in self.config('dither_x_axis').split(',')], dtype=bool)
+        ditherYaxis = np.array([float(v) for v in self.config('dither_y_axis').split(',')], dtype=bool)
+        pix2mm = [float(c) for c in self.config('pix_to_mm').split(',')]
+
         cmdKeys = cmd.cmd.keywords
-        shift = cmd.cmd.keywords['dither'].values[0]
+        reference = 'absolute' if 'abs' in cmdKeys else 'relative'
 
-        if 'pixels' in cmdKeys:
-            fact = float(self.actor.config.get('slit', 'pix_to_mm').split(',')[1])
-        elif 'microns' in cmdKeys:
-            fact = 0.001
-        else:
-            fact = 1
+        if not ('X' in cmdKeys or 'Y' in cmdKeys):
+            raise ValueError('X or Y at least needs to be specified')
 
-        dither_axis = np.array([float(val) for val in self.actor.config.get('slit', 'dither_axis').split(',')])
-        coords = dither_axis * fact * shift
-        reference = 'relative'
+        coeffX, coeffY = 1, 1
+        coeffX, coeffY = pix2mm if 'pixels' in cmdKeys else [coeffX, coeffY]
+        coeffX, coeffY = [0.001, 0.001] if 'microns' in cmdKeys else [coeffX, coeffY]
 
-        self.controller.substates.move(cmd, reference=reference, coords=coords)
-        self.controller.generate(cmd)
-
-    @blocking
-    def shift(self, cmd):
-        """Move wrt shift axis."""
-        cmdKeys = cmd.cmd.keywords
-        shift = cmd.cmd.keywords['shift'].values[0]
-
-        if 'pixels' in cmdKeys:
-            fact = float(self.actor.config.get('slit', 'pix_to_mm').split(',')[0])
-        elif 'microns' in cmdKeys:
-            fact = 0.001
-        else:
-            fact = 1
-
-        shift_axis = np.array([float(val) for val in self.actor.config.get('slit', 'shift_axis').split(',')])
-        coords = shift_axis * fact * shift
-        reference = 'relative'
+        coords = np.array([c for c in self.controller.coords], dtype=float) if reference == 'absolute' else np.zeros(6)
+        coords[ditherXaxis] = coeffX * cmdKeys['X'].values[0] if 'X' in cmdKeys else coords[ditherXaxis]
+        coords[ditherYaxis] = coeffY * cmdKeys['Y'].values[0] if 'Y' in cmdKeys else coords[ditherYaxis]
 
         self.controller.substates.move(cmd, reference=reference, coords=coords)
         self.controller.generate(cmd)
@@ -236,9 +225,8 @@ class SlitCmd(object):
     def start(self, cmd):
         """Power on hxp controller, connect slit controller, and init."""
         cmdKeys = cmd.cmd.keywords
-        mode = self.actor.config.get('slit', 'mode')
-        host = self.actor.config.get('slit', 'host')
-        port = self.actor.config.get('slit', 'port')
+        mode, host, port = self.config('mode'), self.config('host'), self.config('port')
+
         mode = 'operation' if 'operation' in cmdKeys else mode
         mode = 'simulation' if 'simulation' in cmdKeys else mode
 
