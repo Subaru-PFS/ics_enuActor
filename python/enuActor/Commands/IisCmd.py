@@ -19,7 +19,8 @@ class IisCmd(object):
         #
         self.vocab = [
             ('iis', 'status', self.status),
-            ('iis', '[<on>] [<off>]', self.switch),
+            ('iis', '[<on>] [<warmingTime>]', self.switchOn),
+            ('iis', '<off>', self.switchOff),
             ('iis', 'abort', self.abort),
             ('iis', 'stop', self.stop),
             ('iis', 'start [@(operation|simulation)]', self.start),
@@ -31,6 +32,7 @@ class IisCmd(object):
                                                  help='which outlet to switch on.'),
                                         keys.Key("off", types.String() * (1, None),
                                                  help='which outlet to switch off.'),
+                                        keys.Key("warmingTime", types.Float(), help="customizable warming time"),
                                         )
 
     @property
@@ -46,24 +48,38 @@ class IisCmd(object):
         self.controller.generate(cmd)
 
     @blocking
-    def switch(self, cmd):
-        """Switch on/off arc lamps."""
+    def switchOn(self, cmd):
+        """Switch on light sources."""
         cmdKeys = cmd.cmd.keywords
-        arcOn = cmdKeys['on'].values if 'on' in cmdKeys else []
-        arcOff = cmdKeys['off'].values if 'off' in cmdKeys else []
+        sourcesOn = cmdKeys['on'].values if 'on' in cmdKeys else []
 
-        for name in arcOn + arcOff:
-            if name not in self.controller.arcs:
-                raise ValueError(f'{name} : unknown arc')
+        for name in sourcesOn:
+            if name not in self.controller.names:
+                raise ValueError(f'{name} : unknown source')
 
-        powerOff = dict([(self.controller.powerPorts[name], 'off') for name in arcOff])
-        powerOn = [self.controller.powerPorts[name] for name in arcOn if self.controller.isOff(name)]
+        warmingTime = max([self.controller.warmingTime[source] for source in sourcesOn]) if sourcesOn else 0
+        warmingTime = cmdKeys['warmingTime'].values[0] if 'warmingTime' in cmdKeys else warmingTime
+        warmingTime = 0 if 'force' in cmdKeys else warmingTime
 
-        warmingTime = max([self.controller.warmingTime[arc] for arc in arcOn]) if arcOn else 0
+        toBeWarmed = sourcesOn if sourcesOn else self.controller.sourcesOn
+        remainingTimes = [warmingTime - self.controller.elapsed(source) for source in toBeWarmed]
+        warmingTime = max(remainingTimes) if remainingTimes else 0
 
-        self.controller.switching(cmd, powerPorts=powerOff)
-        self.controller.substates.warming(cmd, arcOn=powerOn, warmingTime=warmingTime)
+        self.controller.substates.warming(cmd, sourcesOn=sourcesOn, warmingTime=warmingTime)
+        self.controller.generate(cmd)
 
+    @blocking
+    def switchOff(self, cmd):
+        """Switch off light sources."""
+        cmdKeys = cmd.cmd.keywords
+
+        sourcesOff = cmdKeys['off'].values if 'off' in cmdKeys else []
+
+        for name in sourcesOff:
+            if name not in self.controller.names:
+                raise ValueError(f'{name} : unknown source')
+
+        self.controller.switchOff(cmd, sourcesOff)
         self.controller.generate(cmd)
 
     def abort(self, cmd):
