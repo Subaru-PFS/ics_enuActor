@@ -114,7 +114,7 @@ class iis(pdu.pdu):
             time.sleep(ti)
             self.handleTimeout()
             if self.abortWarmup:
-                raise RuntimeError('sources warmup aborted')
+                raise UserWarning('sources warmup aborted')
 
     def isOff(self, source):
         """Check if light source is currently off.
