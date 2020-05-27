@@ -42,6 +42,7 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         self.switchB = 0
         self.speed = 0
         self.abortMotion = False
+        self.persisted = 'undef'
 
         self.logger = logging.getLogger(self.name)
         self.logger.setLevel(loglevel)
@@ -58,6 +59,12 @@ class rexm(FSMThread, bufferedSocket.EthComm):
 
     @property
     def position(self):
+        fromSwitch = self.positionFromSwitch
+        current = self.persisted if (self.persistPosition and fromSwitch == 'undef') else fromSwitch
+        return current
+
+    @property
+    def positionFromSwitch(self):
         """Interpret rexm current position from limit switches state."""
         return rexm.switch[self.switchA, self.switchB]
 
@@ -88,6 +95,11 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         bufferedSocket.EthComm.__init__(self,
                                         host=self.actor.config.get('rexm', 'host'),
                                         port=int(self.actor.config.get('rexm', 'port')))
+
+        try:
+            self.persistPosition = self.actor.config.getboolean('rexm', 'persistPosition')
+        except:
+            self.persistPosition = False
 
     def _openComm(self, cmd):
         """Open socket with rexm controller or simulate it.
@@ -143,7 +155,12 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         :param forceStop: if True send MST command directly.
         :raise: Exception with warning message.
         """
-        self.stopAndCheck(cmd) if forceStop else self.checkStatus(cmd)
+        if forceStop:
+            self.persisted = self.positionFromSwitch
+            self.stopAndCheck(cmd)
+        else:
+            self.checkStatus(cmd)
+
         start = time.time()
 
         while self.isMoving:
@@ -173,6 +190,7 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         :raise: Exception with warning message.
         """
         self.abortMotion = False
+        self.persisted = 'undef'
 
         if position is not None:
             self._goToPosition(cmd, position)
