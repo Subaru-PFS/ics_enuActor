@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import enuActor.utils.bufferedSocket as bufferedSocket
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
 from enuActor.utils import waitForTcpServer, serverIsUp
@@ -30,6 +31,7 @@ class BiashaCmd(object):
             ('shutters', '@(open|close) [blue|red]', self.shutterSwitch),
             ('shutters', 'status', self.shutterStatus),
             ('shutters', '@(expose) <exptime> [blue|red]', self.expose),
+            ('shutters', '@(blue|red) <raw>', self.shutterRaw),
             ('exposure', 'abort', self.abortExposure),
             ('exposure', 'finish', self.finishExposure),
             ('biasha', 'stop', self.stop),
@@ -168,6 +170,23 @@ class BiashaCmd(object):
         cmdKeys = cmd.cmd.keywords
         cmdStr = cmdKeys['raw'].values[0]
         ret = self.controller.sendOneCommand(cmdStr, cmd=cmd)
+        cmd.finish('text=%s' % (qstr('returned: %s' % (ret))))
+
+    @blocking
+    def shutterRaw(self, cmd):
+        """Send a raw command to the (blue|red) shutter controller via RS232 link."""
+        cmdKeys = cmd.cmd.keywords
+
+        shutter = 'blueshutter' if 'blue' in cmdKeys else 'redshutter'
+        cmdStr = cmdKeys['raw'].values[0]
+
+        sock = bufferedSocket.EthComm(host=self.actor.config.get(shutter, 'host'),
+                                      port=int(self.actor.config.get(shutter, 'port')),
+                                      EOL='\r')
+
+        sock.ioBuffer = bufferedSocket.BufferedSocket(shutter + "IO", EOL='\rc>')
+        sock.connectSock()
+        ret = sock.sendOneCommand(cmdStr, doClose=True, cmd=cmd)
         cmd.finish('text=%s' % (qstr('returned: %s' % (ret))))
 
     def abortExposure(self, cmd):
