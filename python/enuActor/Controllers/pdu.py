@@ -1,5 +1,8 @@
 __author__ = 'alefur'
+
 import logging
+import time
+from functools import partial
 
 import enuActor.utils.bufferedSocket as bufferedSocket
 from enuActor.Simulators.pdu import PduSim
@@ -7,6 +10,9 @@ from enuActor.utils.fsmThread import FSMThread
 
 
 class pdu(FSMThread, bufferedSocket.EthComm):
+    nAttempt = 5
+    waitBetweenAttempt = 3
+
     def __init__(self, actor, name, loglevel=logging.DEBUG):
         """This sets up the connections to/from the hub, the logger, and the twisted reactor.
 
@@ -76,7 +82,7 @@ class pdu(FSMThread, bufferedSocket.EthComm):
         :param cmd: current command.
         :raise: Exception if the communication has failed with the controller.
         """
-        v = float(self.sendOneCommand('read meter olt o01 volt simple', cmd=cmd))
+        v = float(self.safeComm(cmd, partial(self.sendOneCommand, 'read meter olt o01 volt simple', cmd=cmd)))
 
     def getStatus(self, cmd):
         """Get all ports status.
@@ -111,8 +117,20 @@ class pdu(FSMThread, bufferedSocket.EthComm):
         :raise: Exception with warning message.
         """
         for outlet, state in powerPorts.items():
-            self.sendOneCommand('sw o%s %s imme' % (outlet, state), cmd=cmd)
-            self.portStatus(cmd, outlet=outlet)
+            self.safeComm(cmd, partial(self.sendOneCommand, 'sw o%s %s imme' % (outlet, state), cmd=cmd))
+            self.safeComm(cmd, partial(self.portStatus, cmd, outlet=outlet))
+
+    def safeComm(self, cmd, func, attempt=0):
+        try:
+            return func()
+        except Exception as e:
+            if attempt < pdu.nAttempt:
+                cmd.warn('text=%s' % self.actor.strTraceback(e))
+                self._closeComm(cmd)
+                cmd.warn(f'text="attempt #{attempt + 1} to fix connection, waiting {pdu.waitBetweenAttempt} s')
+                time.sleep(pdu.waitBetweenAttempt)
+                return self.safeComm(cmd, func, attempt=attempt + 1)
+            raise
 
     def loginCommand(self, cmdStr, cmd=None, ioEOL=None):
         """Used to login.
