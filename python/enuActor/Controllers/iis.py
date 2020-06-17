@@ -2,6 +2,7 @@ __author__ = 'alefur'
 
 import logging
 import time
+from functools import partial
 
 from enuActor.Controllers import pdu
 from enuActor.Simulators.pdu import PduSim
@@ -107,8 +108,8 @@ class iis(pdu.pdu):
             if self.isOff(source):
                 outlet = self.powerPorts[source]
                 self.warmupTime[source] = time.time()
-                self.sendOneCommand('sw o%s on imme' % outlet, cmd=cmd)
-                self.portStatus(cmd, outlet=outlet)
+                self.safeComm(cmd, partial(self.sendOneCommand, 'sw o%s on imme' % outlet, cmd=cmd))
+                self.safeComm(cmd, partial(self.portStatus, cmd, outlet=outlet))
 
         while time.time() < start + warmingTime:
             time.sleep(ti)
