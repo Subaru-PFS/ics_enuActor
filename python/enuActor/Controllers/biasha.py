@@ -1,4 +1,5 @@
 __author__ = 'alefur'
+
 import logging
 import time
 from datetime import datetime as dt
@@ -189,7 +190,8 @@ class biasha(FSMThread, bufferedSocket.EthComm):
 
         try:
             self.gotoState(cmd=cmd, cmdStr='init')
-
+            # HACK FOR SM1 BROKEN RED SHUTTER
+            shutter = 'blue'
             start = dt.utcnow()
             self.gotoState(cmd=cmd, cmdStr='%s_open' % shutter)
             transientTime1 = (dt.utcnow() - start).total_seconds()
