@@ -11,6 +11,12 @@ class EthComm(object):
         self.port = port
         self.EOL = EOL
 
+        try:
+            self.logger.debug(f'instanciating EthComm {host}:{port}')
+        except AttributeError:
+            self.logger = logging.getLogger(f'{host}:{port}')
+            self.logger.setLevel(logging.DEBUG)
+
     def connectSock(self, timeout=3.0):
         """| Connect socket if self.sock is None.
 
