@@ -172,7 +172,7 @@ class BiashaCmd(object):
         ret = self.controller.sendOneCommand(cmdStr, cmd=cmd)
         cmd.finish('text=%s' % (qstr('returned: %s' % (ret))))
 
-    @blocking
+    @singleShot
     def shutterRaw(self, cmd):
         """Send a raw command to the (blue|red) shutter controller via RS232 link."""
         cmdKeys = cmd.cmd.keywords
@@ -184,7 +184,7 @@ class BiashaCmd(object):
                                       port=int(self.actor.config.get(shutter, 'port')),
                                       EOL='\r')
 
-        sock.ioBuffer = bufferedSocket.BufferedSocket(shutter + "IO", EOL='\rc>')
+        sock.ioBuffer = bufferedSocket.BufferedSocket(shutter + "IO", EOL='c>')
         sock.connectSock()
         ret = sock.sendOneCommand(cmdStr, doClose=True, cmd=cmd)
         cmd.finish('text=%s' % (qstr('returned: %s' % (ret))))
