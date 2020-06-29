@@ -298,23 +298,6 @@ class rexm(FSMThread, bufferedSocket.EthComm):
             raise ValueError('limit switch is not triggered')
 
         cmd.inform('text="arrived at position %s"' % position)
-        cmd.inform('text="adjusting position backward"')
-        self._moveRelative(cmd,
-                           direction=not direction,
-                           distance=5,
-                           speed=(TMCM.g_speed / 3),
-                           hitSwitch=False)
-
-        cmd.inform('text="adjusting position forward"')
-        self._moveRelative(cmd,
-                           direction=direction,
-                           distance=10,
-                           speed=(TMCM.g_speed / 3))
-
-        if not self.limitSwitch(direction):
-            raise ValueError('limit switch is not triggered')
-
-        cmd.inform('text="arrived at position %s"' % position)
 
     def _moveRelative(self, cmd, direction, distance, speed, hitSwitch=True):
         """| Go to specified distance, direction with desired speed.
