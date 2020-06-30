@@ -95,17 +95,17 @@ class TMCM(object):
     MVP_REL = 1
     MVP_COORD = 2
 
-    defaultConfig = {4: 268,  # max. positioning speed [int]
-                     5: 1759,  # max. acceleration [int]
+    defaultConfig = {4: 1611,  # max. positioning speed [int]
+                     5: 1351,  # max. acceleration [int]
                      6: 255,  # max. current
                      7: 0,  # standby current
                      12: 0,  # right limit switch disable
                      13: 0,  # left limit switch disable
                      130: 1,  # minimum speed [int]
                      140: 2,  # microstep resolution
-                     149: 0,  # soft stop flag
-                     153: 11,  # ramp divisor
-                     154: 5,  # pulse divisor
+                     149: 1,  # soft stop flag
+                     153: 9,  # ramp divisor
+                     154: 6,  # pulse divisor
                      160: 0,  # step interpolation enable
                      161: 0,  # double step enable
                      162: 2,  # chopper blank time
