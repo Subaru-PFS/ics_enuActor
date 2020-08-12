@@ -67,8 +67,8 @@ class EthComm(object):
 
         try:
             s.sendall(fullCmd)
-
-        except:
+        except Exception as e:
+            self.logger.warn("%s failed to send '%s': %s" % (self.name, fullCmd, e))
             self.closeSock()
             raise
 
@@ -159,8 +159,10 @@ class BufferedSocket(object):
 
         readers, writers, broken = select.select([sock.fileno()], [], [], timeout)
         if len(readers) == 0:
-            cmd.warn('text="Timed out reading character from %s"' % self.name)
-            raise IOError
+            msg = "%s: timed out (%s s) reading input from %s" % (self.name, timeout, self.name)
+            self.logger.warn(msg)
+            cmd.warn('text="%s"' % (msg))
+            raise IOError(msg)
 
         return sock.recv(1024).decode('latin-1')
 
@@ -183,7 +185,7 @@ class BufferedSocket(object):
                 more = self.getOutput(sock=sock, timeout=timeout, cmd=cmd)
                 if not more:
                     if doRaise:
-                        raise IOError
+                        raise IOError("getOneResponse received nothing.")
                     else:
                         return self.getOneResponse(sock=sock, timeout=timeout, cmd=cmd, doRaise=True)
 
