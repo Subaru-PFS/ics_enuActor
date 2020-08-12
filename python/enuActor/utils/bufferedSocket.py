@@ -60,7 +60,7 @@ class EthComm(object):
         if cmd is None:
             cmd = self.actor.bcast
 
-        fullCmd = ('%s%s' % (cmdStr, self.EOL)).encode('utf-8')
+        fullCmd = ('%s%s' % (cmdStr, self.EOL)).encode('latin-1')
         self.logger.debug('sending %r', fullCmd)
 
         s = self.connectSock()
@@ -162,7 +162,7 @@ class BufferedSocket(object):
             cmd.warn('text="Timed out reading character from %s"' % self.name)
             raise IOError
 
-        return sock.recv(1024).decode('utf8', 'ignore')
+        return sock.recv(1024).decode('latin-1')
 
     def getOneResponse(self, sock=None, timeout=None, cmd=None, doRaise=False):
         """ Return the next available complete line. Fetch new input if necessary.
