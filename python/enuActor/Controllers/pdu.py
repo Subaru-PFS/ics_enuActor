@@ -56,7 +56,7 @@ class pdu(FSMThread, bufferedSocket.EthComm):
         bufferedSocket.EthComm.__init__(self,
                                         host=self.actor.config.get('pdu', 'host'),
                                         port=int(self.actor.config.get('pdu', 'port')),
-                                        EOL='\r\n')
+                                        EOL='\r\n', stripTelnet=True)
         self.powerNames = dict([(key, val) for (key, val) in self.actor.config.items('outlets')])
         self.powerPorts = dict([(val, key) for (key, val) in self.actor.config.items('outlets')])
 

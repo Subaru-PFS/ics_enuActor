@@ -1,15 +1,16 @@
 import logging
 import select
 import socket
-
+import time
 
 class EthComm(object):
-    def __init__(self, host, port, EOL='\r\n'):
+    def __init__(self, host, port, EOL='\r\n', stripTelnet=False):
         object.__init__(self)
         self.sock = None
         self.host = host
         self.port = port
         self.EOL = EOL
+        self.stripTelnet = stripTelnet
 
         try:
             self.logger.debug(f'instanciating EthComm {host}:{port}')
@@ -78,6 +79,40 @@ class EthComm(object):
 
         return reply
 
+    def _stripTelnet(self, s):
+        """Crudely strip TELNET negotiation goo from our input.
+
+        Caveats:
+         - Does not reply to DO with WONT or to WILL with DONT
+         - Only reports to .logger.
+         - Accepts codes which we do not understand, and always strips those out
+           as if they are single byte codes. May or may not be true.
+        """
+        IAC = chr(255)
+        NOP = 241
+        WILL = 251
+        WONT = 252
+        DO = 253
+        DONT = 254
+
+        while True:
+            start = s.find(IAC)
+            if start == -1:
+                return s
+            s1 = s[:start]
+            cmd = ord(s[start+1])
+            if cmd in {WILL, WONT, DO, DONT}:
+                cmd2 = ord(s[start+2])
+                s2 = s[start+3:]
+            elif cmd in {NOP}:
+                cmd2 = 'OK'
+                s2 = s[start+2:]
+            else:
+                cmd2 = 'UNKNOWN!'
+                s2 = s[start+2:]
+            self.logger.debug(f'stripping {cmd}.{cmd2}')
+            s = s1 + s2
+
     def getOneResponse(self, sock=None, cmd=None):
         """| Attempt to receive data from the socket.
 
@@ -90,6 +125,9 @@ class EthComm(object):
             sock = self.connectSock()
 
         ret = self.ioBuffer.getOneResponse(sock=sock, cmd=cmd)
+        if self.stripTelnet:
+            self.logger.debug('raw received %r', ret)
+            ret = self._stripTelnet(ret)
         reply = ret.strip()
 
         self.logger.debug('received %r', reply)
