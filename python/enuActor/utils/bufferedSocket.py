@@ -1,15 +1,16 @@
 import logging
 import select
 import socket
-
+import time
 
 class EthComm(object):
-    def __init__(self, host, port, EOL='\r\n'):
+    def __init__(self, host, port, EOL='\r\n', stripTelnet=False):
         object.__init__(self)
         self.sock = None
         self.host = host
         self.port = port
         self.EOL = EOL
+        self.stripTelnet = stripTelnet
 
         try:
             self.logger.debug(f'instanciating EthComm {host}:{port}')
@@ -59,15 +60,15 @@ class EthComm(object):
         if cmd is None:
             cmd = self.actor.bcast
 
-        fullCmd = ('%s%s' % (cmdStr, self.EOL)).encode('utf-8')
+        fullCmd = ('%s%s' % (cmdStr, self.EOL)).encode('latin-1')
         self.logger.debug('sending %r', fullCmd)
 
         s = self.connectSock()
 
         try:
             s.sendall(fullCmd)
-
-        except:
+        except Exception as e:
+            self.logger.warn("%s failed to send '%s': %s" % (self.name, fullCmd, e))
             self.closeSock()
             raise
 
@@ -77,6 +78,40 @@ class EthComm(object):
             self.closeSock()
 
         return reply
+
+    def _stripTelnet(self, s):
+        """Crudely strip TELNET negotiation goo from our input.
+
+        Caveats:
+         - Does not reply to DO with WONT or to WILL with DONT
+         - Only reports to .logger.
+         - Accepts codes which we do not understand, and always strips those out
+           as if they are single byte codes. May or may not be true.
+        """
+        IAC = chr(255)
+        NOP = 241
+        WILL = 251
+        WONT = 252
+        DO = 253
+        DONT = 254
+
+        while True:
+            start = s.find(IAC)
+            if start == -1:
+                return s
+            s1 = s[:start]
+            cmd = ord(s[start+1])
+            if cmd in {WILL, WONT, DO, DONT}:
+                cmd2 = ord(s[start+2])
+                s2 = s[start+3:]
+            elif cmd in {NOP}:
+                cmd2 = 'OK'
+                s2 = s[start+2:]
+            else:
+                cmd2 = 'UNKNOWN!'
+                s2 = s[start+2:]
+            self.logger.debug(f'stripping {cmd}.{cmd2}')
+            s = s1 + s2
 
     def getOneResponse(self, sock=None, cmd=None):
         """| Attempt to receive data from the socket.
@@ -90,6 +125,9 @@ class EthComm(object):
             sock = self.connectSock()
 
         ret = self.ioBuffer.getOneResponse(sock=sock, cmd=cmd)
+        if self.stripTelnet:
+            self.logger.debug('raw received %r', ret)
+            ret = self._stripTelnet(ret)
         reply = ret.strip()
 
         self.logger.debug('received %r', reply)
@@ -121,10 +159,12 @@ class BufferedSocket(object):
 
         readers, writers, broken = select.select([sock.fileno()], [], [], timeout)
         if len(readers) == 0:
-            cmd.warn('text="Timed out reading character from %s"' % self.name)
-            raise IOError
+            msg = "%s: timed out (%s s) reading input from %s" % (self.name, timeout, self.name)
+            self.logger.warn(msg)
+            cmd.warn('text="%s"' % (msg))
+            raise IOError(msg)
 
-        return sock.recv(1024).decode('utf8', 'ignore')
+        return sock.recv(1024).decode('latin-1')
 
     def getOneResponse(self, sock=None, timeout=None, cmd=None, doRaise=False):
         """ Return the next available complete line. Fetch new input if necessary.
@@ -145,7 +185,7 @@ class BufferedSocket(object):
                 more = self.getOutput(sock=sock, timeout=timeout, cmd=cmd)
                 if not more:
                     if doRaise:
-                        raise IOError
+                        raise IOError("getOneResponse received nothing.")
                     else:
                         return self.getOneResponse(sock=sock, timeout=timeout, cmd=cmd, doRaise=True)
 
