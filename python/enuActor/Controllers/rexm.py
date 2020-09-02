@@ -8,6 +8,7 @@ from enuActor.Simulators.rexm import RexmSim
 from enuActor.drivers.rexm_drivers import recvPacket, TMCM
 from enuActor.utils import wait
 from enuActor.utils.fsmThread import FSMThread
+from astropy import time as astroTime
 
 
 class rexm(FSMThread, bufferedSocket.EthComm):
@@ -157,6 +158,7 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         """
         if forceStop:
             self.persisted = self.positionFromSwitch
+            self.declareNewGratingPosition(cmd)
             self.stopAndCheck(cmd)
         else:
             self.checkStatus(cmd)
@@ -191,6 +193,7 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         """
         self.abortMotion = False
         self.persisted = 'undef'
+        self.declareNewGratingPosition(cmd, invalid=True)
 
         if position is not None:
             self._goToPosition(cmd, position)
@@ -415,6 +418,26 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         """
         usteps = TMCM.mm2ustep(stepIdx=self.stepIdx, valueMm=TMCM.PARKING) - self._getAxisParameter(1, cmd=cmd)
         return TMCM.ustep2mm(stepIdx=self.stepIdx, usteps=usteps)
+
+    def declareNewGratingPosition(self, cmd=None, invalid=False):
+        """Called when hexapod has been moved, homed, shutdown...
+
+        Args
+        ----
+        cmd : `Command`
+          Where to send keywords.
+        invalid : `bool`
+          Whether the current positions are trash/unknown.
+          Used right before homing.
+
+        For now we just generate the MHS keyword which declares that the
+        old motor positions have been invalidated.
+        """
+
+        # Use MJD seconds.
+        cmd = self.actor.bcast if cmd is None else cmd
+        now = astroTime.Time.now().mjd
+        cmd.inform(f'gratingMoved={now:0.6f}')
 
     def _setConfig(self, cmd=None):
         """Set motor parameters.
