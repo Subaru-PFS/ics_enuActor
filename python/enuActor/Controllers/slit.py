@@ -1,8 +1,10 @@
 __author__ = 'alefur'
+
 import logging
 import socket
 
 import numpy as np
+from astropy import time as astroTime
 from enuActor.Simulators.slit import SlitSim
 from enuActor.drivers import hxp_drivers
 from enuActor.utils import wait
@@ -11,6 +13,8 @@ from enuActor.utils.fsmThread import FSMThread
 
 class slit(FSMThread):
     timeout = 2
+    actuallyMoving = ['GroupHomeSearch', 'HexapodMoveAbsolute', 'HexapodMoveIncremental', 'GroupMotionDisable',
+                      'GroupMotionEnable', 'TCLScriptExecuteAndWait']
 
     @staticmethod
     def convertToWorld(array):
@@ -280,6 +284,26 @@ class slit(FSMThread):
         cmd.inform('text="Disabling Slit controller..."')
         self._hexapodDisable()
 
+    def declareNewHexapodPosition(self, cmd=None, invalid=False):
+        """Called when hexapod has been moved, homed, shutdown...
+
+        Args
+        ----
+        cmd : `Command`
+          Where to send keywords.
+        invalid : `bool`
+          Whether the current positions are trash/unknown.
+          Used right before homing.
+
+        For now we just generate the MHS keyword which declares that the
+        old motor positions have been invalidated.
+        """
+
+        # Use MJD seconds.
+        cmd = self.actor.bcast if cmd is None else cmd
+        now = astroTime.Time.now().mjd
+        cmd.inform(f'hexapodMoved={now:0.6f}')
+
     def doAbort(self, cmd):
         """Aborting current move.
 
@@ -476,6 +500,10 @@ class slit(FSMThread):
         socketId = self.connectSock(sockName)
 
         buf = func(socketId, *args)
+
+        if func.__name__ in slit.actuallyMoving:
+            self.declareNewHexapodPosition(invalid=buf[0] != 0)
+
         if buf[0] != 0:
             if buf[0] == -2:
                 self.closeSock(sockName)
