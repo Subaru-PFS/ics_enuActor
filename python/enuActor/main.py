@@ -6,6 +6,7 @@ import logging
 
 import actorcore.ICC
 import numpy as np
+from pfs.utils.instdata import InstData
 
 
 class enuActor(actorcore.ICC.ICC):
@@ -21,6 +22,7 @@ class enuActor(actorcore.ICC.ICC):
                                    configFile=configFile,
                                    modelNames=name)
         self.addModels([self.name])
+        self.instData = InstData(self)
         self.logger.setLevel(logLevel)
 
         self.everConnected = False
