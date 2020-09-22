@@ -97,10 +97,9 @@ class SlitCmd(object):
     @blocking
     def goHome(self, cmd):
         """Go to home related to work : [0,0,0,0,0,0]."""
-        reference = 'absolute'
         coords = 6 * [0.]
 
-        self.controller.substates.move(cmd, reference=reference, coords=coords)
+        self.controller.substates.move(cmd, reference='absolute', coords=coords)
         self.controller.generate(cmd)
 
     @blocking
