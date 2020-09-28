@@ -6,7 +6,9 @@ import logging
 
 import actorcore.ICC
 import numpy as np
+from enuActor.utils import serverIsUp, waitForTcpServer
 from pfs.utils.instdata import InstData
+from twisted.internet import reactor
 
 
 class enuActor(actorcore.ICC.ICC):
@@ -82,10 +84,37 @@ class enuActor(actorcore.ICC.ICC):
     def connectionMade(self):
         """Attach all controllers."""
         if self.everConnected is False:
-            logging.info("Attaching all controllers...")
-            self.allControllers = [s.strip() for s in self.config.get(self.name, 'startingControllers').split(',')]
-            self.attachAllControllers()
+            try:
+                doAutoStart = self.config.getboolean(self.name, 'autoStart')
+            except:
+                doAutoStart = False
+            try:
+                self.connect('pdu')
+                if doAutoStart:
+                    reactor.callLater(5, self.autoStart)
+            except Exception as e:
+                self.logger.warn('text=%s' % self.strTraceback(e))
+
             self.everConnected = True
+
+    def autoStart(self, cmd=None):
+        """start each device automatically."""
+        cmd = self.bcast if cmd is None else cmd
+
+        self.callCommand('slit status')
+        self.startDevice(cmd, 'temps', outlet='temps')
+        self.startDevice(cmd, 'rexm', outlet='pows,ctrl')
+        self.startDevice(cmd, 'biasha', outlet='pows,ctrl')
+
+    def startDevice(self, cmd, device, outlet=None):
+        """power up device if not on the network, wait and connect"""
+        host, port = self.config.get(device, 'host'), self.config.get(device, 'port')
+        mode = self.config.get(device, 'mode')
+        if not serverIsUp(host, port):
+            if outlet is not None:
+                self.callCommand(f'power on={outlet}')
+                waitForTcpServer(host, port, cmd=cmd, mode=mode)
+                self.connect(device)
 
     def ownCall(self, cmd, cmdStr, failMsg='', timeLim=20):
         """Call enuActor itself.
@@ -113,7 +142,7 @@ class enuActor(actorcore.ICC.ICC):
         :type controller: str
         :raise: Exception with warning message.
         """
-        cmd = self.actor.bcast if cmd is None else cmd
+        cmd = self.bcast if cmd is None else cmd
         cmd.inform('text="attaching %s..."' % controller)
         try:
             actorcore.ICC.ICC.attachController(self, controller, cmd=cmd, **kwargs)
@@ -132,7 +161,7 @@ class enuActor(actorcore.ICC.ICC):
         :type controller: str
         :raise: Exception with warning message.
         """
-        cmd = self.actor.bcast if cmd is None else cmd
+        cmd = self.bcast if cmd is None else cmd
         cmd.inform('text="detaching %s..."' % controller)
         try:
             actorcore.ICC.ICC.detachController(self, controller, cmd=cmd)
