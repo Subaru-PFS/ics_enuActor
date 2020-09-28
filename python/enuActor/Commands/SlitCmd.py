@@ -5,7 +5,7 @@ import opscore.protocols.keys as keys
 import opscore.protocols.types as types
 from enuActor.utils import waitForTcpServer, serverIsUp
 from enuActor.utils.wrap import threaded, blocking, singleShot
-
+import enuActor.Controllers.slit as slitCtrl
 
 class SlitCmd(object):
     coordsName = ['X', 'Y', 'Z', 'U', 'V', 'W']
@@ -62,10 +62,20 @@ class SlitCmd(object):
     def config(self, option):
         return self.actor.config.get('slit', option)
 
-    @threaded
     def status(self, cmd):
         """Report state, mode, position."""
-        self.controller.generate(cmd)
+
+        @threaded
+        def thStatus(self, cmd):
+            self.controller.generate(cmd)
+
+        if 'slit' in self.actor.controllers:
+            thStatus(self, cmd=cmd)
+        else:
+            coords = self.actor.instData.loadKey('slit')
+            cmd.inform('slitFSM=OFF,SHUTDOWN')
+            cmd.inform('slit=%s' % ','.join(['%.5f' % p for p in coords]))
+            cmd.finish('slitPosition=%s' % slitCtrl.slit.position(coords))
 
     @blocking
     def initialise(self, cmd):

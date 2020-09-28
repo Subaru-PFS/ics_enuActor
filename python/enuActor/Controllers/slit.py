@@ -64,11 +64,11 @@ class slit(FSMThread):
         else:
             raise ValueError('unknown mode')
 
-    @property
-    def position(self):
+    @staticmethod
+    def position(coords):
         """Interpret slit position from current coordinates."""
-        delta = np.sum(np.abs(np.zeros(6) - self.coords))
-        if ~np.isnan(delta) and delta < 0.005:
+        delta = np.max(np.abs(coords))
+        if ~np.isnan(delta) and delta < 0.008:
             return 'home'
         else:
             return 'undef'
@@ -203,7 +203,7 @@ class slit(FSMThread):
         finally:
             genKeys = cmd.inform if np.nan not in self.coords else cmd.warn
             genKeys('slit=%s' % ','.join(['%.5f' % p for p in self.coords]))
-            genKeys('slitPosition=%s' % self.position)
+            genKeys('slitPosition=%s' % self.position(self.coords))
 
     def checkStatus(self, cmd):
         """Get status code and string from hxp100 controller. Generate hxpStatus keyword.
@@ -248,6 +248,7 @@ class slit(FSMThread):
         :raise: Exception with warning message.
         """
         self.doPersist = True
+
         cmd.inform('text="Kill and save hexapod position..."')
         self._TCLScriptExecute('KillWithRegistration.tcl')
         wait(secs=10)
