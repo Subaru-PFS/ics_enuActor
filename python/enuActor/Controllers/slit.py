@@ -217,8 +217,17 @@ class slit(FSMThread):
         :type coords: list
         :raise: Exception with warning message.
         """
+        coords = np.array(coords)
         if reference == 'absolute':
+            hysteresisCorrection = np.array([0, 0, -0.5, 0, 0, 0])
+            try:
+                ret = self._hexapodMoveAbsolute(coords + hysteresisCorrection)
+            except UserWarning as e:
+                cmd.fail('text=%s' % self.actor.strTraceback(e))
+
+            self.checkPosition(cmd)
             ret = self._hexapodMoveAbsolute(coords)
+
         elif reference == 'relative':
             ret = self._hexapodMoveIncremental('Work', coords)
         else:
