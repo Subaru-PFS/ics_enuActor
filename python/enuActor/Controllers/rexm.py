@@ -4,11 +4,11 @@ import time
 
 import enuActor.utils.bufferedSocket as bufferedSocket
 import numpy as np
+from astropy import time as astroTime
 from enuActor.Simulators.rexm import RexmSim
 from enuActor.drivers.rexm_drivers import recvPacket, TMCM
 from enuActor.utils import wait
 from enuActor.utils.fsmThread import FSMThread
-from astropy import time as astroTime
 
 
 class rexm(FSMThread, bufferedSocket.EthComm):
@@ -43,7 +43,6 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         self.switchB = 0
         self.speed = 0
         self.abortMotion = False
-        self.persisted = 'undef'
 
         self.logger = logging.getLogger(self.name)
         self.logger.setLevel(loglevel)
@@ -83,6 +82,15 @@ class rexm(FSMThread, bufferedSocket.EthComm):
     def stepIdx(self):
         """Microstep resolution"""
         return self.motorConfig[140]
+
+    @property
+    def persisted(self):
+        try:
+            position, = self.actor.instData.loadKey('rexm')
+        except:
+            position = 'undef'
+
+        return position
 
     def _loadCfg(self, cmd, mode=None):
         """Load rexm configuration.
@@ -157,7 +165,6 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         :raise: Exception with warning message.
         """
         if forceStop:
-            self.persisted = self.positionFromSwitch
             self.declareNewGratingPosition(cmd)
             self.stopAndCheck(cmd)
         else:
@@ -192,7 +199,6 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         :raise: Exception with warning message.
         """
         self.abortMotion = False
-        self.persisted = 'undef'
         self.declareNewGratingPosition(cmd, invalid=True)
 
         if position is not None:
@@ -418,6 +424,10 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         """
 
         # Use MJD seconds.
+        position = 'undef' if invalid else self.positionFromSwitch
+
+        self.actor.instData.persistKey('rexm', position)
+
         cmd = self.actor.bcast if cmd is None else cmd
         now = astroTime.Time.now().mjd
         cmd.inform(f'gratingMoved={now:0.6f}')

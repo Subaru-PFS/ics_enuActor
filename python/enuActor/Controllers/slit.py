@@ -13,8 +13,6 @@ from enuActor.utils.fsmThread import FSMThread
 
 class slit(FSMThread):
     timeout = 2
-    actuallyMoving = ['GroupHomeSearch', 'HexapodMoveAbsolute', 'HexapodMoveIncremental', 'GroupMotionDisable',
-                      'GroupMotionEnable', 'TCLScriptExecuteAndWait']
 
     @staticmethod
     def convertToWorld(array):
@@ -54,6 +52,7 @@ class slit(FSMThread):
 
         self.logger = logging.getLogger(self.name)
         self.logger.setLevel(loglevel)
+        self.doPersist = False
 
     @property
     def simulated(self):
@@ -65,11 +64,11 @@ class slit(FSMThread):
         else:
             raise ValueError('unknown mode')
 
-    @property
-    def position(self):
+    @staticmethod
+    def position(coords):
         """Interpret slit position from current coordinates."""
-        delta = np.sum(np.abs(np.zeros(6) - self.coords))
-        if ~np.isnan(delta) and delta < 0.005:
+        delta = np.max(np.abs(coords))
+        if ~np.isnan(delta) and delta < 0.008:
             return 'home'
         else:
             return 'undef'
@@ -140,6 +139,10 @@ class slit(FSMThread):
         :type doHome: bool
         :raise: Exception with warning message.
         """
+        # Make sure that the outside world knows that the axis positions are soon to be invalid.
+        # There are many failures out of the loop, so declare now.
+        self.declareNewHexapodPosition(cmd, invalid=True)
+
         hxpStatus = int(self._getHxpStatus())
         if doHome:
             cmd.inform('text="killing existing socket..."')
@@ -176,6 +179,7 @@ class slit(FSMThread):
 
         cmd.inform('text="going to home ..."')
         self._hexapodMoveAbsolute([0, 0, 0, 0, 0, 0])
+        self.doPersist = True
 
     def getStatus(self, cmd):
         """Get status and generates slit keywords.
@@ -194,10 +198,12 @@ class slit(FSMThread):
 
         try:
             self.coords = self._getCurrentPosition()
+            self.declareNewHexapodPosition(cmd)
+
         finally:
             genKeys = cmd.inform if np.nan not in self.coords else cmd.warn
             genKeys('slit=%s' % ','.join(['%.5f' % p for p in self.coords]))
-            genKeys('slitPosition=%s' % self.position)
+            genKeys('slitPosition=%s' % self.position(self.coords))
 
     def checkStatus(self, cmd):
         """Get status code and string from hxp100 controller. Generate hxpStatus keyword.
@@ -218,20 +224,22 @@ class slit(FSMThread):
         :raise: Exception with warning message.
         """
         coords = np.array(coords)
-        if reference == 'absolute':
-            hysteresisCorrection = np.array([0, 0, -0.5, 0, 0, 0])
-            try:
-                ret = self._hexapodMoveAbsolute(coords + hysteresisCorrection)
-            except UserWarning as e:
-                cmd.fail('text=%s' % self.actor.strTraceback(e))
+        self.doPersist = True
+        try:
+            if reference == 'absolute':
+                hysteresisCorrection = np.array([0, 0, -0.5, 0, 0, 0])
+                try:
+                    ret = self._hexapodMoveAbsolute(coords + hysteresisCorrection)
+                except UserWarning as e:
+                    cmd.fail('text=%s' % self.actor.strTraceback(e))
 
-            self.checkPosition(cmd)
-            ret = self._hexapodMoveAbsolute(coords)
-
-        elif reference == 'relative':
-            ret = self._hexapodMoveIncremental('Work', coords)
-        else:
-            raise ValueError('unknown ref')
+                self.checkPosition(cmd)
+                ret = self._hexapodMoveAbsolute(coords)
+            else:
+                ret = self._hexapodMoveIncremental('Work', coords)
+        except UserWarning:
+            self.doPersist = False
+            raise
 
     def shutdown(self, cmd):
         """Save current controller position and kill connection.
@@ -239,6 +247,8 @@ class slit(FSMThread):
         :param cmd: current command.
         :raise: Exception with warning message.
         """
+        self.doPersist = True
+
         cmd.inform('text="Kill and save hexapod position..."')
         self._TCLScriptExecute('KillWithRegistration.tcl')
         wait(secs=10)
@@ -281,6 +291,7 @@ class slit(FSMThread):
         :param cmd: current command.
         :raise: RuntimeError if an error is raised by errorChecker.
         """
+        self.doPersist = True
         cmd.inform('text="Enabling Slit controller..."')
         self._hexapodEnable()
 
@@ -290,6 +301,7 @@ class slit(FSMThread):
         :param cmd: current command.
         :raise: RuntimeError if an error is raised by errorChecker.
         """
+        self.doPersist = True
         cmd.inform('text="Disabling Slit controller..."')
         self._hexapodDisable()
 
@@ -307,9 +319,20 @@ class slit(FSMThread):
         For now we just generate the MHS keyword which declares that the
         old motor positions have been invalidated.
         """
+        if invalid:
+            self.doPersist = True
 
-        # Use MJD seconds.
+        if not self.doPersist:
+            return
+
+        coords = ['nan'] * 6 if invalid else self.coords
+        coords = [float(c) for c in coords]
+
+        self.actor.instData.persistKey('slit', *coords)
+        self.doPersist = False
+
         cmd = self.actor.bcast if cmd is None else cmd
+        # Use MJD seconds.
         now = astroTime.Time.now().mjd
         cmd.inform(f'hexapodMoved={now:0.6f}')
 
@@ -509,9 +532,6 @@ class slit(FSMThread):
         socketId = self.connectSock(sockName)
 
         buf = func(socketId, *args)
-
-        if func.__name__ in slit.actuallyMoving:
-            self.declareNewHexapodPosition(invalid=buf[0] != 0)
 
         if buf[0] != 0:
             if buf[0] == -2:
