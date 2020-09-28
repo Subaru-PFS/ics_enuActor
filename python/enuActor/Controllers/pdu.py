@@ -11,7 +11,7 @@ from enuActor.utils.fsmThread import FSMThread
 
 class pdu(FSMThread, bufferedSocket.EthComm):
     nAttempt = 5
-    waitBetweenAttempt = 3
+    waitBetweenAttempt = 1
 
     def __init__(self, actor, name, loglevel=logging.DEBUG):
         """This sets up the connections to/from the hub, the logger, and the twisted reactor.
@@ -91,7 +91,7 @@ class pdu(FSMThread, bufferedSocket.EthComm):
         :raise: Exception with warning message.
         """
         for outlet in self.powerNames.keys():
-            self.portStatus(cmd, outlet=outlet)
+            self.safeStatus(cmd, outlet=outlet)
 
     def portStatus(self, cmd, outlet):
         """Get state, voltage, current, power for a given outlet.
@@ -108,6 +108,32 @@ class pdu(FSMThread, bufferedSocket.EthComm):
 
         cmd.inform('pduPort%d=%s,%s,%.2f,%.2f,%.2f' % (int(outlet), self.powerNames[outlet], state, v, a, w))
 
+    def safeStatus(self, cmd, outlet):
+        """Get state for a given outlet and try to survive failure.
+        Try to fetch telemetry but don't raise anything.
+
+        :param cmd: current command.
+        :param outlet: outlet number (ex : o01).
+        :type outlet: str
+        :raise: Exception with warning message.
+        """
+        state = self.safeComm(cmd, partial(self.sendOneCommand, 'read status o%s simple' % outlet, cmd=cmd))
+
+        try:
+            v = float(self.sendOneCommand('read meter olt o%s volt simple' % outlet, cmd=cmd))
+        except:
+            v = float('nan')
+        try:
+            a = float(self.sendOneCommand('read meter olt o%s curr simple' % outlet, cmd=cmd))
+        except:
+            a = float('nan')
+        try:
+            w = float(self.sendOneCommand('read meter olt o%s pow simple' % outlet, cmd=cmd))
+        except:
+            w = float('nan')
+
+        cmd.inform('pduPort%d=%s,%s,%.2f,%.2f,%.2f' % (int(outlet), self.powerNames[outlet], state, v, a, w))
+
     def switching(self, cmd, powerPorts):
         """Switch on/off powerPorts dictionary.
 
@@ -118,7 +144,7 @@ class pdu(FSMThread, bufferedSocket.EthComm):
         """
         for outlet, state in powerPorts.items():
             self.safeComm(cmd, partial(self.sendOneCommand, 'sw o%s %s imme' % (outlet, state), cmd=cmd))
-            self.safeComm(cmd, partial(self.portStatus, cmd, outlet=outlet))
+            self.safeStatus(cmd, outlet=outlet)
 
     def safeComm(self, cmd, func, attempt=0):
         try:
