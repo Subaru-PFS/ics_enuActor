@@ -113,7 +113,7 @@ class EthComm(object):
             self.logger.debug(f'stripping {cmd}.{cmd2}')
             s = s1 + s2
 
-    def getOneResponse(self, sock=None, cmd=None):
+    def getOneResponse(self, sock=None, cmd=None, timeout=None):
         """| Attempt to receive data from the socket.
 
         :param sock: socket
@@ -124,7 +124,7 @@ class EthComm(object):
         if sock is None:
             sock = self.connectSock()
 
-        ret = self.ioBuffer.getOneResponse(sock=sock, cmd=cmd)
+        ret = self.ioBuffer.getOneResponse(sock=sock, cmd=cmd, timeout=timeout)
         if self.stripTelnet:
             self.logger.debug('raw received %r', ret)
             ret = self._stripTelnet(ret)
