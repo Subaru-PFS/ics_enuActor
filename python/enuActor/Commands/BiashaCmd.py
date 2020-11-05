@@ -169,7 +169,7 @@ class BiashaCmd(object):
         """Send a raw command to the biasha board."""
         cmdKeys = cmd.cmd.keywords
         cmdStr = cmdKeys['raw'].values[0]
-        ret = self.controller.sendOneCommand(cmdStr, cmd=cmd)
+        ret = bufferedSocket.EthComm.sendOneCommand(self.controller, cmdStr=cmdStr, cmd=cmd)
         cmd.finish('text=%s' % (qstr('returned: %s' % (ret))))
 
     @singleShot
