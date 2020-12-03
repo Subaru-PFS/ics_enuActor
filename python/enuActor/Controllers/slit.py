@@ -64,6 +64,10 @@ class slit(FSMThread):
         else:
             raise ValueError('unknown mode')
 
+    @property
+    def hxpSoftwareLimits(self):
+        return 'on' if self.softwareLimitsActivated else 'off'
+
     @staticmethod
     def position(coords):
         """Interpret slit position from current coordinates."""
@@ -98,6 +102,11 @@ class slit(FSMThread):
         tool = slit.convertToWorld(tool)[:3] + self.slit_position[3:]
         # Tool z = 21 + z_slit with 21 height of upper carriage
         self.toolSystem = [sum(i) for i in zip(tool, [0, 0, self.thicknessCarriage, 0, 0, 0])]
+        try:
+            self.softwareLimitsActivated = self.actor.config.getboolean('slit', 'activateSoftwareLimits')
+        except:
+            self.softwareLimitsActivated = True
+
 
     def _openComm(self, cmd):
         """Open socket slit hexapod controller or simulate it.
@@ -212,6 +221,7 @@ class slit(FSMThread):
         """
         hxpStatus = self._getHxpStatus()
         cmd.inform('hxpStatus=%d,"%s' % (int(hxpStatus), self._getHxpStatusString(hxpStatus)))
+        cmd.inform(f'hxpSoftwareLimits={self.hxpSoftwareLimits}')
 
     def moving(self, cmd, reference, coords):
         """Move to coords in the reference.
@@ -456,10 +466,7 @@ class slit(FSMThread):
         :return: ''
         :raise: RuntimeError if an error is raised by errorChecker.
         """
-        for lim_inf, lim_sup, coord in zip(self.lowerBounds, self.upperBounds, absCoords):
-            if not lim_inf <= coord <= lim_sup:
-                raise UserWarning("[X, Y, Z, U, V, W] exceed : %.5f not permitted" % coord)
-
+        self._checkHexaLimits(absCoords)
         return self.errorChecker(self.myxps.HexapodMoveAbsolute, self.groupName, 'Work', *absCoords)
 
     def _hexapodMoveIncremental(self, coordSystem, relCoords):
@@ -473,9 +480,8 @@ class slit(FSMThread):
         :return: ''
         :raise: RuntimeError if an error is raised by errorChecker.
         """
-        for lim_inf, lim_sup, relCoord, coord in zip(self.lowerBounds, self.upperBounds, relCoords, self.coords):
-            if not lim_inf <= relCoord + coord <= lim_sup:
-                raise UserWarning("[X, Y, Z, U, V, W] exceed : %.5f not permitted" % (relCoord + coord))
+        futureCoords = np.array(self.coords) + np.array(relCoords)
+        self._checkHexaLimits(futureCoords)
 
         return self.errorChecker(self.myxps.HexapodMoveIncremental, self.groupName, coordSystem,
                                  *relCoords)
@@ -519,6 +525,19 @@ class slit(FSMThread):
         :raise: RuntimeError if an error is raised by errorChecker.
         """
         return self.errorChecker(self.myxps.GroupMoveAbort, self.groupName, sockName='emergency')
+
+    def _checkHexaLimits(self, futureCoords):
+        """Check hexapod future coordinates.
+        :return: ''
+        :raise: UserWarning if a coord exceed
+        """
+        if not self.softwareLimitsActivated:
+            return
+
+        for lim_inf, lim_sup, coord in zip(self.lowerBounds, self.upperBounds, futureCoords):
+            if not lim_inf <= coord <= lim_sup:
+                raise UserWarning("[X, Y, Z, U, V, W] exceed : %.5f not permitted" % coord)
+
 
     def errorChecker(self, func, *args, sockName='main'):
         """Decorator for slit lower level functions.

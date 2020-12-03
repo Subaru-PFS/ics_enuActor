@@ -33,6 +33,7 @@ class SlitCmd(object):
             ('slit', 'move relative [<X>] [<Y>] [<Z>] [<U>] [<V>] [<W>]', self.moveRel),
             ('slit', '<focus> [@(microns)] [abs]', self.focus),
             ('slit', 'dither [<X>] [<Y>] [@(pixels|microns)] [abs]', self.dither),
+            ('slit', '@softwareLimits @(on|off) [@force]', self.hxpSoftwareLimits),
 
             ('slit', 'convert <X> <Y> <Z> <U> <V> <W>', self.convert),
             ('slit', 'stop', self.stop),
@@ -203,6 +204,25 @@ class SlitCmd(object):
             self.controller.motionDisable(cmd=cmd)
         except Exception as e:
             cmd.warn('text=%s' % self.actor.strTraceback(e))
+
+        self.controller.generate(cmd)
+
+    @threaded
+    def hxpSoftwareLimits(self, cmd):
+        """Activate/deactivate hexapod software limits"""
+        cmdKeys = cmd.cmd.keywords
+        futureState = 'on' in cmdKeys
+        force = 'force' in cmdKeys
+
+        if futureState:
+            self.controller.softwareLimitsActivated = futureState
+            cmd.inform('text="Hexapod software limits ACTIVATED ...')
+        else:
+            if force:
+                self.controller.softwareLimitsActivated = futureState
+                cmd.warn('text="WARNING Hexapod software limits DEACTIVATED, decision is yours...')
+            else:
+                cmd.warn('text="NOT deactivating hexapod software limits, add force argument to proceed..')
 
         self.controller.generate(cmd)
 
