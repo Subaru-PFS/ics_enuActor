@@ -425,11 +425,13 @@ class rexm(FSMThread, bufferedSocket.EthComm):
 
         # Use MJD seconds.
         position = 'undef' if invalid else self.positionFromSwitch
+        now = float(astroTime.Time.now().mjd)
 
         self.actor.instData.persistKey('rexm', position)
+        self.actor.instData.persistKey('gratingMoved', now)
 
         cmd = self.actor.bcast if cmd is None else cmd
-        now = astroTime.Time.now().mjd
+
         cmd.inform(f'gratingMoved={now:0.6f}')
 
     def _setConfig(self, cmd=None):

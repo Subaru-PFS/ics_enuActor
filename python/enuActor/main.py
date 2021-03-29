@@ -90,12 +90,31 @@ class enuActor(actorcore.ICC.ICC):
                 doAutoStart = False
             try:
                 self.connect('pdu')
+                reactor.callLater(3, self.genPersistedKeys)
                 if doAutoStart:
                     reactor.callLater(5, self.autoStart)
+
+
             except Exception as e:
                 self.logger.warn('text=%s' % self.strTraceback(e))
 
             self.everConnected = True
+
+    def genPersistedKeys(self):
+        """Make sure that hexapodMoved and gratingMoved are generated as soon as enuActor start."""
+        cmd = self.bcast
+        try:
+            hexapodMoved, = self.instData.loadKey('hexapodMoved')
+        except:
+            hexapodMoved = np.nan
+
+        try:
+            gratingMoved, = self.instData.loadKey('gratingMoved')
+        except:
+            gratingMoved = np.nan
+
+        cmd.inform(f'hexapodMoved={hexapodMoved:0.6f}')
+        cmd.inform(f'gratingMoved={gratingMoved:0.6f}')
 
     def autoStart(self, cmd=None):
         """start each device automatically."""

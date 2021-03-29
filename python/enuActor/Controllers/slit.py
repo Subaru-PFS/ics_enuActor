@@ -337,13 +337,15 @@ class slit(FSMThread):
 
         coords = ['nan'] * 6 if invalid else self.coords
         coords = [float(c) for c in coords]
+        # Use MJD seconds.
+        now = float(astroTime.Time.now().mjd)
 
         self.actor.instData.persistKey('slit', *coords)
+        self.actor.instData.persistKey('hexapodMoved', now)
         self.doPersist = False
 
         cmd = self.actor.bcast if cmd is None else cmd
-        # Use MJD seconds.
-        now = astroTime.Time.now().mjd
+
         cmd.inform(f'hexapodMoved={now:0.6f}')
 
     def doAbort(self, cmd):
