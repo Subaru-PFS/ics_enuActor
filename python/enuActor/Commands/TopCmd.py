@@ -76,13 +76,30 @@ class TopCmd(object):
         cmd.inform('text="monitors: %s"' % self.actor.monitors)
         cmd.inform('text="config id=0x%08x %r"' % (id(self.actor.config),
                                                    self.actor.config.sections()))
-        self.actor.updateStates(cmd=cmd)
+
+        self.genPersistedKeys(cmd)
+        self.actor.updateStates(cmd)
 
         if 'all' in cmd.cmd.keywords:
             for c in self.actor.controllers:
                 self.actor.callCommand("%s status" % c)
 
         cmd.finish(self.controllerKey())
+
+    def genPersistedKeys(self, cmd):
+        """Make sure that hexapodMoved and gratingMoved are generated as soon as enuActor start."""
+        try:
+            hexapodMoved, = self.actor.instData.loadKey('hexapodMoved')
+        except:
+            hexapodMoved = float('nan')
+
+        try:
+            gratingMoved, = self.actor.instData.loadKey('gratingMoved')
+        except:
+            gratingMoved = float('nan')
+
+        cmd.inform(f'hexapodMoved={hexapodMoved:0.6f}')
+        cmd.inform(f'gratingMoved={gratingMoved:0.6f}')
 
     @singleShot
     def start(self, cmd):
