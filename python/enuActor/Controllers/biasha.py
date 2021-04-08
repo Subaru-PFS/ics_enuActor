@@ -1,4 +1,5 @@
 __author__ = 'alefur'
+
 import logging
 import time
 from datetime import datetime as dt
@@ -46,7 +47,8 @@ class biasha(FSMThread, bufferedSocket.EthComm):
             {'name': 'blue_close', 'src': ['EXPOSING'], 'dst': 'OPENRED'},
             {'name': 'blue_close', 'src': ['OPENBLUE'], 'dst': 'IDLE'},
             {'name': 'bia_on', 'src': ['IDLE'], 'dst': 'BIA'},
-            {'name': 'bia_off', 'src': ['BIA'], 'dst': 'IDLE'}]
+            {'name': 'bia_off', 'src': ['BIA'], 'dst': 'IDLE'},
+            {'name': 'ack', 'src': ['FAILED'], 'dst': 'IDLE'}]
 
         events += sum([busyEvent(event) for event in events], [])
         events += [{'name': 'fail', 'src': 'BUSY', 'dst': 'FAILED'},
@@ -189,7 +191,6 @@ class biasha(FSMThread, bufferedSocket.EthComm):
 
         try:
             self.gotoState(cmd=cmd, cmdStr='init')
-
             start = dt.utcnow()
             self.gotoState(cmd=cmd, cmdStr='%s_open' % shutter)
             transientTime1 = (dt.utcnow() - start).total_seconds()
@@ -394,11 +395,12 @@ class biasha(FSMThread, bufferedSocket.EthComm):
         self.monitor = 0
         self.doFinish()
 
-        try:
-            self.gotoState(cmd, 'init')
-            self.getStatus(cmd)
-        except Exception as e:
-            cmd.warn('text=%s' % self.actor.strTraceback(e))
+        if self.substates.current != "FAILED":
+            try:
+                self.gotoState(cmd, 'init')
+                self.getStatus(cmd)
+            except Exception as e:
+                cmd.warn('text=%s' % self.actor.strTraceback(e))
 
         self._closeComm(cmd=cmd)
 
