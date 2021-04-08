@@ -161,6 +161,10 @@ class BiashaCmd(object):
     @threaded
     def init(self, cmd):
         """Go to biasha init state."""
+        if self.controller.substates.current == "FAILED":
+            cmd.warn('text="acknowledging FAILED state..."')
+            self.controller.substates.ack()
+
         self.controller.gotoState(cmd, 'init')
         self.controller.generate(cmd)
 
