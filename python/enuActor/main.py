@@ -87,6 +87,7 @@ class enuActor(actorcore.ICC.ICC):
         if self.everConnected is False:
             logging.info("Attaching all controllers...")
             self.allControllers = ['pdu']
+            self.startingControllers = [s.strip() for s in self.config.get(self.name, 'startingControllers').split(',')]
             self.attachAllControllers()
             self.everConnected = True
 
@@ -96,7 +97,9 @@ class enuActor(actorcore.ICC.ICC):
         """Start all controllers."""
         try:
             self.callCommand('slit status')
-            for controller in ['temps', 'biasha', 'rexm']:
+            for controller in self.startingControllers:
+                if controller == 'pdu':
+                    continue
                 self.startController(controller, fromThread=False)
 
         except Exception as e:
@@ -105,13 +108,15 @@ class enuActor(actorcore.ICC.ICC):
     def startController(self, device, cmd=None, mode=None, fromThread=True):
         """power up device if not on the network, wait and connect"""
         cmd = self.bcast if cmd is None else cmd
-        host, port = self.config.get(device, 'host'), self.config.get(device, 'port')
+        networkSection = 'pdu' if device == 'iis' else device
+        host, port = self.config.get(networkSection, 'host'), int(self.config.get(networkSection, 'port'))
         mode = self.config.get(device, 'mode') if mode is None else mode
 
         if not serverIsUp(host, port):
             self.switchPowerOutlet(enuActor.deviceOutlet[device], state='on', cmd=cmd, fromThread=fromThread)
             waitForTcpServer(host, port, cmd=cmd, mode=mode)
-            self.connect(device, mode=mode)
+
+        self.connect(device, mode=mode)
 
     def switchPowerOutlet(self, outlet, state, cmd=None, fromThread=True):
         """power up device if not on the network, wait and connect"""
