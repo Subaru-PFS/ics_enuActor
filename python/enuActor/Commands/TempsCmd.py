@@ -3,7 +3,6 @@
 
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
-from enuActor.utils import waitForTcpServer, serverIsUp
 from enuActor.utils.wrap import threaded, singleShot
 
 
@@ -75,9 +74,7 @@ class TempsCmd(object):
     def stop(self, cmd):
         """Finish current exposure, power off and disconnect."""
         self.actor.disconnect('temps', cmd=cmd)
-
-        cmd.inform('text="powering down temps controller..."')
-        self.actor.ownCall(cmd, cmdStr='power off=temps', failMsg='failed to power off temps')
+        self.actor.switchPowerOutlet('temps', state='off', cmd=cmd)
 
         cmd.finish()
 
@@ -85,17 +82,11 @@ class TempsCmd(object):
     def start(self, cmd):
         """Power on temps controller, wait for temps host, connect controller."""
         cmdKeys = cmd.cmd.keywords
+
         mode = self.actor.config.get('temps', 'mode')
-        host = self.actor.config.get('temps', 'host')
-        port = self.actor.config.get('temps', 'port')
         mode = 'operation' if 'operation' in cmdKeys else mode
         mode = 'simulation' if 'simulation' in cmdKeys else mode
 
-        if not serverIsUp(host=host, port=port):
-            cmd.inform('text="powering up temps controller ..."')
-            self.actor.ownCall(cmd, cmdStr='power on=temps', failMsg='failed to power on temps')
-            waitForTcpServer(host=host, port=port, cmd=cmd, mode=mode)
+        self.actor.startController('temps', cmd=cmd, mode=mode)
 
-        self.actor.connect('temps', cmd=cmd, mode=mode)
-
-        cmd.finish()
+        self.controller.generate(cmd)

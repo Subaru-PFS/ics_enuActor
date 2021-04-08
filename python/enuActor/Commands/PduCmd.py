@@ -83,4 +83,4 @@ class PduCmd(object):
         waitForTcpServer(host=host, port=port, cmd=cmd, mode=mode)
 
         self.actor.connect(self.name, cmd=cmd, mode=mode)
-        cmd.finish()
+        self.controller.generate(cmd)

@@ -81,9 +81,11 @@ class CmdThread(QThread):
         :param cmd: current command.
         """
         cmd.inform(f'text="calling {self.cmdStr}"')
-        cmdVar = self.actor.ownCall(cmd, cmdStr=self.cmdStr, failMsg='', timeLim=150)
+        cmdVar = self.actor.cmdr.call(actor=self.actor.name, cmdStr=self.cmdStr, forUserCmd=cmd, timeLim=150)
 
-        if not cmdVar.didFail:
+        if cmdVar.didFail:
+            cmd.warn(cmdVar.replyList[-1].keywords.canonical(delimiter=';'))
+        else:
             cmd.inform(f'text="{self.cmdStr} OK"')
 
         self.cmdVar = cmdVar
