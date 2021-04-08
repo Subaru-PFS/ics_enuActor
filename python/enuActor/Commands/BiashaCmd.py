@@ -3,7 +3,7 @@
 import enuActor.utils.bufferedSocket as bufferedSocket
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
-from enuActor.utils import waitForTcpServer, serverIsUp
+from enuActor.utils import wait
 from enuActor.utils.wrap import threaded, blocking, singleShot
 from opscore.utility.qstr import qstr
 
@@ -36,6 +36,7 @@ class BiashaCmd(object):
             ('exposure', 'finish', self.finishExposure),
             ('biasha', 'stop', self.stop),
             ('biasha', 'start [@(operation|simulation)]', self.start),
+            ('biasha', 'reboot', self.reboot),
         ]
 
         # Define typed command arguments for the above commands.
@@ -209,8 +210,7 @@ class BiashaCmd(object):
         self.actor.disconnect('biasha', cmd=cmd)
 
         if 'rexm' not in self.actor.controllers.keys():
-            cmd.inform('text="powering down enu rack..."')
-            self.actor.ownCall(cmd, cmdStr='power off=ctrl,pows', failMsg='failed to power off enu rack')
+            self.actor.switchPowerOutlet('ctrl,pows', state='off', cmd=cmd)
 
         cmd.finish()
 
@@ -218,16 +218,22 @@ class BiashaCmd(object):
     def start(self, cmd):
         """Power on enu rack, wait for biasha host, connect controller."""
         cmdKeys = cmd.cmd.keywords
+
         mode = self.actor.config.get('biasha', 'mode')
-        host = self.actor.config.get('biasha', 'host')
-        port = self.actor.config.get('biasha', 'port')
         mode = 'operation' if 'operation' in cmdKeys else mode
         mode = 'simulation' if 'simulation' in cmdKeys else mode
+        self.actor.startController('biasha', cmd=cmd, mode=mode)
 
-        if not serverIsUp(host=host, port=port):
-            cmd.inform('text="powering up enu rack ..."')
-            self.actor.ownCall(cmd, cmdStr='power on=pows,ctrl', failMsg='failed to power on enu rack')
-            waitForTcpServer(host=host, port=port, cmd=cmd, mode=mode)
+        self.controller.generate(cmd)
 
-        self.actor.connect('biasha', cmd=cmd, mode=mode)
-        cmd.finish()
+    @singleShot
+    def reboot(self, cmd):
+        """Power on enu rack, wait for biasha host, connect controller."""
+        cmd.inform('text="rebooting biasha board..."')
+        self.actor.disconnect('biasha', cmd=cmd)
+
+        self.actor.switchPowerOutlet('ctrl', state='off', cmd=cmd)
+        wait(secs=10)
+        self.actor.startController('biasha', cmd=cmd)
+
+        self.controller.generate(cmd)

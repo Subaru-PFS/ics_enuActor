@@ -15,6 +15,7 @@ class enuActor(actorcore.ICC.ICC):
     stateList = ['OFF', 'LOADED', 'ONLINE']
     state2logic = dict([(state, val) for val, state in enumerate(stateList)])
     logic2state = {v: k for k, v in state2logic.items()}
+    deviceOutlet = dict(slit='slit', biasha='ctrl,pows', rexm='ctrl,pows', temps='temps')
 
     def __init__(self, name, productName=None, configFile=None, logLevel=logging.INFO):
         # This sets up the connections to/from the hub, the logger, and the twisted reactor.
@@ -84,57 +85,49 @@ class enuActor(actorcore.ICC.ICC):
     def connectionMade(self):
         """Attach all controllers."""
         if self.everConnected is False:
-            try:
-                doAutoStart = self.config.getboolean(self.name, 'autoStart')
-            except:
-                doAutoStart = False
-            try:
-                self.connect('pdu')
-
-                if doAutoStart:
-                    reactor.callLater(5, self.autoStart)
-
-            except Exception as e:
-                self.logger.warn('text=%s' % self.strTraceback(e))
-
+            logging.info("Attaching all controllers...")
+            self.allControllers = ['pdu']
+            self.attachAllControllers()
             self.everConnected = True
 
-    def autoStart(self, cmd=None):
-        """start each device automatically."""
-        cmd = self.bcast if cmd is None else cmd
+            reactor.callLater(5, self.startAllControllers)
 
-        self.callCommand('slit status')
-        self.startDevice(cmd, 'temps', outlet='temps')
-        self.startDevice(cmd, 'rexm', outlet='pows,ctrl')
-        self.startDevice(cmd, 'biasha', outlet='pows,ctrl')
+    def startAllControllers(self):
+        """Start all controllers."""
+        try:
+            self.callCommand('slit status')
+            for controller in ['temps', 'biasha', 'rexm']:
+                self.startController(controller, fromThread=False)
 
-    def startDevice(self, cmd, device, outlet=None):
+        except Exception as e:
+            self.logger.warn('text=%s' % self.strTraceback(e))
+
+    def startController(self, device, cmd=None, mode=None, fromThread=True):
         """power up device if not on the network, wait and connect"""
+        cmd = self.bcast if cmd is None else cmd
         host, port = self.config.get(device, 'host'), self.config.get(device, 'port')
-        mode = self.config.get(device, 'mode')
+        mode = self.config.get(device, 'mode') if mode is None else mode
+
         if not serverIsUp(host, port):
-            if outlet is not None:
-                self.callCommand(f'power on={outlet}')
-                waitForTcpServer(host, port, cmd=cmd, mode=mode)
-                self.connect(device)
+            self.switchPowerOutlet(enuActor.deviceOutlet[device], state='on', cmd=cmd, fromThread=fromThread)
+            waitForTcpServer(host, port, cmd=cmd, mode=mode)
+            self.connect(device, mode=mode)
 
-    def ownCall(self, cmd, cmdStr, failMsg='', timeLim=20):
-        """Call enuActor itself.
-        :param cmd: current command.
-        :param cmdStr: command string.
-        :param failMsg: failure message.
-        :type cmdStr: str
-        :type failMsg: str
-        :raise: Exception if cmdVar.didFail and failMsg !=''.
-        """
-        cmdVar = self.cmdr.call(actor=self.name, cmdStr=cmdStr, forUserCmd=cmd, timeLim=timeLim)
+    def switchPowerOutlet(self, outlet, state, cmd=None, fromThread=True):
+        """power up device if not on the network, wait and connect"""
+        cmd = self.bcast if cmd is None else cmd
+        cmdStr = f'power {state}={outlet}'
+        cmd.inform(f'text="{cmdStr} outlet ..."')
 
-        if cmdVar.didFail:
-            cmd.warn(cmdVar.replyList[-1].keywords.canonical(delimiter=';'))
-            if failMsg:
-                raise RuntimeError(failMsg)
+        if fromThread:
+            cmdVar = self.cmdr.call(actor=self.name, cmdStr=f'power {state}={outlet}', forUserCmd=cmd, timeLim=60)
 
-        return cmdVar
+            if cmdVar.didFail:
+                cmd.warn(cmdVar.replyList[-1].keywords.canonical(delimiter=';'))
+                raise ValueError(f'failed to power {state} {outlet} outlet ...')
+
+        else:
+            self.callCommand(cmdStr)
 
     def connect(self, controller, cmd=None, **kwargs):
         """Connect the given controller name.
