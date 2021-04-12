@@ -92,6 +92,15 @@ class rexm(FSMThread, bufferedSocket.EthComm):
 
         return position
 
+    @property
+    def motorConfigParameters(self):
+        config = TMCM.defaultConfig
+        if self.brokenLimitSwitches:
+            oldConfig = {4: 268, 5: 1759, 149: 0, 153: 11, 154: 5}
+            config.update(oldConfig)
+
+        return config
+
     def _loadCfg(self, cmd, mode=None):
         """Load rexm configuration.
 
@@ -109,6 +118,11 @@ class rexm(FSMThread, bufferedSocket.EthComm):
             self.persistPosition = self.actor.config.getboolean('rexm', 'persistPosition')
         except:
             self.persistPosition = False
+
+        try:
+            self.brokenLimitSwitches = self.actor.config.getboolean('rexm', 'brokenLimitSwitches')
+        except:
+            self.brokenLimitSwitches = False
 
     def _openComm(self, cmd):
         """Open socket with rexm controller or simulate it.
@@ -238,8 +252,8 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         :param cmd: current command.
         :raise: Exception with warning message.
         """
-        self.motorConfig = dict([(paramId, self._getAxisParameter(paramId=paramId, cmd=cmd))
-                                 for paramId in TMCM.defaultConfig.keys()])
+        self.motorConfig = dict([(paramId, self._getAxisParameter(paramId=paramId, cmd=cmd)) for paramId in
+                                 self.motorConfigParameters.keys()])
 
         cmd.inform('rexmConfig=%s' % (','.join(['%d' % value for value in self.motorConfig.values()])))
 
@@ -307,6 +321,26 @@ class rexm(FSMThread, bufferedSocket.EthComm):
             raise ValueError('limit switch is not triggered')
 
         cmd.inform('text="arrived at position %s"' % position)
+
+        if self.brokenLimitSwitches:
+            cmd.inform('text="adjusting position backward"')
+            self._moveRelative(cmd,
+                               direction=not direction,
+                               distance=5,
+                               speed=(TMCM.g_speed / 3),
+                               hitSwitch=False)
+
+            cmd.inform('text="adjusting position forward"')
+            self._moveRelative(cmd,
+                               direction=direction,
+                               distance=10,
+                               speed=(TMCM.g_speed / 3))
+
+            if not self.limitSwitch(direction):
+                raise ValueError('limit switch is not triggered')
+
+            cmd.inform('text="arrived at position %s"' % position)
+
 
     def _moveRelative(self, cmd, direction, distance, speed, hitSwitch=True):
         """| Go to specified distance, direction with desired speed.
@@ -443,7 +477,7 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         self._setGlobalParameter(paramId=80, motorAddress=0, data=2, cmd=cmd)  # shutdown pin set to low active
         self.resetEmergencyFlag(cmd=cmd)
 
-        for paramId, value in TMCM.defaultConfig.items():
+        for paramId, value in self.motorConfigParameters.items():
             self._setAxisParameter(paramId=paramId, data=value, cmd=cmd)
 
     def _getSteps(self, cmd=None):
