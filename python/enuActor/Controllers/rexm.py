@@ -146,6 +146,7 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         :raise: Exception if the communication has failed with the controller.
         """
         self.checkConfig(cmd)
+        self.ensureLimitSwitchesOK(cmd)
 
     def _init(self, cmd, doHome=True):
         """Set motor config, go to low resolution position, set this position at 0 (steps).
@@ -213,6 +214,7 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         :raise: Exception with warning message.
         """
         self.abortMotion = False
+        self.ensureLimitSwitchesOK(cmd)
         self.declareNewGratingPosition(cmd, invalid=True)
 
         if position is not None:
@@ -294,6 +296,19 @@ class rexm(FSMThread, bufferedSocket.EthComm):
             elif self.substates.current in ['INITIALISING', 'MOVING']:
                 raise UserWarning('Emergency Button is triggered')
 
+    def ensureLimitSwitchesOK(self, cmd):
+        """Check that both switches are not triggered, meaning that cable between controller and motor is likely to be
+        disconnected, or revealing and even weirder behaviour.
+
+        :param cmd: current command.
+        :raise: Exception with warning message.
+        """
+        self.checkStatus(cmd)
+
+        if self.positionFromSwitch == 'error':
+            raise RuntimeError('both limit switches report to be triggered, connection between the controller and the '
+                               'motor is likely to be disconnected...')
+
     def _goToPosition(self, cmd, position):
         """| Go accurately to the required position.
 
@@ -340,7 +355,6 @@ class rexm(FSMThread, bufferedSocket.EthComm):
                 raise ValueError('limit switch is not triggered')
 
             cmd.inform('text="arrived at position %s"' % position)
-
 
     def _moveRelative(self, cmd, direction, distance, speed, hitSwitch=True):
         """| Go to specified distance, direction with desired speed.
