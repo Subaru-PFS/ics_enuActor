@@ -25,6 +25,7 @@ class RexmCmd(object):
             ('rexm', '@(move) <relative>', self.moveRelative),
             ('rexm', 'park', self.park),
             ('rexm', 'resetFlag', self.resetFlag),
+            ('rexm', 'forcePersistedPosition', self.forcePersistedPosition),
             ('rexm', 'abort', self.abort),
             ('rexm', 'stop', self.stop),
             ('rexm', 'start [@(operation|simulation)]', self.start),
@@ -99,7 +100,12 @@ class RexmCmd(object):
     def abort(self, cmd):
         """Abort current motion."""
         self.controller.doAbort()
-        cmd.finish("text='motion aborted'")
+        cmd.finish('text="motion aborted..."')
+
+    def forcePersistedPosition(self, cmd):
+        """Abort current motion."""
+        self.controller.forcePersistedPosition = True
+        cmd.finish('text="current position is now declared as previous persisted position..."')
 
     @singleShot
     def stop(self, cmd):

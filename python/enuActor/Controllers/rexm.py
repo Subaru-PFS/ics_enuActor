@@ -43,6 +43,7 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         self.switchB = 0
         self.speed = 0
         self.abortMotion = False
+        self.forcePersistedPosition = False
 
         self.logger = logging.getLogger(self.name)
         self.logger.setLevel(loglevel)
@@ -59,8 +60,14 @@ class rexm(FSMThread, bufferedSocket.EthComm):
 
     @property
     def position(self):
-        fromSwitch = self.positionFromSwitch
-        current = self.persisted if (self.persistPosition and fromSwitch == 'undef') else fromSwitch
+        current = self.positionFromSwitch
+
+        if current == 'undef' and (self.brokenLimitSwitches or self.forcePersistedPosition):
+            current = self.persisted
+
+        elif current == 'error' and self.forcePersistedPosition:
+            current = self.persisted
+
         return current
 
     @property
@@ -113,11 +120,6 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         bufferedSocket.EthComm.__init__(self,
                                         host=self.actor.config.get('rexm', 'host'),
                                         port=int(self.actor.config.get('rexm', 'port')))
-
-        try:
-            self.persistPosition = self.actor.config.getboolean('rexm', 'persistPosition')
-        except:
-            self.persistPosition = False
 
         try:
             self.brokenLimitSwitches = self.actor.config.getboolean('rexm', 'brokenLimitSwitches')
@@ -472,7 +474,11 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         """
 
         # Use MJD seconds.
-        position = 'undef' if invalid else self.positionFromSwitch
+        if invalid:
+            position = 'undef'
+            self.forcePersistedPosition = False
+        else:
+            position = self.positionFromSwitch
         now = float(astroTime.Time.now().mjd)
 
         self.actor.instData.persistKey('rexm', position)
