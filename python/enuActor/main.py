@@ -103,7 +103,7 @@ class enuActor(actorcore.ICC.ICC):
                 self.startController(controller, fromThread=False)
 
         except Exception as e:
-            self.logger.warn('text=%s' % self.strTraceback(e))
+            self.logger.warning('text=%s' % self.strTraceback(e))
 
     def startController(self, device, cmd=None, mode=None, fromThread=True):
         """power up device if not on the network, wait and connect"""
@@ -112,7 +112,7 @@ class enuActor(actorcore.ICC.ICC):
         host, port = self.config.get(networkSection, 'host'), int(self.config.get(networkSection, 'port'))
         mode = self.config.get(device, 'mode') if mode is None else mode
 
-        if not serverIsUp(host, port):
+        if not serverIsUp(host, port) and device not in ['pdu', 'iis']:
             self.switchPowerOutlet(enuActor.deviceOutlet[device], state='on', cmd=cmd, fromThread=fromThread)
             waitForTcpServer(host, port, cmd=cmd, mode=mode)
 
