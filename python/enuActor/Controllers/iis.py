@@ -50,7 +50,7 @@ class iis(pdu.pdu):
         :raise: Exception if config file is badly formatted.
         """
         mode = self.actor.config.get('iis', 'mode') if mode is None else mode
-        pdu.pdu._loadCfg(self, cmd=cmd, mode=mode)
+        pdu.pdu._loadCfg(self, cmd=cmd, mode=mode, name='pdu')
 
         for source in iis.names:
             if source not in self.powerPorts.keys():
@@ -108,8 +108,8 @@ class iis(pdu.pdu):
             if self.isOff(source):
                 outlet = self.powerPorts[source]
                 self.warmupTime[source] = time.time()
-                self.safeComm(cmd, partial(self.sendOneCommand, 'sw o%s on imme' % outlet, cmd=cmd))
-                self.safeComm(cmd, partial(self.portStatus, cmd, outlet=outlet))
+                self.safeOneCommand('sw o%s on imme' % outlet, cmd=cmd)
+                self.portStatus(cmd, outlet=outlet)
 
         while time.time() < start + warmingTime:
             time.sleep(ti)
@@ -158,7 +158,7 @@ class iis(pdu.pdu):
         self.doAbort()
 
         try:
-            self.switchOff(cmd, self.names)
+            self.switchOff(cmd, self.sourcesOn)
             self.getStatus(cmd)
         except Exception as e:
             cmd.warn('text=%s' % self.actor.strTraceback(e))
