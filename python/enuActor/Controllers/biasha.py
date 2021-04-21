@@ -25,6 +25,7 @@ class biasha(FSMThread, bufferedSocket.EthComm):
                  'open': '100100',
                  'openblue': '100010',
                  'openred': '010100'}
+    maxIOAttempt = 5
 
     def __init__(self, actor, name, loglevel=logging.DEBUG):
         """This sets up the connections to/from the hub, the logger, and the twisted reactor.
@@ -226,7 +227,10 @@ class biasha(FSMThread, bufferedSocket.EthComm):
         :raise: RuntimeError if statword and current state are incoherent.
         """
         try:
-            state = self.getState(cmd) if state is None else state
+            if state is None:
+                state = self.getState(cmd)
+                cmd.inform('%sFSM=%s,%s' % (self.name, self.states.current, self.substates.current))
+
             shutters, __ = biasha.status[state]
             statword = self._statword(cmd)
 
@@ -243,6 +247,26 @@ class biasha(FSMThread, bufferedSocket.EthComm):
 
         return shutters
 
+    def maintainConnection(self, cmd, nAttempt):
+        """Maintain connection with biasha board during a long exposure, generate shutter keywords.
+
+        :param cmd: current command.
+        :raise: RuntimeError if statword and current state are incoherent.
+        """
+        try:
+            self.shutterStatus(cmd)
+            nAttempt = 0
+        except Exception as e:
+            if nAttempt >= self.maxIOAttempt:
+                raise
+            cmd.warn('text=%s' % self.actor.strTraceback(e))
+            nAttempt += 1
+
+        finally:
+            self._closeComm(cmd=cmd)
+
+        return nAttempt
+
     def biaStatus(self, cmd, state=None):
         """Get bia status and generate bia keywords.
 
@@ -250,7 +274,10 @@ class biasha(FSMThread, bufferedSocket.EthComm):
         :raise: Exception if communication has failed
         """
         try:
-            state = self.getState(cmd) if state is None else state
+            if state is None:
+                state = self.getState(cmd)
+                cmd.inform('%sFSM=%s,%s' % (self.name, self.states.current, self.substates.current))
+
             __, bia = biasha.status[state]
             strobe, period, duty = self._biaConfig(cmd)
             phr1, phr2 = self._photores(cmd)
@@ -355,18 +382,23 @@ class biasha(FSMThread, bufferedSocket.EthComm):
         :return: end as datetime.datetime, 0 if abortExposure.
         """
         tlim = start + timedelta(seconds=exptime)
-        inform = dt.utcnow()
-        cmd.inform("integratingTime=%.2f" % (tlim - inform).total_seconds())
-        cmd.inform("elapsedTime=%.2f" % (inform - start).total_seconds())
+        genElapsedTime = genStatus = dt.utcnow()
+        nAttempt = 0
+        cmd.inform("integratingTime=%.2f" % (tlim - genElapsedTime).total_seconds())
+        cmd.inform("elapsedTime=%.2f" % (genElapsedTime - start).total_seconds())
 
         while dt.utcnow() < tlim:
             if self.finishExposure:
                 break
             if self.abortExposure:
                 return 0
-            if (dt.utcnow() - inform).total_seconds() > 2:
-                inform = dt.utcnow()
-                cmd.inform("elapsedTime=%.2f" % (inform - start).total_seconds())
+            if (dt.utcnow() - genElapsedTime).total_seconds() > 2:
+                genElapsedTime = dt.utcnow()
+                cmd.inform("elapsedTime=%.2f" % (genElapsedTime - start).total_seconds())
+            if (dt.utcnow() - genStatus).total_seconds() > self.monitor:
+                genStatus = dt.utcnow()
+                nAttempt = self.maintainConnection(cmd, nAttempt)
+
             time.sleep(ti)
 
         return dt.utcnow()
