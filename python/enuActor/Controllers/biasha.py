@@ -27,6 +27,8 @@ class biasha(FSMThread, bufferedSocket.EthComm):
                  'openred': '010100'}
     maxIOAttempt = 5
     maintainConnectionRate = 60
+    maintainConnectionMargin = 5
+    genElapsedTimeRate = 2
 
     def __init__(self, actor, name, loglevel=logging.DEBUG):
         """This sets up the connections to/from the hub, the logger, and the twisted reactor.
@@ -389,14 +391,15 @@ class biasha(FSMThread, bufferedSocket.EthComm):
         cmd.inform("elapsedTime=%.2f" % (genElapsedTime - start).total_seconds())
 
         while dt.utcnow() < tlim:
+            closingSoon = (tlim - dt.utcnow()).total_seconds() < biasha.maintainConnectionMargin
             if self.finishExposure:
                 break
             if self.abortExposure:
                 return 0
-            if (dt.utcnow() - genElapsedTime).total_seconds() > 2:
+            if (dt.utcnow() - genElapsedTime).total_seconds() > biasha.genElapsedTimeRate:
                 genElapsedTime = dt.utcnow()
                 cmd.inform("elapsedTime=%.2f" % (genElapsedTime - start).total_seconds())
-            if (dt.utcnow() - genStatus).total_seconds() > biasha.maintainConnectionRate:
+            if (dt.utcnow() - genStatus).total_seconds() > biasha.maintainConnectionRate and not closingSoon:
                 genStatus = dt.utcnow()
                 nAttempt = self.maintainConnection(cmd, nAttempt)
 
