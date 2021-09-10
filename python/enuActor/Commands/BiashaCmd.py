@@ -96,7 +96,12 @@ class BiashaCmd(object):
     @blocking
     def biaOff(self, cmd):
         """Switch bia off."""
-        self.controller.gotoState(cmd, cmdStr='bia_off')
+
+        if self.controller.substates.current == 'IDLE':
+            cmd.inform('text="bia already off, not forwarding to biasha board....')
+        else:
+            self.controller.gotoState(cmd, cmdStr='bia_off')
+
         self.controller.biaStatus(cmd)
         cmd.finish()
 
