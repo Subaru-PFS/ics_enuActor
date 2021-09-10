@@ -85,7 +85,11 @@ class BiashaCmd(object):
 
         self.controller.setBiaConfig(cmd, strobe=strobe, period=period, duty=duty)
 
-        self.controller.gotoState(cmd, cmdStr='bia_on')
+        if self.controller.substates.current == 'BIA':
+            cmd.inform('text="bia already on, not forwarding to biasha board....')
+        else:
+            self.controller.gotoState(cmd, cmdStr='bia_on')
+
         self.controller.biaStatus(cmd)
         cmd.finish()
 
