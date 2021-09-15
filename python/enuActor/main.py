@@ -12,9 +12,10 @@ from twisted.internet import reactor
 
 
 class enuActor(actorcore.ICC.ICC):
-    stateList = ['OFF', 'LOADED', 'ONLINE']
-    state2logic = dict([(state, val) for val, state in enumerate(stateList)])
+    state2logic = dict(OFF=2, LOADED=1, ONLINE=0)
     logic2state = {v: k for k, v in state2logic.items()}
+    substate2logic = dict(FAILED=100, IDLE=0)
+
     deviceOutlet = dict(slit='slit', biasha='ctrl,pows', rexm='ctrl,pows', temps='temps')
 
     def __init__(self, name, productName=None, configFile=None, logLevel=logging.INFO):
@@ -29,17 +30,17 @@ class enuActor(actorcore.ICC.ICC):
         self.logger.setLevel(logLevel)
 
         self.everConnected = False
-        self.onsubstate = 'IDLE'
+        self.activeSubStates = dict()
 
     @property
     def states(self):
         """Return list of controller current state."""
-        return [controller.states.current for controller in self.controllers.values()]
+        return list(set([controller.states.current for controller in self.controllers.values()]))
 
     @property
     def substates(self):
         """Return list of controller current substate."""
-        return [controller.substates.current for controller in self.controllers.values()]
+        return list(set([controller.substates.current for controller in self.controllers.values()]))
 
     @property
     def state(self):
@@ -47,8 +48,8 @@ class enuActor(actorcore.ICC.ICC):
         if not self.controllers.values():
             return 'OFF'
 
-        minLogic = np.min([enuActor.state2logic[state] for state in self.states])
-        return enuActor.logic2state[minLogic]
+        maxLogic = np.max([enuActor.state2logic[state] for state in self.states])
+        return enuActor.logic2state[maxLogic]
 
     @property
     def substate(self):
@@ -56,14 +57,10 @@ class enuActor(actorcore.ICC.ICC):
         if not self.controllers.values():
             return 'IDLE'
 
-        if 'FAILED' in self.substates:
-            substate = 'FAILED'
-        elif list(set(self.substates)) == ['IDLE']:
-            substate = 'IDLE'
-        else:
-            substate = self.onsubstate
-
-        return substate
+        allLogic = dict([kv for kv in enuActor.substate2logic.items()] + [kv for kv in self.activeSubStates.items()])
+        maxLogic = np.max([allLogic[state] for state in self.substates])
+        logic2substate = dict([(v, k) for k, v in allLogic.items()])
+        return logic2substate[maxLogic]
 
     @property
     def monitors(self):
@@ -198,9 +195,25 @@ class enuActor(actorcore.ICC.ICC):
         :param onsubstate: current substate.
         :type onsubstate: str
         """
-        self.onsubstate = onsubstate if onsubstate and onsubstate != 'IDLE' else self.onsubstate
-
+        self.updateSubstates(fresh=onsubstate)
         cmd.inform('metaFSM=%s,%s' % (self.state, self.substate))
+
+    def updateSubstates(self, fresh):
+        """Generate  up-to-date active substates.
+        :param fresh: fresh new substate.
+
+        """
+        if not fresh:
+            return
+
+        for substate in list(set(self.activeSubStates.keys()) - set(self.substates)):
+            self.activeSubStates.pop(substate, None)
+
+        try:
+            logic = enuActor.substate2logic[fresh]
+        except KeyError:
+            logic = 1 if not self.activeSubStates.values() else max(self.activeSubStates.values()) + 1
+            self.activeSubStates[fresh] = logic
 
 
 def main():
