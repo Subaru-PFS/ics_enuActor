@@ -284,10 +284,14 @@ class biasha(FSMThread, bufferedSocket.EthComm):
             __, bia = biasha.status[state]
             strobe, period, duty = self._biaConfig(cmd)
             phr1, phr2 = self._photores(cmd)
+            biaPower = 0 if bia == 'off' else round(duty * 100 / 255)
+            pulseGap = 0 if not strobe else period
 
             cmd.inform('photores=%d,%d' % (phr1, phr2))
             cmd.inform('biaConfig=%d,%d,%d' % (strobe, period, duty))
+            cmd.inform(f'biaStatus={biaPower},{pulseGap}')
             cmd.inform('bia=%s' % bia)
+
         except:
             cmd.warn('bia=undef')
             raise
