@@ -5,17 +5,12 @@ import argparse
 import logging
 
 import actorcore.ICC
-import numpy as np
 from enuActor.utils import serverIsUp, waitForTcpServer
 from pfs.utils.instdata import InstData
 from twisted.internet import reactor
-
+from actorcore.FSM import MetaStates
 
 class enuActor(actorcore.ICC.ICC):
-    state2logic = dict(OFF=2, LOADED=1, ONLINE=0)
-    logic2state = {v: k for k, v in state2logic.items()}
-    substate2logic = dict(FAILED=100, IDLE=0)
-
     deviceOutlet = dict(slit='slit', biasha='ctrl,pows', rexm='ctrl,pows', temps='temps')
 
     def __init__(self, name, productName=None, configFile=None, logLevel=logging.INFO):
@@ -30,37 +25,7 @@ class enuActor(actorcore.ICC.ICC):
         self.logger.setLevel(logLevel)
 
         self.everConnected = False
-        self.activeSubStates = dict()
-
-    @property
-    def states(self):
-        """Return list of controller current state."""
-        return list(set([controller.states.current for controller in self.controllers.values()]))
-
-    @property
-    def substates(self):
-        """Return list of controller current substate."""
-        return list(set([controller.substates.current for controller in self.controllers.values()]))
-
-    @property
-    def state(self):
-        """Return current enu meta state as a result of underlying state machine."""
-        if not self.controllers.values():
-            return 'OFF'
-
-        maxLogic = np.max([enuActor.state2logic[state] for state in self.states])
-        return enuActor.logic2state[maxLogic]
-
-    @property
-    def substate(self):
-        """Return current enu meta substate as a result of underlying state machine."""
-        if not self.controllers.values():
-            return 'IDLE'
-
-        allLogic = dict([kv for kv in enuActor.substate2logic.items()] + [kv for kv in self.activeSubStates.items()])
-        maxLogic = np.max([allLogic[state] for state in self.substates])
-        logic2substate = dict([(v, k) for k, v in allLogic.items()])
-        return logic2substate[maxLogic]
+        self.metaStates = MetaStates(self)
 
     @property
     def monitors(self):
@@ -187,33 +152,6 @@ class enuActor(actorcore.ICC.ICC):
 
         self.controllers[controller].monitor = period
         cmd.warn('text="setting %s loop to %gs"' % (controller, period))
-
-    def updateStates(self, cmd, onsubstate=False):
-        """Generate metaFSM keyword.
-
-        :param cmd: current command.
-        :param onsubstate: current substate.
-        :type onsubstate: str
-        """
-        self.updateSubstates(fresh=onsubstate)
-        cmd.inform('metaFSM=%s,%s' % (self.state, self.substate))
-
-    def updateSubstates(self, fresh):
-        """Generate  up-to-date active substates.
-        :param fresh: fresh new substate.
-
-        """
-        if not fresh:
-            return
-
-        for substate in list(set(self.activeSubStates.keys()) - set(self.substates)):
-            self.activeSubStates.pop(substate, None)
-
-        try:
-            logic = enuActor.substate2logic[fresh]
-        except KeyError:
-            logic = 1 if not self.activeSubStates.values() else max(self.activeSubStates.values()) + 1
-            self.activeSubStates[fresh] = logic
 
 
 def main():
