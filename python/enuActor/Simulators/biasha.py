@@ -12,10 +12,12 @@ class BiashaSim(socket.socket):
     def __init__(self):
         """Fake biasha tcp server."""
         socket.socket.__init__(self, socket.AF_INET, socket.SOCK_STREAM)
-        self.g_aduty = 0
-        self.g_aperiod = 100
+        self.g_aduty = 100
+        self.g_aperiod = 1000
+        self.g_sduty = self.g_aduty
+        self.g_speriod = self.g_aperiod
+        self.g_apower = 0
         self.bia_mode = 0
-        self.pulse_on = 0
         self.statword = BiashaSim.statword[self.bia_mode]
 
         self.buf = []
@@ -153,6 +155,10 @@ class BiashaSim(socket.socket):
             self.g_aduty = int(cmdStr[8:])
             cmdOk = True
 
+        elif cmdStr[:9] == 'set_power':
+            self.g_apower = int(cmdStr[9:])
+            cmdOk = True
+
         elif cmdStr == 'get_period\r\n':
             self.buf.append(self.g_aperiod)
             cmdOk = True
@@ -160,16 +166,25 @@ class BiashaSim(socket.socket):
         elif cmdStr == 'get_duty\r\n':
             self.buf.append(self.g_aduty)
             cmdOk = True
+
+        elif cmdStr == 'get_power\r\n':
+            self.buf.append(self.g_apower)
+            cmdOk = True
+
         elif cmdStr == 'get_param\r\n':
-            self.buf.append('%d,%d,%d' % (self.pulse_on, self.g_aperiod, self.g_aduty))
+            self.buf.append('%d,%d,%d' % (self.g_aduty, self.g_aperiod, self.g_apower))
             cmdOk = True
 
         elif cmdStr == 'pulse_on\r\n':
-            self.pulse_on = 1
+            self.g_aperiod = self.g_speriod
+            self.g_aduty = self.g_sduty
             cmdOk = True
 
         elif cmdStr == 'pulse_off\r\n':
-            self.pulse_on = 0
+            self.g_speriod = self.g_aperiod
+            self.g_sduty = self.g_aduty
+            self.g_aduty = 100
+            self.g_aperiod = 1000
             cmdOk = True
 
         elif cmdStr == 'read_phr\r\n':

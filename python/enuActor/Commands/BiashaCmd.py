@@ -24,7 +24,7 @@ class BiashaCmd(object):
             ('biasha', 'init', self.init),
             ('bia', '@on [strobe] [<period>] [<duty>] [<power>]', self.biaOn),
             ('bia', '@off', self.biaOff),
-            ('bia', '@strobe @on [<period>] [<duty>] [<power>]', self.strobeOn),
+            ('bia', '@strobe @on [<period>] [<duty>] [<power>]', self.biaOn),
             ('bia', '@strobe @off', self.strobeOff),
             ('bia', '[<period>] [<duty>] [<power>]', self.biaConfig),
             ('bia', 'status', self.biaStatus),
@@ -81,9 +81,9 @@ class BiashaCmd(object):
         strobe = 'on' if 'strobe' in cmdKeys else None
         period = cmdKeys['period'].values[0] if 'period' in cmdKeys else None
         duty = cmdKeys['duty'].values[0] if 'duty' in cmdKeys else None
-        duty = round(cmdKeys['power'].values[0] * 255 / 100) if 'power' in cmdKeys else duty
+        power = cmdKeys['power'].values[0] if 'power' in cmdKeys else None
 
-        self.controller.setBiaConfig(cmd, strobe=strobe, period=period, duty=duty)
+        self.controller.setBiaConfig(cmd, strobe=strobe, period=period, duty=duty, power=power)
 
         if self.controller.substates.current == 'BIA':
             cmd.inform('text="bia already on, not forwarding to biasha board....')
@@ -106,18 +106,6 @@ class BiashaCmd(object):
         cmd.finish()
 
     @threaded
-    def strobeOn(self, cmd):
-        """Activate bia strobe mode. """
-        cmdKeys = cmd.cmd.keywords
-        period = cmdKeys['period'].values[0] if 'period' in cmdKeys else None
-        duty = cmdKeys['duty'].values[0] if 'duty' in cmdKeys else None
-        duty = round(cmdKeys['power'].values[0] * 255 / 100) if 'power' in cmdKeys else duty
-
-        self.controller.setBiaConfig(cmd, strobe='on', period=period, duty=duty)
-        self.controller.biaStatus(cmd)
-        cmd.finish()
-
-    @threaded
     def strobeOff(self, cmd):
         """Deactivate bia strobe mode. """
         self.controller.setBiaConfig(cmd, strobe='off')
@@ -130,9 +118,9 @@ class BiashaCmd(object):
         cmdKeys = cmd.cmd.keywords
         period = cmdKeys['period'].values[0] if 'period' in cmdKeys else None
         duty = cmdKeys['duty'].values[0] if 'duty' in cmdKeys else None
-        duty = round(cmdKeys['power'].values[0] * 255 / 100) if 'power' in cmdKeys else duty
+        power = cmdKeys['power'].values[0] if 'power' in cmdKeys else None
 
-        self.controller.setBiaConfig(cmd, period=period, duty=duty)
+        self.controller.setBiaConfig(cmd, period=period, duty=duty, power=power)
         self.controller.biaStatus(cmd)
         cmd.finish()
 
