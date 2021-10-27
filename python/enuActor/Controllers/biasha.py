@@ -194,7 +194,10 @@ class biasha(FSMThread, bufferedSocket.EthComm):
         self.abortExposure = False
 
         try:
-            self.gotoState(cmd=cmd, cmdStr='init')
+            #self.gotoState(cmd=cmd, cmdStr='init')
+            # OK, this is scary. if bia is on, the actor stateMachine does not reject because passing through
+            # the init turn off the bia and avoid the interlock in some sense. but even worst, the lower level state machine allow it
+            # given the decay of the LED is not instantaneous, you get some extra photons on your detector ...
             start = dt.utcnow()
             self.gotoState(cmd=cmd, cmdStr='%s_open' % shutter)
             transientTime1 = (dt.utcnow() - start).total_seconds()
