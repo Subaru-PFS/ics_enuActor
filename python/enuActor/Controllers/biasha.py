@@ -103,6 +103,7 @@ class biasha(FSMThread, bufferedSocket.EthComm):
 
         self.defaultBiaParams = dict(period=int(self.actor.config.get('biasha', 'bia_period')),
                                      duty=int(self.actor.config.get('biasha', 'bia_duty')),
+                                     power=int(self.actor.config.get('biasha', 'bia_power')),
                                      strobe=self.actor.config.get('biasha', 'bia_strobe'))
 
     def _openComm(self, cmd):
@@ -194,7 +195,7 @@ class biasha(FSMThread, bufferedSocket.EthComm):
         self.abortExposure = False
 
         try:
-            #self.gotoState(cmd=cmd, cmdStr='init')
+            # self.gotoState(cmd=cmd, cmdStr='init')
             # OK, this is scary. if bia is on, the actor stateMachine does not reject because passing through
             # the init turn off the bia and avoid the interlock in some sense. but even worst, the lower level state machine allow it
             # given the decay of the LED is not instantaneous, you get some extra photons on your detector ...
@@ -285,29 +286,35 @@ class biasha(FSMThread, bufferedSocket.EthComm):
                 cmd.inform('%sFSM=%s,%s' % (self.name, self.states.current, self.substates.current))
 
             __, bia = biasha.status[state]
-            strobe, period, duty = self._biaConfig(cmd)
+            duty, period, power = self._biaConfig(cmd)
             phr1, phr2 = self._photores(cmd)
-            biaPower = 0 if bia == 'off' else round(duty * 100 / 255)
+            strobe = duty != 100
+            biaPower = 0 if bia == 'off' else round(power * 100 / 255)
             pulseGap = 0 if not strobe else period
 
+            pulseOn = period * duty / 100
+            pulseOff = period - pulseOn
+
             cmd.inform('photores=%d,%d' % (phr1, phr2))
-            cmd.inform('biaConfig=%d,%d,%d' % (strobe, period, duty))
-            cmd.inform(f'biaStatus={biaPower},{pulseGap}')
+            cmd.inform('biaConfig=%d,%d,%d,%d' % (strobe, period, power, duty))
+            cmd.inform('biaStatus=%d,%d,%d,%d,%d' % (biaPower, pulseGap, duty, pulseOn, pulseOff))
             cmd.inform('bia=%s' % bia)
 
         except:
             cmd.warn('bia=undef')
             raise
 
-    def setBiaConfig(self, cmd, period=None, duty=None, strobe=None):
+    def setBiaConfig(self, cmd, period=None, duty=None, power=None, strobe=None):
         """Send new parameters for bia.
 
         :param cmd: current command.
         :param period: bia period for strobe mode.
-        :param duty: bia duty cycle.
+        :param duty: bia strobe duty cycle.
+        :param power: bia led input power.
         :param strobe: **on** | **off**.
         :type period: int
         :type duty: int
+        :type power: int
         :type strobe: str
         :raise: Exception with warning message.
         """
@@ -318,10 +325,17 @@ class biasha(FSMThread, bufferedSocket.EthComm):
             self.sendOneCommand('set_period%i' % period, cmd=cmd)
 
         if duty is not None:
-            if not (0 <= duty < 256):
-                raise ValueError('duty not in range 0:255')
+            if not (0 <= duty <= 100):
+                raise ValueError('duty not in range 0:100')
 
             self.sendOneCommand('set_duty%i' % duty, cmd=cmd)
+
+        if power is not None:
+            if not (0 < power <= 100):
+                raise ValueError('power not in range 0:100')
+
+            power = round(255 * power / 100)
+            self.sendOneCommand('set_power%i' % power, cmd=cmd)
 
         if strobe is not None:
             self.sendOneCommand('pulse_%s' % strobe, cmd=cmd)
@@ -352,9 +366,9 @@ class biasha(FSMThread, bufferedSocket.EthComm):
         :raise: Exception with warning message.
         """
         biastat = self.sendOneCommand("get_param", cmd=cmd)
-        strobe, period, duty = biastat.split(',')
+        duty, period, power = biastat.split(',')
 
-        return int(strobe), int(period), int(duty)
+        return int(duty), int(period), int(power)
 
     def _photores(self, cmd):
         """Check and return current photoresistances values.
@@ -374,13 +388,12 @@ class biasha(FSMThread, bufferedSocket.EthComm):
         :param cmd: current command.
         :raise: Exception with warning message.
         """
-        reply = self.sendOneCommand(cmdStr, cmd=cmd)
-
-        if reply == '':
-            return reply
-        elif reply == 'n':
+        try:
+            reply = self.sendOneCommand(cmdStr, cmd=cmd)
+        except RuntimeError:
             raise RuntimeError('biasha has replied nok, %s inappropriate in current state ' % cmdStr)
-        else:
+
+        if reply:
             raise RuntimeError('error : %s' % reply)
 
     def _waitUntil(self, cmd, start, exptime, ti=0.001):
@@ -459,10 +472,15 @@ class biasha(FSMThread, bufferedSocket.EthComm):
         """
         ret = bufferedSocket.EthComm.sendOneCommand(self, cmdStr=cmdStr, doClose=doClose, cmd=cmd)
 
-        if 'ok' in ret:
-            return ret.split('ok')[0]
-        else:
+        if not 'ok' in ret:
             raise IOError('unexpected return from biasha ret:%s' % ret)
+
+        reply, __ = ret.split('ok')
+
+        if reply == 'n':
+            raise RuntimeError(f'biasha {cmdStr} returned nok !')
+
+        return reply
 
     def createSock(self):
         """create socket in operation, simulator otherwise.
