@@ -297,7 +297,7 @@ class biasha(FSMThread, bufferedSocket.EthComm):
 
             cmd.inform('photores=%d,%d' % (phr1, phr2))
             cmd.inform('biaConfig=%d,%d,%d,%d' % (strobe, period, power, duty))
-            cmd.inform('biaStatus=%d,%d,%d,%d,%d' % (biaPower,pulseGap,duty,pulseOn,pulseOff))
+            cmd.inform('biaStatus=%d,%d,%d,%d,%d' % (biaPower, pulseGap, duty, pulseOn, pulseOff))
             cmd.inform('bia=%s' % bia)
 
         except:
@@ -388,13 +388,12 @@ class biasha(FSMThread, bufferedSocket.EthComm):
         :param cmd: current command.
         :raise: Exception with warning message.
         """
-        reply = self.sendOneCommand(cmdStr, cmd=cmd)
-
-        if reply == '':
-            return reply
-        elif reply == 'n':
+        try:
+            reply = self.sendOneCommand(cmdStr, cmd=cmd)
+        except RuntimeError:
             raise RuntimeError('biasha has replied nok, %s inappropriate in current state ' % cmdStr)
-        else:
+
+        if reply:
             raise RuntimeError('error : %s' % reply)
 
     def _waitUntil(self, cmd, start, exptime, ti=0.001):
@@ -473,10 +472,15 @@ class biasha(FSMThread, bufferedSocket.EthComm):
         """
         ret = bufferedSocket.EthComm.sendOneCommand(self, cmdStr=cmdStr, doClose=doClose, cmd=cmd)
 
-        if 'ok' in ret:
-            return ret.split('ok')[0]
-        else:
+        if not 'ok' in ret:
             raise IOError('unexpected return from biasha ret:%s' % ret)
+
+        reply, __ = ret.split('ok')
+
+        if reply == 'n':
+            raise RuntimeError(f'biasha {cmdStr} returned nok !')
+
+        return reply
 
     def createSock(self):
         """create socket in operation, simulator otherwise.
