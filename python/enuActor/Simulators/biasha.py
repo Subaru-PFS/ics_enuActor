@@ -12,8 +12,10 @@ class BiashaSim(socket.socket):
     def __init__(self):
         """Fake biasha tcp server."""
         socket.socket.__init__(self, socket.AF_INET, socket.SOCK_STREAM)
-        self.g_aduty = 100
-        self.g_aperiod = 1000
+        self.noStrobeDuty = 100
+        self.noStrobePeriod = 1000
+        self.g_aduty = self.noStrobeDuty
+        self.g_aperiod = self.noStrobePeriod
         self.g_sduty = self.g_aduty
         self.g_speriod = self.g_aperiod
         self.g_apower = 0
@@ -30,6 +32,10 @@ class BiashaSim(socket.socket):
             raise TypeError
         if type(port) is not int:
             raise TypeError
+
+    def setBiaParameters(self, duty, period):
+        self.g_aduty = duty
+        self.g_aperiod = period
 
     def sendall(self, cmdStr, flags=None):
         """Send fake packets, append fake response to buffer."""
@@ -148,11 +154,15 @@ class BiashaSim(socket.socket):
             cmdOk = True
 
         elif cmdStr[:10] == 'set_period':
-            self.g_aperiod = int(cmdStr[10:])
+            g_aperiod = int(cmdStr[10:])
+            self.setBiaParameters(self.g_sduty, g_aperiod)
+            self.g_speriod = g_aperiod
             cmdOk = True
 
         elif cmdStr[:8] == 'set_duty':
-            self.g_aduty = int(cmdStr[8:])
+            g_aduty = int(cmdStr[8:])
+            self.setBiaParameters(g_aduty, self.g_speriod)
+            self.g_sduty = g_aduty
             cmdOk = True
 
         elif cmdStr[:9] == 'set_power':
@@ -176,15 +186,12 @@ class BiashaSim(socket.socket):
             cmdOk = True
 
         elif cmdStr == 'pulse_on\r\n':
-            self.g_aperiod = self.g_speriod
-            self.g_aduty = self.g_sduty
+            self.setBiaParameters(self.g_sduty, self.g_speriod)
             cmdOk = True
 
         elif cmdStr == 'pulse_off\r\n':
-            self.g_speriod = self.g_aperiod
-            self.g_sduty = self.g_aduty
-            self.g_aduty = 100
-            self.g_aperiod = 1000
+            self.g_aduty = self.noStrobeDuty
+            self.g_aperiod = self.noStrobePeriod
             cmdOk = True
 
         elif cmdStr == 'read_phr\r\n':

@@ -290,14 +290,13 @@ class biasha(FSMThread, bufferedSocket.EthComm):
             phr1, phr2 = self._photores(cmd)
             strobe = duty != 100
             biaPower = 0 if bia == 'off' else round(power * 100 / 255)
-            pulseGap = 0 if not strobe else period
 
             pulseOn = period * duty / 100
             pulseOff = period - pulseOn
 
             cmd.inform('photores=%d,%d' % (phr1, phr2))
             cmd.inform('biaConfig=%d,%d,%d,%d' % (strobe, period, power, duty))
-            cmd.inform('biaStatus=%d,%d,%d,%d,%d' % (biaPower, pulseGap, duty, pulseOn, pulseOff))
+            cmd.inform('biaStatus=%d,%d,%d,%d,%d' % (biaPower, period, duty, pulseOn, pulseOff))
             cmd.inform('bia=%s' % bia)
 
         except:
@@ -318,21 +317,26 @@ class biasha(FSMThread, bufferedSocket.EthComm):
         :type strobe: str
         :raise: Exception with warning message.
         """
+        if duty is not None and duty == 100:
+            period = None
+            duty = None
+            strobe = 'off'
+
         if period is not None:
-            if not (0 <= period < 65536):
-                raise ValueError('period not in range 0:65535')
+            if not (0 < period < 2 ** 16):
+                raise ValueError('period not in range 1:65535')
 
             self.sendOneCommand('set_period%i' % period, cmd=cmd)
 
         if duty is not None:
-            if not (0 <= duty <= 100):
-                raise ValueError('duty not in range 0:100')
+            if not (0 < duty <= 100):
+                raise ValueError('duty not in range 1:100')
 
             self.sendOneCommand('set_duty%i' % duty, cmd=cmd)
 
         if power is not None:
             if not (0 < power <= 100):
-                raise ValueError('power not in range 0:100')
+                raise ValueError('power not in range 1:100')
 
             power = round(255 * power / 100)
             self.sendOneCommand('set_power%i' % power, cmd=cmd)
