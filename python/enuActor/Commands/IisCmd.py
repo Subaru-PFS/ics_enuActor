@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
 
+import ics.utils.tcp.utils as tcpUtils
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
-from enuActor.utils import waitForTcpServer
-from enuActor.utils.wrap import threaded, blocking, singleShot
+from ics.utils.threading import threaded, blocking, singleShot
 
 
 class IisCmd(object):
@@ -103,7 +103,7 @@ class IisCmd(object):
         mode = 'operation' if 'operation' in cmdKeys else mode
         mode = 'simulation' if 'simulation' in cmdKeys else mode
 
-        waitForTcpServer(host=host, port=port, cmd=cmd, mode=mode)
+        tcpUtils.waitForTcpServer(host=host, port=port, cmd=cmd, mode=mode)
 
         cmd.inform('text="connecting iis..."')
         self.actor.connect('iis', cmd=cmd, mode=mode)

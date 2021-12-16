@@ -2,12 +2,10 @@ __author__ = 'alefur'
 
 import logging
 import time
-from functools import partial
 
 from enuActor.Controllers import pdu
 from enuActor.Simulators.pdu import PduSim
-from enuActor.utils import wait
-from enuActor.utils.fsmThread import FSMThread
+from ics.utils.fsm.fsmThread import FSMThread
 
 
 class iis(pdu.pdu):
@@ -74,7 +72,8 @@ class iis(pdu.pdu):
         """
         state = self.sendOneCommand('read status o%s simple' % self.powerPorts[source], cmd=cmd)
         if state == 'pending':
-            wait(secs=2)
+            # the outlet is currently in a intermediate state so wait and retry.
+            time.sleep(2)
             return self.getState(source, cmd=cmd)
 
         return state

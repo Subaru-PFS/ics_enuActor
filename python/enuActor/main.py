@@ -5,10 +5,11 @@ import argparse
 import logging
 
 import actorcore.ICC
-from enuActor.utils import serverIsUp, waitForTcpServer
-from pfs.utils.instdata import InstData
-from twisted.internet import reactor
+import ics.utils.tcp.utils as tcpUtils
 from actorcore.FSM import MetaStates
+from ics.utils.instdata import InstData
+from twisted.internet import reactor
+
 
 class enuActor(actorcore.ICC.ICC):
     deviceOutlet = dict(slit='slit', biasha='ctrl,pows', rexm='ctrl,pows', temps='temps')
@@ -60,7 +61,7 @@ class enuActor(actorcore.ICC.ICC):
         try:
             self.callCommand('slit status')
             for controller in self.startingControllers:
-                if controller == 'pdu':
+                if not controller or controller == 'pdu':
                     continue
                 self.startController(controller, fromThread=False)
 
@@ -74,9 +75,9 @@ class enuActor(actorcore.ICC.ICC):
         host, port = self.config.get(networkSection, 'host'), int(self.config.get(networkSection, 'port'))
         mode = self.config.get(device, 'mode') if mode is None else mode
 
-        if not serverIsUp(host, port) and device not in ['pdu', 'iis']:
+        if not tcpUtils.serverIsUp(host, port) and device not in ['pdu', 'iis']:
             self.switchPowerOutlet(enuActor.deviceOutlet[device], state='on', cmd=cmd, fromThread=fromThread)
-            waitForTcpServer(host, port, cmd=cmd, mode=mode)
+            tcpUtils.waitForTcpServer(host, port, cmd=cmd, mode=mode)
 
         self.connect(device, mode=mode)
 

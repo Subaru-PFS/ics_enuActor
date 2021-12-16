@@ -3,7 +3,7 @@
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
 from enuActor.utils.sync import SyncCmd
-from enuActor.utils.wrap import singleShot
+from ics.utils.threading import singleShot
 
 
 class TopCmd(object):

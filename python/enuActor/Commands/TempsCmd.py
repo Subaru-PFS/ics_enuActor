@@ -3,7 +3,7 @@
 
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
-from enuActor.utils.wrap import threaded, singleShot
+from ics.utils.threading import threaded, singleShot
 
 
 class TempsCmd(object):

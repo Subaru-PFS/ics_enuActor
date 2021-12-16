@@ -3,9 +3,9 @@ __author__ = 'alefur'
 import logging
 import time
 
-import enuActor.utils.bufferedSocket as bufferedSocket
+import ics.utils.tcp.bufferedSocket as bufferedSocket
 from enuActor.Simulators.pdu import PduSim
-from enuActor.utils.fsmThread import FSMThread
+from ics.utils.fsm.fsmThread import FSMThread
 
 
 class pdu(FSMThread, bufferedSocket.EthComm):

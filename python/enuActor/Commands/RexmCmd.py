@@ -4,7 +4,7 @@
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
 from enuActor.drivers.rexm_drivers import TMCM
-from enuActor.utils.wrap import threaded, blocking, singleShot
+from ics.utils.threading import threaded, blocking, singleShot
 
 
 class RexmCmd(object):

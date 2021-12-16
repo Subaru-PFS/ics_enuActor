@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 
-import enuActor.utils.bufferedSocket as bufferedSocket
+import time
+
+import ics.utils.tcp.bufferedSocket as bufferedSocket
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
-from enuActor.utils import wait
-from enuActor.utils.wrap import threaded, blocking, singleShot
+from ics.utils.threading import threaded, blocking, singleShot
 from opscore.utility.qstr import qstr
 
 
@@ -229,8 +230,10 @@ class BiashaCmd(object):
         cmd.inform('text="rebooting biasha board..."')
         self.actor.disconnect('biasha', cmd=cmd)
 
+        # power off and wait
         self.actor.switchPowerOutlet('ctrl', state='off', cmd=cmd)
-        wait(secs=10)
+        time.sleep(10)
+
         self.actor.startController('biasha', cmd=cmd)
 
         self.controller.generate(cmd)

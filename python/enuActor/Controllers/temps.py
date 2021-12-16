@@ -2,11 +2,11 @@ __author__ = 'alefur'
 
 import logging
 
-import enuActor.utils.bufferedSocket as bufferedSocket
+import ics.utils.tcp.bufferedSocket as bufferedSocket
 import numpy as np
 import opscore.protocols.types as types
 from enuActor.Simulators.temps import TempsSim
-from enuActor.utils.fsmThread import FSMThread
+from ics.utils.fsm.fsmThread import FSMThread
 
 
 class temps(FSMThread, bufferedSocket.EthComm):

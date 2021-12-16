@@ -2,13 +2,12 @@ import copy
 import logging
 import time
 
-import enuActor.utils.bufferedSocket as bufferedSocket
+import ics.utils.tcp.bufferedSocket as bufferedSocket
 import numpy as np
 from astropy import time as astroTime
 from enuActor.Simulators.rexm import RexmSim
 from enuActor.drivers.rexm_drivers import recvPacket, TMCM
-from enuActor.utils import wait
-from enuActor.utils.fsmThread import FSMThread
+from ics.utils.fsm.fsmThread import FSMThread
 
 
 class rexm(FSMThread, bufferedSocket.EthComm):
@@ -205,7 +204,8 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         cmd.inform('text="stopping rexm motion"')
         self._stop(cmd=cmd)
 
-        wait(secs=1)
+        # wait 1 sec and check status again...
+        time.sleep(1)
         self.checkStatus(cmd)
 
     def moving(self, cmd, position=None, **kwargs):
@@ -224,7 +224,8 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         else:
             self._moveRelative(cmd, **kwargs)
 
-        wait()
+        # wait few seconds before we drop holding current...
+        time.sleep(5)
         self.stopMotion(cmd, forceStop=True)
 
     def checkStatus(self, cmd, genKeys=True):
