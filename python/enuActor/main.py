@@ -4,155 +4,83 @@
 import argparse
 import logging
 
-import actorcore.ICC
+import ics.utils.fsm.fsmActor as fsmActor
 import ics.utils.tcp.utils as tcpUtils
-from actorcore.FSM import MetaStates
-from ics.utils.instdata import InstData
-from twisted.internet import reactor
 
 
-class enuActor(actorcore.ICC.ICC):
-    deviceOutlet = dict(slit='slit', biasha='ctrl,pows', rexm='ctrl,pows', temps='temps')
+class enuActor(fsmActor.FsmActor):
+    knownControllers = ['biasha', 'iis', 'pdu', 'rexm', 'slit', 'temps']
+    # we dont start the hexapod by default.
+    startingControllers = list(set(knownControllers) - {'slit'})
+
+    outletConfig = dict(slit='slit', biasha='ctrl,pows', rexm='ctrl,pows', temps='temps', iis=None, pdu=None)
 
     def __init__(self, name, productName=None, configFile=None, logLevel=logging.INFO):
         # This sets up the connections to/from the hub, the logger, and the twisted reactor.
         #
-        actorcore.ICC.ICC.__init__(self, name,
+        fsmActor.FsmActor.__init__(self, name,
                                    productName=productName,
                                    configFile=configFile,
-                                   modelNames=name)
-        self.addModels([self.name])
-        self.instData = InstData(self)
-        self.logger.setLevel(logLevel)
+                                   logLevel=logLevel)
 
-        self.everConnected = False
-        self.metaStates = MetaStates(self)
+        self.addModels([name])
 
-    @property
-    def monitors(self):
-        """Return controller monitor value."""
-        return dict([(name, controller.monitor) for name, controller in self.controllers.items()])
+    def letsGetReadyToRumble(self):
+        """ Just startup nicely."""
 
-    def controllerKey(self):
-        """Return formatted keyword listing all loaded controllers."""
-        controllerNames = list(self.controllers.keys())
-        key = 'controllers=%s' % (','.join([c for c in controllerNames]) if controllerNames else None)
+        toStart = list(set(enuActor.startingControllers) - set(self.ignoreControllers))
 
-        return key
+        if 'pdu' not in toStart:
+            # thats weird but devices could be powered by something else so just force simulation and proceed.
+            pduMode = 'simulation'
+        else:
+            pduMode = None
 
-    def reloadConfiguration(self, cmd):
-        """Reload configuration file."""
-        cmd.inform('sections=%08x,%r' % (id(self.config),
-                                         self.config))
+        self.connect('pdu', mode=pduMode)
 
-    def connectionMade(self):
-        """Attach all controllers."""
-        if self.everConnected is False:
-            logging.info("Attaching all controllers...")
-            self.allControllers = ['pdu']
-            self.startingControllers = [s.strip() for s in self.config.get(self.name, 'startingControllers').split(',')]
-            self.attachAllControllers()
-            self.everConnected = True
+        for controller in toStart:
+            if controller == 'pdu':
+                continue
+            self.startController(controller, fromThread=False)
 
-            reactor.callLater(5, self.startAllControllers)
+        self.callCommand('slit status')
 
-    def startAllControllers(self):
-        """Start all controllers."""
-        try:
-            self.callCommand('slit status')
-            for controller in self.startingControllers:
-                if not controller or controller == 'pdu':
-                    continue
-                self.startController(controller, fromThread=False)
-
-        except Exception as e:
-            self.logger.warning('text=%s' % self.strTraceback(e))
-
-    def startController(self, device, cmd=None, mode=None, fromThread=True):
+    def startController(self, controller, cmd=None, mode=None, fromThread=True):
         """power up device if not on the network, wait and connect"""
+
+        def getConfig(field):
+            """ Retrieve host and port from config file. """
+            return self.config.get(controller, field).strip()
+
         cmd = self.bcast if cmd is None else cmd
-        networkSection = 'pdu' if device == 'iis' else device
-        host, port = self.config.get(networkSection, 'host'), int(self.config.get(networkSection, 'port'))
-        mode = self.config.get(device, 'mode') if mode is None else mode
+        mode = getConfig('mode') if mode is None else mode
+        host, port = getConfig('host'), int(getConfig('port'))
 
-        if not tcpUtils.serverIsUp(host, port) and device not in ['pdu', 'iis']:
-            self.switchPowerOutlet(enuActor.deviceOutlet[device], state='on', cmd=cmd, fromThread=fromThread)
-            tcpUtils.waitForTcpServer(host, port, cmd=cmd, mode=mode)
+        # for iis and pdu there is no outlet per se, actually it might change for iis.
+        outlet = enuActor.outletConfig[controller]
 
-        self.connect(device, mode=mode)
+        if mode == 'operation' and not tcpUtils.serverIsUp(host, port) and outlet is not None:
+            # most devices can be power cycled, so try it.
+            self.powerSwitch(outlet, 'on', cmd=cmd, fromThread=fromThread)
+            tcpUtils.waitForTcpServer(host, port, cmd=cmd)
 
-    def switchPowerOutlet(self, outlet, state, cmd=None, fromThread=True):
-        """power up device if not on the network, wait and connect"""
+        self.connect(controller, cmd=cmd, mode=mode)
+
+    def powerSwitch(self, outlet, state, cmd=None, fromThread=True):
+        """power up/down pdu outlet from main thread or controller thread."""
         cmd = self.bcast if cmd is None else cmd
         cmdStr = f'power {state}={outlet}'
         cmd.inform(f'text="{cmdStr} outlet ..."')
 
         if fromThread:
-            cmdVar = self.cmdr.call(actor=self.name, cmdStr=f'power {state}={outlet}', forUserCmd=cmd, timeLim=60)
+            cmdVar = self.cmdr.call(actor=self.name, cmdStr=cmdStr, forUserCmd=cmd, timeLim=60)
 
             if cmdVar.didFail:
                 cmd.warn(cmdVar.replyList[-1].keywords.canonical(delimiter=';'))
-                raise ValueError(f'failed to power {state} {outlet} outlet ...')
+                raise ValueError(f'failed to {cmdStr} outlet ...')
 
         else:
             self.callCommand(cmdStr)
-
-    def connect(self, controller, cmd=None, **kwargs):
-        """Connect the given controller name.
-
-        :param controller: controller name.
-        :param cmd: current command.
-        :type controller: str
-        :raise: Exception with warning message.
-        """
-        cmd = self.bcast if cmd is None else cmd
-        cmd.inform('text="attaching %s..."' % controller)
-        try:
-            actorcore.ICC.ICC.attachController(self, controller, cmd=cmd, **kwargs)
-        except:
-            cmd.warn(self.controllerKey())
-            cmd.warn('text="failed to connect controller %s' % controller)
-            raise
-
-        cmd.inform(self.controllerKey())
-
-    def disconnect(self, controller, cmd=None):
-        """Disconnect the given controller name.
-
-        :param controller: controller name.
-        :param cmd: current command.
-        :type controller: str
-        :raise: Exception with warning message.
-        """
-        cmd = self.bcast if cmd is None else cmd
-        cmd.inform('text="detaching %s..."' % controller)
-        try:
-            actorcore.ICC.ICC.detachController(self, controller, cmd=cmd)
-
-        except:
-            cmd.warn(self.controllerKey())
-            cmd.warn('text="failed to disconnect controller %s"')
-            raise
-
-        cmd.inform(self.controllerKey())
-
-    def monitor(self, controller, period, cmd=None):
-        """Change controller monitoring value.
-
-        :param controller: controller name.
-        :param period: monitoring value(secs).
-        :param cmd: current command.
-        :type controller: str
-        :type period: int
-        :raise: Exception with warning message.
-        """
-        cmd = self.bcast if cmd is None else cmd
-
-        if controller not in self.controllers:
-            raise ValueError('controller %s is not connected' % controller)
-
-        self.controllers[controller].monitor = period
-        cmd.warn('text="setting %s loop to %gs"' % (controller, period))
 
 
 def main():
