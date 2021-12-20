@@ -33,7 +33,7 @@ class rexm(FSMThread, bufferedSocket.EthComm):
                   {'name': 'fail', 'src': ['MOVING'], 'dst': 'FAILED'},
                   ]
 
-        FSMThread.__init__(self, actor, name, events=events, substates=substates, doInit=False)
+        FSMThread.__init__(self, actor, name, events=events, substates=substates)
 
         self.addStateCB('MOVING', self.moving)
         self.sim = RexmSim()
@@ -680,8 +680,7 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         return reply
 
     def createSock(self):
-        """Create socket in operation, simulator otherwise.
-        """
+        """Create socket in operation, simulator otherwise."""
         if self.simulated:
             s = self.sim
         else:
@@ -690,11 +689,13 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         return s
 
     def doAbort(self):
-        """Abort current motion.
-        """
+        """Abort current motion."""
         self.abortMotion = True
-        while self.currCmd:
+
+        # Coming from the blocking wrapper (see ics.utils.threading), not beautiful but should work.
+        while self.onGoingCmd:
             pass
+
         return
 
     def leaveSafely(self, cmd):

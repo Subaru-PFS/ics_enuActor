@@ -246,7 +246,7 @@ class SlitCmd(object):
         self.controller.substates.shutdown()
 
         self.actor.disconnect('slit', cmd=cmd)
-        self.actor.switchPowerOutlet('slit', state='off', cmd=cmd)
+        self.actor.powerSwitch('slit', state='off', cmd=cmd)
 
         cmd.finish()
 

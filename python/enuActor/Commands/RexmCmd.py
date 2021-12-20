@@ -113,7 +113,7 @@ class RexmCmd(object):
         self.actor.disconnect('rexm', cmd=cmd)
 
         if 'biasha' not in self.actor.controllers.keys():
-            self.actor.switchPowerOutlet('ctrl,pows', state='off', cmd=cmd)
+            self.actor.powerSwitch('ctrl,pows', state='off', cmd=cmd)
 
         cmd.finish()
 

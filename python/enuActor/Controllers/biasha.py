@@ -15,6 +15,9 @@ def busyEvent(event):
 
 
 class biasha(FSMThread, bufferedSocket.EthComm):
+    # for state machine, not need to temporize before init
+    forceInit = True
+
     status = {0: ('close', 'off'),
               10: ('close', 'on'),
               20: ('open', 'off'),
@@ -25,6 +28,8 @@ class biasha(FSMThread, bufferedSocket.EthComm):
                  'open': '100100',
                  'openblue': '100010',
                  'openred': '010100'}
+
+    # socket properties
     maxIOAttempt = 5
     maintainConnectionRate = 60
     maintainConnectionMargin = 5
@@ -58,7 +63,7 @@ class biasha(FSMThread, bufferedSocket.EthComm):
         events += [{'name': 'fail', 'src': 'BUSY', 'dst': 'FAILED'},
                    {'name': 'lock', 'src': ['IDLE', 'EXPOSING', 'OPENRED', 'OPENBLUE', 'BIA'], 'dst': 'BUSY'}]
 
-        FSMThread.__init__(self, actor, name, events=events, substates=substates, doInit=True)
+        FSMThread.__init__(self, actor, name, events=events, substates=substates)
 
         self.finishExposure = False
         self.abortExposure = False
@@ -432,19 +437,23 @@ class biasha(FSMThread, bufferedSocket.EthComm):
         return dt.utcnow()
 
     def doAbort(self):
-        """Abort current exposure.
-        """
+        """Abort current exposure."""
         self.abortExposure = True
-        while self.currCmd:
+
+        # Coming from the blocking wrapper (see ics.utils.threading), not beautiful but should work.
+        while self.onGoingCmd:
             pass
+
         return
 
     def doFinish(self):
-        """Finish current exposure.
-        """
+        """Finish current exposure. """
         self.finishExposure = True
-        while self.currCmd:
+
+        # Coming from the blocking wrapper (see ics.utils.threading), not beautiful but should work.
+        while self.onGoingCmd:
             pass
+
         return
 
     def leaveCleanly(self, cmd):

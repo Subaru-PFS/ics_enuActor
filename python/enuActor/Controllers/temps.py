@@ -35,7 +35,7 @@ class temps(FSMThread, bufferedSocket.EthComm):
         :param name: controller name.
         :type name: str
         """
-        FSMThread.__init__(self, actor, name, doInit=True)
+        FSMThread.__init__(self, actor, name)
 
         self.sim = TempsSim()
         self.biaOverHeat = False

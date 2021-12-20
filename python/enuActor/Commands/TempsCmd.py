@@ -74,7 +74,7 @@ class TempsCmd(object):
     def stop(self, cmd):
         """Finish current exposure, power off and disconnect."""
         self.actor.disconnect('temps', cmd=cmd)
-        self.actor.switchPowerOutlet('temps', state='off', cmd=cmd)
+        self.actor.powerSwitch('temps', state='off', cmd=cmd)
 
         cmd.finish()
 

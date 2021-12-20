@@ -38,7 +38,7 @@ class slit(FSMThread):
                   {'name': 'shutdown', 'src': ['IDLE'], 'dst': 'SHUTDOWN'},
                   ]
 
-        FSMThread.__init__(self, actor, name, events=events, substates=substates, doInit=False)
+        FSMThread.__init__(self, actor, name, events=events, substates=substates)
 
         self.addStateCB('MOVING', self.moving)
 
@@ -361,7 +361,8 @@ class slit(FSMThread):
         except Exception as e:
             cmd.warn('text=%s' % self.actor.strTraceback(e))
 
-        while self.currCmd:
+        # Coming from the blocking wrapper (see ics.utils.threading), not beautiful but should work.
+        while self.onGoingCmd:
             pass
 
     def leaveCleanly(self, cmd):
