@@ -8,7 +8,7 @@ import ics.utils.fsm.fsmActor as fsmActor
 import ics.utils.tcp.utils as tcpUtils
 
 
-class enuActor(fsmActor.FsmActor):
+class EnuActor(fsmActor.FsmActor):
     knownControllers = ['biasha', 'iis', 'pdu', 'rexm', 'slit', 'temps']
     # we dont start the hexapod by default.
     startingControllers = list(set(knownControllers) - {'slit'})
@@ -28,7 +28,7 @@ class enuActor(fsmActor.FsmActor):
     def letsGetReadyToRumble(self):
         """ Just startup nicely."""
 
-        toStart = list(set(enuActor.startingControllers) - set(self.ignoreControllers))
+        toStart = list(set(EnuActor.startingControllers) - set(self.ignoreControllers))
 
         if 'pdu' not in toStart:
             # thats weird but devices could be powered by something else so just force simulation and proceed.
@@ -57,7 +57,7 @@ class enuActor(fsmActor.FsmActor):
         host, port = getConfig('host'), int(getConfig('port'))
 
         # for iis and pdu there is no outlet per se, actually it might change for iis.
-        outlet = enuActor.outletConfig[controller]
+        outlet = EnuActor.outletConfig[controller]
 
         if mode == 'operation' and not tcpUtils.serverIsUp(host, port) and outlet is not None:
             # most devices can be power cycled, so try it.
@@ -65,6 +65,27 @@ class enuActor(fsmActor.FsmActor):
             tcpUtils.waitForTcpServer(host, port, cmd=cmd)
 
         self.connect(controller, cmd=cmd, mode=mode)
+
+    def attachController(self, name, instanceName=None, **kwargs):
+        """ regular ICC attach controller with a gotcha for IIS"""
+
+        def findPduModel():
+            """ Find pduModel being used from config file. """
+            try:
+                pduModel = self.config.get('iis', 'pduModel').strip()
+            except:
+                raise RuntimeError(f'iis pdu model is not properly described')
+
+            if pduModel not in ['aten', 'digitalLoggers']:
+                raise ValueError(f'unknown pduModel : {pduModel}')
+
+            return pduModel
+
+        if name == 'iis':
+            name = findPduModel()
+            instanceName = 'iis'
+
+        return fsmActor.FsmActor.attachController(self, name, instanceName=instanceName, **kwargs)
 
     def powerSwitch(self, outlet, state, cmd=None, fromThread=True):
         """power up/down pdu outlet from main thread or controller thread."""
@@ -93,7 +114,7 @@ def main():
                         help='identity')
     args = parser.parse_args()
 
-    theActor = enuActor(args.name,
+    theActor = EnuActor(args.name,
                         productName='enuActor',
                         configFile=args.config,
                         logLevel=args.logLevel)

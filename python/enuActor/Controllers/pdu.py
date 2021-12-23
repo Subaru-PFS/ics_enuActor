@@ -1,10 +1,10 @@
 __author__ = 'alefur'
 
-from ics.utils.sps.controllers.pdu import aten
+from ics.utils.sps.pdu.controllers import aten
 
 
-class pdu(aten.pdu):
+class pdu(aten.aten):
     """ code shared among ics_utils package."""
 
     def __init__(self, *args, **kwargs):
-        aten.pdu.__init__(self, *args, **kwargs)
+        aten.aten.__init__(self, *args, **kwargs)

@@ -10,6 +10,9 @@ from ics.utils.fsm.fsmThread import FSMThread
 
 
 class temps(FSMThread, bufferedSocket.EthComm):
+    # for state machine, not need to temporize before init
+    forceInit = True
+
     channels = {1: '101:110',
                 2: '201:210'}
     tempMin, tempMax = -20, 60
