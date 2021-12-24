@@ -4,7 +4,7 @@ import enuActor.Controllers.slit as slitCtrl
 import numpy as np
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
-from enuActor.utils.wrap import threaded, blocking, singleShot
+from ics.utils.threading import threaded, blocking, singleShot
 
 
 class SlitCmd(object):
@@ -246,7 +246,7 @@ class SlitCmd(object):
         self.controller.substates.shutdown()
 
         self.actor.disconnect('slit', cmd=cmd)
-        self.actor.switchPowerOutlet('slit', state='off', cmd=cmd)
+        self.actor.powerSwitch('slit', state='off', cmd=cmd)
 
         cmd.finish()
 

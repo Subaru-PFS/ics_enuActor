@@ -2,13 +2,13 @@ __author__ = 'alefur'
 
 import logging
 import socket
+import time
 
 import numpy as np
 from astropy import time as astroTime
 from enuActor.Simulators.slit import SlitSim
 from enuActor.drivers import hxp_drivers
-from enuActor.utils import wait
-from enuActor.utils.fsmThread import FSMThread
+from ics.utils.fsm.fsmThread import FSMThread
 
 
 class slit(FSMThread):
@@ -38,7 +38,7 @@ class slit(FSMThread):
                   {'name': 'shutdown', 'src': ['IDLE'], 'dst': 'SHUTDOWN'},
                   ]
 
-        FSMThread.__init__(self, actor, name, events=events, substates=substates, doInit=False)
+        FSMThread.__init__(self, actor, name, events=events, substates=substates)
 
         self.addStateCB('MOVING', self.moving)
 
@@ -106,7 +106,6 @@ class slit(FSMThread):
             self.softwareLimitsActivated = self.actor.config.getboolean('slit', 'activateSoftwareLimits')
         except:
             self.softwareLimitsActivated = True
-
 
     def _openComm(self, cmd):
         """Open socket slit hexapod controller or simulate it.
@@ -261,7 +260,9 @@ class slit(FSMThread):
 
         cmd.inform('text="Kill and save hexapod position..."')
         self._TCLScriptExecute('KillWithRegistration.tcl')
-        wait(secs=10)
+
+        # the script actually return immediately, so we need to wait, pretty ugly but has been proven to work...
+        time.sleep(10)
 
     def getSystem(self, cmd, system):
         """Get system from the controller and update the actor's current value.
@@ -360,7 +361,8 @@ class slit(FSMThread):
         except Exception as e:
             cmd.warn('text=%s' % self.actor.strTraceback(e))
 
-        while self.currCmd:
+        # Coming from the blocking wrapper (see ics.utils.threading), not beautiful but should work.
+        while self.onGoingCmd:
             pass
 
     def leaveCleanly(self, cmd):
@@ -540,7 +542,6 @@ class slit(FSMThread):
             if not lim_inf <= coord <= lim_sup:
                 raise UserWarning("[X, Y, Z, U, V, W] exceed : %.5f not permitted" % coord)
 
-
     def errorChecker(self, func, *args, sockName='main'):
         """Decorator for slit lower level functions.
 
@@ -569,7 +570,8 @@ class slit(FSMThread):
                     raise UserWarning('[X, Y, Z, U, V, W] exceed : %s' % errorString)
                 elif buf[0] == -21:
                     self.logger.debug('Hxp controller in initialization...')
-                    wait(secs=1)
+                    # just wait a bit, the controller should soon be ready, erk.
+                    time.sleep(2)
                     return self.errorChecker(func, *args, sockName=sockName)
                 elif errorCode != 0:
                     raise RuntimeError(func.__name__ + ' : ERROR ' + str(errorCode))

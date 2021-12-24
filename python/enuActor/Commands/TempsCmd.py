@@ -3,7 +3,7 @@
 
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
-from enuActor.utils.wrap import threaded, singleShot
+from ics.utils.threading import threaded, singleShot
 
 
 class TempsCmd(object):
@@ -74,7 +74,7 @@ class TempsCmd(object):
     def stop(self, cmd):
         """Finish current exposure, power off and disconnect."""
         self.actor.disconnect('temps', cmd=cmd)
-        self.actor.switchPowerOutlet('temps', state='off', cmd=cmd)
+        self.actor.powerSwitch('temps', state='off', cmd=cmd)
 
         cmd.finish()
 

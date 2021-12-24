@@ -2,14 +2,17 @@ __author__ = 'alefur'
 
 import logging
 
-import enuActor.utils.bufferedSocket as bufferedSocket
+import ics.utils.tcp.bufferedSocket as bufferedSocket
 import numpy as np
 import opscore.protocols.types as types
 from enuActor.Simulators.temps import TempsSim
-from enuActor.utils.fsmThread import FSMThread
+from ics.utils.fsm.fsmThread import FSMThread
 
 
 class temps(FSMThread, bufferedSocket.EthComm):
+    # for state machine, not need to temporize before init
+    forceInit = True
+
     channels = {1: '101:110',
                 2: '201:210'}
     tempMin, tempMax = -20, 60
@@ -35,7 +38,7 @@ class temps(FSMThread, bufferedSocket.EthComm):
         :param name: controller name.
         :type name: str
         """
-        FSMThread.__init__(self, actor, name, doInit=True)
+        FSMThread.__init__(self, actor, name)
 
         self.sim = TempsSim()
         self.biaOverHeat = False

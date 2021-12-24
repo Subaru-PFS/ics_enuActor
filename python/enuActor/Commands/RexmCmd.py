@@ -4,7 +4,7 @@
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
 from enuActor.drivers.rexm_drivers import TMCM
-from enuActor.utils.wrap import threaded, blocking, singleShot
+from ics.utils.threading import threaded, blocking, singleShot
 
 
 class RexmCmd(object):
@@ -113,7 +113,7 @@ class RexmCmd(object):
         self.actor.disconnect('rexm', cmd=cmd)
 
         if 'biasha' not in self.actor.controllers.keys():
-            self.actor.switchPowerOutlet('ctrl,pows', state='off', cmd=cmd)
+            self.actor.powerSwitch('ctrl,pows', state='off', cmd=cmd)
 
         cmd.finish()
 

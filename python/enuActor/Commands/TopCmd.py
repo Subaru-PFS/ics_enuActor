@@ -3,7 +3,7 @@
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
 from enuActor.utils.sync import SyncCmd
-from enuActor.utils.wrap import singleShot
+from ics.utils.threading import singleShot
 
 
 class TopCmd(object):
@@ -40,11 +40,9 @@ class TopCmd(object):
         period = cmd.cmd.keywords['period'].values[0]
         controllers = cmd.cmd.keywords['controllers'].values
 
-        knownControllers = [c.strip() for c in self.actor.config.get(self.actor.name, 'controllers').split(',')]
-
         foundOne = False
         for c in controllers:
-            if c not in knownControllers:
+            if c not in self.actor.knownControllers:
                 cmd.warn('text="not starting monitor for %s: unknown controller"' % (c))
                 continue
 

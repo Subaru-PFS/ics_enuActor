@@ -1,28 +1,7 @@
 import time
-from functools import partial, wraps
 
 from actorcore.QThread import QThread
-from enuActor.utils import wait
-
-
-def putMsg(func):
-    @wraps(func)
-    def wrapper(self, cmd, *args, **kwargs):
-        self.putMsg(partial(func, self, cmd, *args, **kwargs))
-
-    return wrapper
-
-
-def threaded(func):
-    @wraps(func)
-    @putMsg
-    def wrapper(self, cmd, *args, **kwargs):
-        try:
-            return func(self, cmd, *args, **kwargs)
-        except Exception as e:
-            cmd.fail('text=%s' % self.actor.strTraceback(e))
-
-    return wrapper
+from ics.utils.threading import threaded
 
 
 class SyncCmd(object):
@@ -54,7 +33,7 @@ class SyncCmd(object):
     def sync(self):
         """Wait for each command to be finished."""
         while None in [th.cmdVar for th in self.cmdThd]:
-            wait(secs=1)
+            time.sleep(1)
 
     def exit(self):
         """Exit all threads."""
