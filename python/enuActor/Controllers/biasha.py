@@ -440,9 +440,8 @@ class biasha(FSMThread, bufferedSocket.EthComm):
         """Abort current exposure."""
         self.abortExposure = True
 
-        # Coming from the blocking wrapper (see ics.utils.threading), not beautiful but should work.
-        while self.onGoingCmd:
-            pass
+        # see ics.utils.fsm.fsmThread.LockedThread
+        self.waitForCommandToFinish()
 
         return
 
@@ -450,9 +449,8 @@ class biasha(FSMThread, bufferedSocket.EthComm):
         """Finish current exposure. """
         self.finishExposure = True
 
-        # Coming from the blocking wrapper (see ics.utils.threading), not beautiful but should work.
-        while self.onGoingCmd:
-            pass
+        # see ics.utils.fsm.fsmThread.LockedThread
+        self.waitForCommandToFinish()
 
         return
 

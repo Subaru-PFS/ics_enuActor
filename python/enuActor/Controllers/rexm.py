@@ -692,9 +692,8 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         """Abort current motion."""
         self.abortMotion = True
 
-        # Coming from the blocking wrapper (see ics.utils.threading), not beautiful but should work.
-        while self.onGoingCmd:
-            pass
+        # see ics.utils.fsm.fsmThread.LockedThread
+        self.waitForCommandToFinish()
 
         return
 

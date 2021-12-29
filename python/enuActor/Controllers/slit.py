@@ -361,9 +361,8 @@ class slit(FSMThread):
         except Exception as e:
             cmd.warn('text=%s' % self.actor.strTraceback(e))
 
-        # Coming from the blocking wrapper (see ics.utils.threading), not beautiful but should work.
-        while self.onGoingCmd:
-            pass
+        # see ics.utils.fsm.fsmThread.LockedThread
+        self.waitForCommandToFinish()
 
     def leaveCleanly(self, cmd):
         """Aborting current move.

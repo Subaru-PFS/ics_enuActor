@@ -208,7 +208,7 @@ class BiashaCmd(object):
         self.actor.disconnect('biasha', cmd=cmd)
 
         if 'rexm' not in self.actor.controllers.keys():
-            self.actor.switchPowerOutlet('ctrl,pows', state='off', cmd=cmd)
+            self.actor.powerSwitch('ctrl,pows', state='off', cmd=cmd)
 
         cmd.finish()
 
@@ -231,7 +231,7 @@ class BiashaCmd(object):
         self.actor.disconnect('biasha', cmd=cmd)
 
         # power off and wait
-        self.actor.switchPowerOutlet('ctrl', state='off', cmd=cmd)
+        self.actor.powerSwitch('ctrl', state='off', cmd=cmd)
         time.sleep(10)
 
         self.actor.startController('biasha', cmd=cmd)
