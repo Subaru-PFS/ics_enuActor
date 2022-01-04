@@ -29,6 +29,10 @@ class biasha(FSMThread, bufferedSocket.EthComm):
                  'openblue': '100010',
                  'openred': '010100'}
 
+    # shutterMask to cmdShutter
+    cmdShutter = {0: 'none', 1: 'blue', 2: 'red', 3: 'shut'}
+    shutterToMask = dict([(v, k) for k, v in cmdShutter.items()])
+
     # socket properties
     maxIOAttempt = 5
     maintainConnectionRate = 60
@@ -187,7 +191,7 @@ class biasha(FSMThread, bufferedSocket.EthComm):
 
         self.substates.trigger(cmdStr)
 
-    def expose(self, cmd, exptime, shutter):
+    def expose(self, cmd, exptime, shutterMask):
         """exposure routine with given exptime and shutter. Generate dateobs, transientTime and exptime keywords.
 
         :param cmd: current command.
@@ -199,34 +203,55 @@ class biasha(FSMThread, bufferedSocket.EthComm):
         self.finishExposure = False
         self.abortExposure = False
 
+        # translate shutterMask to commanded shutters.
+        cmdShutter = biasha.cmdShutter[shutterMask]
+
+        def shutterTransition(desiredState):
+            """ command shutters to the desired state and check we reached desired state. """
+            start = dt.utcnow()
+            # skip that part is no shutters needs to be commanded.
+            if shutterMask:
+                self.gotoState(cmd=cmd, cmdStr=f'{cmdShutter}_{desiredState}')
+            # roughly time the transientTime, ultimately should come from the arduino itself but for now...
+            end = dt.utcnow()
+
+            if shutterMask and desiredState not in self.shutterStatus(cmd):
+                raise RuntimeError(f'{cmdShutter}_{desiredState} transition failed...')
+
+            # lamps exposure requires a signal from the shutters to fire the lamps, so we are just pretending.
+            if not shutterMask:
+                cmd.inform(f'shutters={desiredState}')
+
+            return start, end
+
         try:
             # self.gotoState(cmd=cmd, cmdStr='init')
-            # OK, this is scary. if bia is on, the actor stateMachine does not reject because passing through
-            # the init turn off the bia and avoid the interlock in some sense. but even worst, the lower level state machine allow it
-            # given the decay of the LED is not instantaneous, you get some extra photons on your detector ...
-            start = dt.utcnow()
-            self.gotoState(cmd=cmd, cmdStr='%s_open' % shutter)
-            transientTime1 = (dt.utcnow() - start).total_seconds()
+            # OK, kind of scary to do that. if bia is on, the actor stateMachine does not reject the exposure command.
+            # and the init turn off the bia really quickly so the arduino state machine also allows it, but
+            # given the decay of the LED is not instantaneous, you get some extra photons on your detector.
+            # you just basically bypassed the interlock, for certainly few photons, but still...
 
-            if 'open' not in self.shutterStatus(cmd):
-                raise RuntimeError('shutter(s) not open')
+            # open shutters.
+            integrationStartedAt, openReturnedAt = shutterTransition('open')
+            # wait for exposure time.
+            self._waitUntil(cmd, integrationStartedAt, exptime)
+            # close shutters.
+            integrationEndedAt, closeReturnedAt = shutterTransition('close')
 
-            integEnd = self._waitUntil(cmd, start, exptime)
-            self.gotoState(cmd=cmd, cmdStr='%s_close' % shutter)
-
-            if not integEnd:
-                self.shutterStatus(cmd)
+            if self.abortExposure:
                 raise RuntimeWarning('exposure aborted')
 
-            end = dt.utcnow()
-            transientTime2 = (end - integEnd).total_seconds()
+            transientTime1 = (openReturnedAt - integrationStartedAt).total_seconds()
+            transientTime2 = (closeReturnedAt - integrationEndedAt).total_seconds()
 
-            if self.shutterStatus(cmd) != 'close':
-                raise RuntimeError('shutter(s) not close')
+            totalTransient = transientTime1 + transientTime2
+            totalExptime = (closeReturnedAt - integrationStartedAt).total_seconds()
+            exptime = totalExptime - totalTransient / 2
 
-            cmd.inform('dateobs=%s' % start.isoformat())
+            cmd.inform('dateobs=%s' % integrationStartedAt.isoformat())
             cmd.inform('transientTime=%.3f' % (transientTime1 + transientTime2))
-            cmd.inform('exptime=%.3f' % ((end - start).total_seconds() - 0.5 * (transientTime1 + transientTime2)))
+            cmd.inform('exptime=%.3f' % exptime)
+            cmd.inform('shutterMask=0x%01x' % shutterMask)
 
         except:
             cmd.warn('exptime=nan')
@@ -433,8 +458,6 @@ class biasha(FSMThread, bufferedSocket.EthComm):
                 nAttempt = self.maintainConnection(cmd, nAttempt)
 
             time.sleep(ti)
-
-        return dt.utcnow()
 
     def doAbort(self):
         """Abort current exposure."""
