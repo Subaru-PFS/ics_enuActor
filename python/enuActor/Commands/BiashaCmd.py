@@ -31,7 +31,7 @@ class BiashaCmd(object):
             ('bia', 'status', self.biaStatus),
             ('shutters', '@(open|close) [blue|red]', self.shutterSwitch),
             ('shutters', 'status', self.shutterStatus),
-            ('shutters', '@(expose) <exptime> [blue|red]', self.expose),
+            ('shutters', '@(expose) <exptime> [blue|red|none] [<shutterMask>]', self.expose),
             ('shutters', '@(blue|red) <raw>', self.shutterRaw),
             ('exposure', 'abort', self.abortExposure),
             ('exposure', 'finish', self.finishExposure),
@@ -48,6 +48,7 @@ class BiashaCmd(object):
                                                  help='power level to set (0..100)'),
                                         keys.Key('raw', types.String(), help='raw command'),
                                         keys.Key('exptime', types.Float(), help='exposure time'),
+                                        keys.Key('shutterMask', types.Long(), help='shutterMask'),
                                         )
 
     @property
@@ -144,16 +145,23 @@ class BiashaCmd(object):
         cmdKeys = cmd.cmd.keywords
 
         exptime = cmdKeys["exptime"].values[0]
-        shutter = 'shut'
-        shutter = 'red' if 'red' in cmdKeys else shutter
-        shutter = 'blue' if 'blue' in cmdKeys else shutter
 
-        if exptime < 0.5:
+        # open both shutters by default
+        shutterMask = self.controller.shutterToMask['shut']
+
+        # from cmdKeys if specified.
+        shutterMask = cmdKeys['shutterMask'].values[0] if 'shutterMask' in cmdKeys else shutterMask
+
+        # or if shutters specified as string.
+        for key in ['blue', 'red', 'none']:
+            shutterMask = self.controller.shutterToMask[key] if key in cmdKeys else shutterMask
+
+        if exptime < 0.5 and shutterMask:
             raise ValueError('exptime>=0.5 (red shutter transientTime)')
 
         self.controller.expose(cmd=cmd,
                                exptime=exptime,
-                               shutter=shutter)
+                               shutterMask=shutterMask)
 
         self.controller.generate(cmd)
 
