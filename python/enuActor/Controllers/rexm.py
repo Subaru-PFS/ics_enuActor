@@ -1,10 +1,11 @@
-import copy
-import logging
-import time
+__author__ = 'alefur'
 
+import copy
 import ics.utils.tcp.bufferedSocket as bufferedSocket
+import ics.utils.time as pfsTime
+import logging
 import numpy as np
-from astropy import time as astroTime
+import time
 from enuActor.Simulators.rexm import RexmSim
 from enuActor.drivers.rexm_drivers import recvPacket, TMCM
 from ics.utils.fsm.fsmThread import FSMThread
@@ -480,7 +481,7 @@ class rexm(FSMThread, bufferedSocket.EthComm):
             self.forcePersistedPosition = False
         else:
             position = self.positionFromSwitch
-        now = float(astroTime.Time.now().mjd)
+        now = float(pfsTime.Time.now().mjd)
 
         self.actor.instData.persistKey('rexm', position)
         self.actor.instData.persistKey('gratingMoved', now)

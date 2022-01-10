@@ -1,11 +1,10 @@
 __author__ = 'alefur'
 
+import ics.utils.time as pfsTime
 import logging
+import numpy as np
 import socket
 import time
-
-import numpy as np
-from astropy import time as astroTime
 from enuActor.Simulators.slit import SlitSim
 from enuActor.drivers import hxp_drivers
 from ics.utils.fsm.fsmThread import FSMThread
@@ -339,7 +338,7 @@ class slit(FSMThread):
         coords = ['nan'] * 6 if invalid else self.coords
         coords = [float(c) for c in coords]
         # Use MJD seconds.
-        now = float(astroTime.Time.now().mjd)
+        now = float(pfsTime.Time.now().mjd)
 
         self.actor.instData.persistKey('slit', *coords)
         self.actor.instData.persistKey('hexapodMoved', now)
