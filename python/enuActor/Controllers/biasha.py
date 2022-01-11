@@ -1,11 +1,9 @@
 __author__ = 'alefur'
 
+import ics.utils.tcp.bufferedSocket as bufferedSocket
+import ics.utils.time as pfsTime
 import logging
 import time
-from datetime import datetime as dt
-from datetime import timedelta
-
-import ics.utils.tcp.bufferedSocket as bufferedSocket
 from enuActor.Simulators.biasha import BiashaSim
 from ics.utils.fsm.fsmThread import FSMThread
 
@@ -117,7 +115,7 @@ class biasha(FSMThread, bufferedSocket.EthComm):
 
     def _openComm(self, cmd):
         """Open socket with biasha board or simulate it.
-        
+
         :param cmd: current command.
         :raise: socket.error if the communication has failed.
         """
@@ -198,7 +196,7 @@ class biasha(FSMThread, bufferedSocket.EthComm):
         :param exptime: Exposure time.
         :param shutter: which shutter to open : shut (both), blue, red.
         :type exptime: float
-        :type shutter: str
+        :type shutterMask: int
         """
         self.finishExposure = False
         self.abortExposure = False
@@ -208,12 +206,14 @@ class biasha(FSMThread, bufferedSocket.EthComm):
 
         def shutterTransition(desiredState):
             """ command shutters to the desired state and check we reached desired state. """
-            start = dt.utcnow()
+            # make sure socket is open at the beginning that really should be marginal but ...
+            self.connectSock()
+            start = pfsTime.timestamp()
             # skip that part is no shutters needs to be commanded.
             if shutterMask:
                 self.gotoState(cmd=cmd, cmdStr=f'{cmdShutter}_{desiredState}')
             # roughly time the transientTime, ultimately should come from the arduino itself but for now...
-            end = dt.utcnow()
+            end = pfsTime.timestamp()
 
             if shutterMask and desiredState not in self.shutterStatus(cmd):
                 raise RuntimeError(f'{cmdShutter}_{desiredState} transition failed...')
@@ -224,31 +224,76 @@ class biasha(FSMThread, bufferedSocket.EthComm):
 
             return start, end
 
+        def waitUntil(integrationStartedAt, exptime, nAttempt=1):
+            """Wait for the end of integration, check for an abort/finish command."""
+
+            def remainingTime():
+                return integrationEnd - now
+
+            def maintainConnection(nAttempt):
+                """Maintain connection with biasha board during a long exposure, generate shutter keywords."""
+                try:
+                    self.shutterStatus(cmd)
+                    return 1
+                except Exception as e:
+                    cmd.warn('text=%s' % self.actor.strTraceback(e))
+                    return nAttempt + 1
+                finally:
+                    self._closeComm(cmd=cmd)
+
+            integrationEnd = integrationStartedAt + exptime
+
+            now = genElapsedTime = genStatus = pfsTime.timestamp()
+
+            cmd.inform("integratingTime=%.2f" % exptime)
+            cmd.inform("elapsedTime=%.2f" % (now - integrationStartedAt))
+
+            while remainingTime() > 0:
+                # check for early abort/finish
+                if self.finishExposure or self.abortExposure:
+                    return
+
+                # dont generate elapsedTime at too fast rate.
+                if now - genElapsedTime > biasha.genElapsedTimeRate:
+                    genElapsedTime = pfsTime.timestamp()
+                    cmd.inform("elapsedTime=%.2f" % (now - integrationStartedAt))
+
+                # keep generating status to avoid STS timeout.
+                if now - genStatus > self.maintainConnectionRate and remainingTime() > self.maintainConnectionMargin:
+                    nAttempt = maintainConnection(nAttempt)
+                    # raise a failure after trying to many times.
+                    if nAttempt > self.maxIOAttempt:
+                        raise RuntimeError(f'failed to maintain connection after {nAttempt} attempts...')
+                    genStatus = pfsTime.timestamp()
+
+                pfsTime.sleep.millisec()
+                now = pfsTime.timestamp()
+
         try:
-            # self.gotoState(cmd=cmd, cmdStr='init')
             # OK, kind of scary to do that. if bia is on, the actor stateMachine does not reject the exposure command.
             # and the init turn off the bia really quickly so the arduino state machine also allows it, but
             # given the decay of the LED is not instantaneous, you get some extra photons on your detector.
             # you just basically bypassed the interlock, for certainly few photons, but still...
+            # self.gotoState(cmd=cmd, cmdStr='init')
 
             # open shutters.
             integrationStartedAt, openReturnedAt = shutterTransition('open')
             # wait for exposure time.
-            self._waitUntil(cmd, integrationStartedAt, exptime)
+            waitUntil(integrationStartedAt, exptime)
             # close shutters.
             integrationEndedAt, closeReturnedAt = shutterTransition('close')
 
             if self.abortExposure:
                 raise RuntimeWarning('exposure aborted')
 
-            transientTime1 = (openReturnedAt - integrationStartedAt).total_seconds()
-            transientTime2 = (closeReturnedAt - integrationEndedAt).total_seconds()
+            transientTime1 = openReturnedAt - integrationStartedAt
+            transientTime2 = closeReturnedAt - integrationEndedAt
 
             totalTransient = transientTime1 + transientTime2
-            totalExptime = (closeReturnedAt - integrationStartedAt).total_seconds()
+            totalExptime = closeReturnedAt - integrationStartedAt
             exptime = totalExptime - totalTransient / 2
 
-            cmd.inform('dateobs=%s' % integrationStartedAt.isoformat())
+            cmd.inform('dateobs=%s' % pfsTime.Time.fromtimestamp(integrationStartedAt).isoformat())
             cmd.inform('transientTime=%.3f' % (transientTime1 + transientTime2))
             cmd.inform('exptime=%.3f' % exptime)
             cmd.inform('shutterMask=0x%01x' % shutterMask)
@@ -283,26 +328,6 @@ class biasha(FSMThread, bufferedSocket.EthComm):
             raise
 
         return shutters
-
-    def maintainConnection(self, cmd, nAttempt):
-        """Maintain connection with biasha board during a long exposure, generate shutter keywords.
-
-        :param cmd: current command.
-        :raise: RuntimeError if statword and current state are incoherent.
-        """
-        try:
-            self.shutterStatus(cmd)
-            nAttempt = 0
-        except Exception as e:
-            if nAttempt >= self.maxIOAttempt:
-                raise
-            cmd.warn('text=%s' % self.actor.strTraceback(e))
-            nAttempt += 1
-
-        finally:
-            self._closeComm(cmd=cmd)
-
-        return nAttempt
 
     def biaStatus(self, cmd, state=None):
         """Get bia status and generate bia keywords.
@@ -429,35 +454,6 @@ class biasha(FSMThread, bufferedSocket.EthComm):
 
         if reply:
             raise RuntimeError('error : %s' % reply)
-
-    def _waitUntil(self, cmd, start, exptime, ti=0.001):
-        """Temporization, check every 0.001 sec for an abort command.
-
-        :param cmd: current command.
-        :param exptime: exposure time.
-        :type exptime: float
-        :return: end as datetime.datetime, 0 if abortExposure.
-        """
-        tlim = start + timedelta(seconds=exptime)
-        genElapsedTime = genStatus = dt.utcnow()
-        nAttempt = 0
-        cmd.inform("integratingTime=%.2f" % (tlim - genElapsedTime).total_seconds())
-        cmd.inform("elapsedTime=%.2f" % (genElapsedTime - start).total_seconds())
-
-        while dt.utcnow() < tlim:
-            closingSoon = (tlim - dt.utcnow()).total_seconds() < biasha.maintainConnectionMargin
-            if self.finishExposure:
-                break
-            if self.abortExposure:
-                return 0
-            if (dt.utcnow() - genElapsedTime).total_seconds() > biasha.genElapsedTimeRate:
-                genElapsedTime = dt.utcnow()
-                cmd.inform("elapsedTime=%.2f" % (genElapsedTime - start).total_seconds())
-            if (dt.utcnow() - genStatus).total_seconds() > biasha.maintainConnectionRate and not closingSoon:
-                genStatus = dt.utcnow()
-                nAttempt = self.maintainConnection(cmd, nAttempt)
-
-            time.sleep(ti)
 
     def doAbort(self):
         """Abort current exposure."""
