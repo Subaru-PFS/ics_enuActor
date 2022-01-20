@@ -72,7 +72,7 @@ class biasha(FSMThread, bufferedSocket.EthComm):
 
         self.finishExposure = False
         self.abortExposure = False
-        self.sim = BiashaSim()
+        self.sim = simulator.BiashaSim()
 
         self.logger = logging.getLogger(self.name)
         self.logger.setLevel(loglevel)
