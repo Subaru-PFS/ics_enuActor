@@ -227,21 +227,18 @@ class biasha(FSMThread, bufferedSocket.EthComm):
 
             return start, end
 
-        def waitUntil(integrationStartedAt, exptime, nAttempt=1):
+        def waitUntil(integrationStartedAt, exptime):
             """Wait for the end of integration, check for an abort/finish command."""
 
             def remainingTime():
                 return integrationEnd - now
 
-            def maintainConnection(nAttempt):
+            def maintainConnection():
                 """Maintain connection with biasha board during a long exposure, generate shutter keywords."""
                 try:
                     self.shutterStatus(cmd)
-                    return 1
                 except Exception as e:
                     cmd.warn('text=%s' % self.actor.strTraceback(e))
-                    return nAttempt + 1
-                finally:
                     self._closeComm(cmd=cmd)
 
             integrationEnd = integrationStartedAt + exptime
@@ -263,10 +260,13 @@ class biasha(FSMThread, bufferedSocket.EthComm):
 
                 # keep generating status to avoid STS timeout.
                 if now - genStatus > self.maintainConnectionRate and remainingTime() > self.maintainConnectionMargin:
-                    nAttempt = maintainConnection(nAttempt)
+                    maintainConnection()
                     # raise a failure after trying to many times.
-                    if nAttempt > self.maxIOAttempt:
-                        raise RuntimeError(f'failed to maintain connection after {nAttempt} attempts...')
+                    # if nAttempt > self.maxIOAttempt:
+                    #    raise RuntimeError(f'failed to maintain connection after {nAttempt} attempts...')
+
+                    # actually I dont think it makes sense operationally, currently, exposure would fail
+                    # but since the shutter was open, you may want to read data in anycase.
                     genStatus = pfsTime.timestamp()
 
                 pfsTime.sleep.millisec()
