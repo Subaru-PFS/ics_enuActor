@@ -27,7 +27,7 @@ class BiashaSim(socket.socket):
     def connect(self, server):
         """Fake the connection to tcp server."""
         (ip, port) = server
-        time.sleep(0.2)
+        time.sleep(0.001)
         if type(ip) is not str:
             raise TypeError
         if type(port) is not int:
@@ -39,11 +39,14 @@ class BiashaSim(socket.socket):
 
     def sendall(self, cmdStr, flags=None):
         """Send fake packets, append fake response to buffer."""
-        time.sleep(0.02)
+        time.sleep(0.005)
         transient = 0
-        redTime = np.random.normal(0.397, 0.0006)
-        blueTime = np.random.normal(0.317, 0.0006)
-        closeOffset = 0.005
+        # redTime = np.random.normal(0.397, 0.0006)
+        # blueTime = np.random.normal(0.317, 0.0006)
+        # closeOffset = 0.005
+        redTime = 0.40
+        blueTime = 0.3
+        closeOffset = 0
         cmdOk = False
         cmdStr = cmdStr.decode()
 
@@ -214,7 +217,7 @@ class BiashaSim(socket.socket):
 
     def recv(self, buffersize, flags=None):
         """Return and remove fake response from buffer."""
-        time.sleep(0.02)
+        time.sleep(0.005)
         ret = self.buf[0]
         self.buf = self.buf[1:]
         return str(ret).encode()

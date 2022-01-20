@@ -1,13 +1,17 @@
 __author__ = 'alefur'
 
-import ics.utils.time as pfsTime
 import logging
-import numpy as np
 import socket
 import time
-from enuActor.Simulators.slit import SlitSim
+from importlib import reload
+
+import enuActor.Simulators.slit as simulator
+import ics.utils.time as pfsTime
+import numpy as np
 from enuActor.drivers import hxp_drivers
 from ics.utils.fsm.fsmThread import FSMThread
+
+reload(simulator)
 
 
 class slit(FSMThread):
@@ -41,7 +45,7 @@ class slit(FSMThread):
 
         self.addStateCB('MOVING', self.moving)
 
-        self.sim = SlitSim()
+        self.sim = simulator.SlitSim()
 
         # Hexapod Attributes
         self.groupName = 'HEXAPOD'

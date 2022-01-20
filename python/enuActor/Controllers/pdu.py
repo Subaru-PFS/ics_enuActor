@@ -1,6 +1,10 @@
 __author__ = 'alefur'
 
+from importlib import reload
+
 from ics.utils.sps.pdu.controllers import aten
+
+reload(aten)
 
 
 class pdu(aten.aten):

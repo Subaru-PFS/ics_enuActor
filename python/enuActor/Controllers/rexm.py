@@ -1,14 +1,18 @@
 __author__ = 'alefur'
 
 import copy
+import logging
+import time
+from importlib import reload
+
+import enuActor.Simulators.rexm as simulator
 import ics.utils.tcp.bufferedSocket as bufferedSocket
 import ics.utils.time as pfsTime
-import logging
 import numpy as np
-import time
-from enuActor.Simulators.rexm import RexmSim
 from enuActor.drivers.rexm_drivers import recvPacket, TMCM
 from ics.utils.fsm.fsmThread import FSMThread
+
+reload(simulator)
 
 
 class rexm(FSMThread, bufferedSocket.EthComm):
@@ -37,7 +41,7 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         FSMThread.__init__(self, actor, name, events=events, substates=substates)
 
         self.addStateCB('MOVING', self.moving)
-        self.sim = RexmSim()
+        self.sim = simulator.RexmSim()
 
         self.switchA = 0
         self.switchB = 0

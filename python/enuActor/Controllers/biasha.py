@@ -1,11 +1,14 @@
 __author__ = 'alefur'
 
+import logging
+from importlib import reload
+
+import enuActor.Simulators.biasha as simulator
 import ics.utils.tcp.bufferedSocket as bufferedSocket
 import ics.utils.time as pfsTime
-import logging
-import time
-from enuActor.Simulators.biasha import BiashaSim
 from ics.utils.fsm.fsmThread import FSMThread
+
+reload(simulator)
 
 
 def busyEvent(event):

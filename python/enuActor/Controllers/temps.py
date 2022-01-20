@@ -1,12 +1,15 @@
 __author__ = 'alefur'
 
 import logging
+from importlib import reload
 
+import enuActor.Simulators.temps as simulator
 import ics.utils.tcp.bufferedSocket as bufferedSocket
 import numpy as np
 import opscore.protocols.types as types
-from enuActor.Simulators.temps import TempsSim
 from ics.utils.fsm.fsmThread import FSMThread
+
+reload(simulator)
 
 
 class temps(FSMThread, bufferedSocket.EthComm):
@@ -40,7 +43,7 @@ class temps(FSMThread, bufferedSocket.EthComm):
         """
         FSMThread.__init__(self, actor, name)
 
-        self.sim = TempsSim()
+        self.sim = simulator.TempsSim()
         self.biaOverHeat = False
 
         self.logger = logging.getLogger(self.name)
