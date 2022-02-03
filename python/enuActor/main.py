@@ -5,6 +5,7 @@ import argparse
 import logging
 
 import ics.utils.fsm.fsmActor as fsmActor
+import ics.utils.sps.spectroIds as spectroIds
 import ics.utils.tcp.utils as tcpUtils
 
 
@@ -22,6 +23,11 @@ class EnuActor(fsmActor.FsmActor):
                                    productName=productName,
                                    configFile=configFile,
                                    logLevel=logLevel)
+
+        # enable string interpolation for instdata
+        __, specName = name.split('_')
+        self.ids = spectroIds.SpectroIds(specName)
+        self.instData.config.enableStringInterpolation(idDict=self.ids.idDict)
 
         self.addModels([name])
 
@@ -44,6 +50,16 @@ class EnuActor(fsmActor.FsmActor):
             self.startController(controller, fromThread=False)
 
         self.callCommand('slit status')
+
+    def genInstConfigKeys(self, cmd):
+        """ generate enu config keys"""
+
+        def serialKeys():
+            """ return serials key, note that yaml keep field order so that is actorkey compliant."""
+            return ','.join(map(str, self.instData.config['serials'].values()))
+
+        cmd.inform(f'instConfig="{self.instData.config.filepath}"')
+        cmd.inform(f"serials={serialKeys()}")
 
     def startController(self, controller, cmd=None, mode=None, fromThread=True):
         """power up device if not on the network, wait and connect"""
@@ -110,8 +126,8 @@ def main():
                         help='configuration file to use')
     parser.add_argument('--logLevel', default=logging.INFO, type=int, nargs='?',
                         help='logging level')
-    parser.add_argument('--name', default='enu', type=str, nargs='?',
-                        help='identity')
+    parser.add_argument('--name', choices=[f'enu_sm{specNum}' for specNum in range(5)], type=str,
+                        nargs='?', help='identity')
     args = parser.parse_args()
 
     theActor = EnuActor(args.name,

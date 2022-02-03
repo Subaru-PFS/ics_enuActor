@@ -76,6 +76,7 @@ class TopCmd(object):
                                                    self.actor.config.sections()))
 
         self.genPersistedKeys(cmd)
+        self.actor.genInstConfigKeys(cmd)
         self.actor.metaStates.update(cmd)
 
         if 'all' in cmd.cmd.keywords:
