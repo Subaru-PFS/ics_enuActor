@@ -27,7 +27,6 @@ class EnuActor(fsmActor.FsmActor):
         # enable string interpolation for instdata
         __, specName = name.split('_')
         self.ids = spectroIds.SpectroIds(specName)
-        self.instData.config.enableStringInterpolation(idDict=self.ids.idDict)
 
         self.addModels([name])
 
@@ -56,9 +55,9 @@ class EnuActor(fsmActor.FsmActor):
 
         def serialKeys():
             """ return serials key, note that yaml keep field order so that is actorkey compliant."""
-            return ','.join(map(str, self.instData.config['serials'].values()))
+            return ','.join(map(str, self.actorConfig['serials'].values()))
 
-        cmd.inform(f'instConfig="{self.instData.config.filepath}"')
+        cmd.inform(f'instConfig="{self.actorConfig.filepath}"')
         cmd.inform(f"serials={serialKeys()}")
 
     def startController(self, controller, cmd=None, mode=None, fromThread=True):
