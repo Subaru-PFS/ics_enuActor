@@ -105,6 +105,11 @@ class RexmCmd(object):
     def forcePersistedPosition(self, cmd):
         """Abort current motion."""
         self.controller.forcePersistedPosition = True
+        # quick note about that feature.
+        # current position is based on rexm limit switches values (1,0) -> low ; (0,1) -> med.
+        # if for some reasons, limits switches lose signal, an incorrect position is reported (undef or error)
+        # this command allows you to declare the previous persisted position current and hence proceed with your data.
+        # but if you need to move, that's another story I'm afraid...
         cmd.finish('text="current position is now declared as previous persisted position..."')
 
     @singleShot

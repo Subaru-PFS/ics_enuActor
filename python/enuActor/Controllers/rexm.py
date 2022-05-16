@@ -222,6 +222,13 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         """
         self.abortMotion = False
         self.ensureLimitSwitchesOK(cmd)
+
+        # checking if rexm already at required position, eg limit switch is engaged.
+        if position is not None and self.limitSwitch(rexm.toDir[position]):
+            cmd.inform('text="already at position %s"' % position)
+            return
+
+        # rexm is actually going to move, so invalidate persisted position.
         self.declareNewGratingPosition(cmd, invalid=True)
 
         if position is not None:
@@ -330,11 +337,6 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         :raise: Exception with warning message.
         """
         direction = rexm.toDir[position]
-        self.checkStatus(cmd)
-        if self.limitSwitch(direction):
-            cmd.inform('text="already at position %s"' % position)
-            return
-
         self._moveRelative(cmd,
                            direction=direction,
                            distance=TMCM.DISTANCE_MAX,
@@ -485,6 +487,7 @@ class rexm(FSMThread, bufferedSocket.EthComm):
             self.forcePersistedPosition = False
         else:
             position = self.positionFromSwitch
+
         now = float(pfsTime.Time.now().mjd)
 
         self.actor.instData.persistKey('rexm', position)
