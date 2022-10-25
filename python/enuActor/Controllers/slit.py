@@ -16,6 +16,7 @@ reload(simulator)
 
 class slit(FSMThread):
     timeout = 2
+    positionTolerance = 0.005
 
     @staticmethod
     def convertToWorld(array):
@@ -26,6 +27,35 @@ class slit(FSMThread):
         x = X * np.cos(degToRad(W)) - Y * np.sin(degToRad(W))
         y = X * np.sin(degToRad(W)) + Y * np.cos(degToRad(W))
         return [round(x, 5), round(y, 5), float(Z), float(U), float(V), float(W)]
+
+    @staticmethod
+    def slitPosition(coords, config):
+        """Interpret slit position from current coordinates."""
+        # consider any nans or angle out of tolerance as undef.
+        if any(np.isnan(coords)) or np.max(np.abs(coords[3:])) > slit.positionTolerance:
+            return 'undef'
+
+        # eerk
+        [xPixToMm, yPixToMm] = [float(c) for c in config.get('slit', 'pix_to_mm').split(',')]
+
+        posStr = []
+
+        [focus, ditherY, ditherX, _, _, _] = coords
+        if abs(focus) > slit.positionTolerance:
+            sign = '+' if focus > 0 else '-'
+            posStr.append(f'focus{sign}{round(abs(focus), 2)}mm')
+        if abs(ditherX) > slit.positionTolerance:
+            sign = '+' if ditherX > 0 else '-'
+            posStr.append(f'ditherFib{sign}{round(abs(ditherX) / xPixToMm, 1)}pix')
+        if abs(ditherY) > slit.positionTolerance:
+            sign = '+' if ditherY > 0 else '-'
+            posStr.append(f'ditherWav{sign}{round(abs(ditherY) / yPixToMm, 1)}pix')
+
+        if posStr:
+            # format correctly with space.
+            return f'''"{' '.join(posStr)}"'''
+        else:
+            return 'home'
 
     def __init__(self, actor, name, loglevel=logging.DEBUG):
         """This sets up the connections to/from the hub, the logger, and the twisted reactor.
@@ -70,15 +100,6 @@ class slit(FSMThread):
     @property
     def hxpSoftwareLimits(self):
         return 'on' if self.softwareLimitsActivated else 'off'
-
-    @staticmethod
-    def position(coords):
-        """Interpret slit position from current coordinates."""
-        delta = np.max(np.abs(coords))
-        if ~np.isnan(delta) and delta < 0.008:
-            return 'home'
-        else:
-            return 'undef'
 
     def _loadCfg(self, cmd, mode=None):
         """Load slit configuration.
@@ -214,7 +235,7 @@ class slit(FSMThread):
         finally:
             genKeys = cmd.inform if np.nan not in self.coords else cmd.warn
             genKeys('slit=%s' % ','.join(['%.5f' % p for p in self.coords]))
-            genKeys('slitPosition=%s' % self.position(self.coords))
+            genKeys('slitPosition=%s' % self.slitPosition(self.coords, config=self.actor.config))
 
     def checkStatus(self, cmd):
         """Get status code and string from hxp100 controller. Generate hxpStatus keyword.
