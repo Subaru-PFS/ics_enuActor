@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import enuActor.Controllers.slit as slitCtrl
+import ics.utils.tcp.utils as tcpUtils
 import numpy as np
 import opscore.protocols.keys as keys
 import opscore.protocols.types as types
@@ -60,6 +61,10 @@ class SlitCmd(object):
         except KeyError:
             raise RuntimeError('slit controller is not connected.')
 
+    @property
+    def connected(self):
+        return 'slit' in self.actor.controllers
+
     def config(self, option):
         return self.actor.config.get('slit', option)
 
@@ -70,7 +75,7 @@ class SlitCmd(object):
         def thStatus(self, cmd):
             self.controller.generate(cmd)
 
-        if 'slit' in self.actor.controllers:
+        if self.connected:
             thStatus(self, cmd=cmd)
         else:
             coords = self.actor.instData.loadKey('slit')
@@ -255,12 +260,20 @@ class SlitCmd(object):
         """Power on hxp controller, connect slit controller, and init."""
         cmdKeys = cmd.cmd.keywords
 
+        host, port = self.config('host'), int(self.config('port'))
+
         mode = self.config('mode')
         mode = 'operation' if 'operation' in cmdKeys else mode
         mode = 'simulation' if 'simulation' in cmdKeys else mode
+
         doHome = 'fullInit' in cmdKeys
 
-        self.actor.startController('slit', cmd=cmd, mode=mode)
-        self.controller.substates.init(cmd, doHome=doHome)
+        # if hexapod is turned off or slit controller disconnected.
+        if (mode == 'operation' and not tcpUtils.serverIsUp(host, port)) or not self.connected:
+            self.actor.startController('slit', cmd=cmd, mode=mode)
+
+        # init is required if LOADED state or if fullInit is specified.
+        if self.controller.states.current == 'LOADED' or doHome:
+            self.controller.substates.init(cmd, doHome=doHome)
 
         self.controller.generate(cmd)
