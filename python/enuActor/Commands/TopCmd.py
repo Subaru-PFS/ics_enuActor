@@ -88,12 +88,12 @@ class TopCmd(object):
     def genPersistedKeys(self, cmd):
         """Make sure that hexapodMoved and gratingMoved are generated as soon as enuActor start."""
         try:
-            hexapodMoved, = self.actor.instData.loadKey('hexapodMoved')
+            hexapodMoved, = self.actor.actorData.loadKey('hexapodMoved')
         except:
             hexapodMoved = float('nan')
 
         try:
-            gratingMoved, = self.actor.instData.loadKey('gratingMoved')
+            gratingMoved, = self.actor.actorData.loadKey('gratingMoved')
         except:
             gratingMoved = float('nan')
 

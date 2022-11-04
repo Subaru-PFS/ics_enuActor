@@ -78,7 +78,7 @@ class SlitCmd(object):
         if self.connected:
             thStatus(self, cmd=cmd)
         else:
-            coords = self.actor.instData.loadKey('slit')
+            coords = self.actor.actorData.loadKey('slit')
             cmd.inform('slitFSM=OFF,SHUTDOWN')
             cmd.inform('slit=%s' % ','.join(['%.5f' % p for p in coords]))
             cmd.finish('slitPosition=%s' % slitCtrl.slit.slitPosition(coords, config=self.actor.config))

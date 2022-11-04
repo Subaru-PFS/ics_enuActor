@@ -365,8 +365,8 @@ class slit(FSMThread):
         # Use MJD seconds.
         now = float(pfsTime.Time.now().mjd)
 
-        self.actor.instData.persistKey('slit', *coords)
-        self.actor.instData.persistKey('hexapodMoved', now)
+        self.actor.actorData.persistKey('slit', *coords)
+        self.actor.actorData.persistKey('hexapodMoved', now)
         self.doPersist = False
 
         cmd = self.actor.bcast if cmd is None else cmd

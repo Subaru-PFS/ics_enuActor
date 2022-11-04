@@ -19,15 +19,13 @@ class EnuActor(fsmActor.FsmActor):
     def __init__(self, name, productName=None, configFile=None, logLevel=logging.INFO):
         # This sets up the connections to/from the hub, the logger, and the twisted reactor.
         #
-        fsmActor.FsmActor.__init__(self, name,
-                                   productName=productName,
-                                   configFile=configFile,
-                                   logLevel=logLevel)
-
         # enable string interpolation for instdata
         __, specName = name.split('_')
         self.ids = spectroIds.SpectroIds(specName)
 
+        fsmActor.FsmActor.__init__(self, name,
+                                   productName=productName,
+                                   idDict=self.ids.idDict)
         self.addModels([name])
 
     def letsGetReadyToRumble(self):

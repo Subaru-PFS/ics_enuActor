@@ -97,7 +97,7 @@ class rexm(FSMThread, bufferedSocket.EthComm):
     @property
     def persisted(self):
         try:
-            position, = self.actor.instData.loadKey('rexm')
+            position, = self.actor.actorData.loadKey('rexm')
         except:
             position = 'undef'
 
@@ -490,8 +490,8 @@ class rexm(FSMThread, bufferedSocket.EthComm):
 
         now = float(pfsTime.Time.now().mjd)
 
-        self.actor.instData.persistKey('rexm', position)
-        self.actor.instData.persistKey('gratingMoved', now)
+        self.actor.actorData.persistKey('rexm', position)
+        self.actor.actorData.persistKey('gratingMoved', now)
 
         cmd = self.actor.bcast if cmd is None else cmd
 
