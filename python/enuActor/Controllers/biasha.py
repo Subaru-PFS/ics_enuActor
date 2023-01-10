@@ -105,16 +105,16 @@ class biasha(FSMThread, bufferedSocket.EthComm):
         :type mode: str
         :raise: Exception if config file is badly formatted.
         """
-        self.mode = self.actor.config.get('biasha', 'mode') if mode is None else mode
+        self.mode = self.controllerConfig['mode'] if mode is None else mode
         bufferedSocket.EthComm.__init__(self,
-                                        host=self.actor.config.get('biasha', 'host'),
-                                        port=int(self.actor.config.get('biasha', 'port')),
+                                        host=self.controllerConfig['host'],
+                                        port=self.controllerConfig['port'],
                                         EOL='\r\n')
 
-        self.defaultBiaParams = dict(period=int(self.actor.config.get('biasha', 'bia_period')),
-                                     duty=int(self.actor.config.get('biasha', 'bia_duty')),
-                                     power=int(self.actor.config.get('biasha', 'bia_power')),
-                                     strobe=self.actor.config.get('biasha', 'bia_strobe'))
+        self.defaultBiaParams = dict(period=self.controllerConfig['bia_period'],
+                                     duty=self.controllerConfig['bia_duty'],
+                                     power=self.controllerConfig['bia_power'],
+                                     strobe=self.controllerConfig['bia_strobe'])
 
     def _openComm(self, cmd):
         """Open socket with biasha board or simulate it.
@@ -378,7 +378,7 @@ class biasha(FSMThread, bufferedSocket.EthComm):
         if duty is not None and duty == 100:
             period = None
             duty = None
-            strobe = 'off'
+            strobe = False
 
         if period is not None:
             if not (0 < period < 2 ** 16):
@@ -400,7 +400,8 @@ class biasha(FSMThread, bufferedSocket.EthComm):
             self.sendOneCommand('set_power%i' % power, cmd=cmd)
 
         if strobe is not None:
-            self.sendOneCommand('pulse_%s' % strobe, cmd=cmd)
+            cmdStr = 'pulse_on' if strobe else 'pulse_off'
+            self.sendOneCommand(cmdStr, cmd=cmd)
 
     def _state(self, cmd):
         """Check and return biasha board current state.

@@ -83,7 +83,7 @@ class TempsCmd(object):
         """Power on temps controller, wait for temps host, connect controller."""
         cmdKeys = cmd.cmd.keywords
 
-        mode = self.actor.config.get('temps', 'mode')
+        mode =  self.actor.actorConfig['temps']['mode']
         mode = 'operation' if 'operation' in cmdKeys else mode
         mode = 'simulation' if 'simulation' in cmdKeys else mode
 

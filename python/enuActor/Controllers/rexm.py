@@ -120,14 +120,14 @@ class rexm(FSMThread, bufferedSocket.EthComm):
         :type mode: str
         :raise: Exception if config file is badly formatted.
         """
-        self.mode = self.actor.config.get('rexm', 'mode') if mode is None else mode
+        self.mode = self.controllerConfig['mode']if mode is None else mode
         bufferedSocket.EthComm.__init__(self,
-                                        host=self.actor.config.get('rexm', 'host'),
-                                        port=int(self.actor.config.get('rexm', 'port')))
+                                        host=self.controllerConfig['host'],
+                                        port=self.controllerConfig['port'])
 
         try:
-            self.brokenLimitSwitches = self.actor.config.getboolean('rexm', 'brokenLimitSwitches')
-        except:
+            self.brokenLimitSwitches = self.controllerConfig['brokenLimitSwitches']
+        except KeyError:
             self.brokenLimitSwitches = False
 
     def _openComm(self, cmd):
