@@ -66,7 +66,7 @@ class SlitCmd(object):
         return 'slit' in self.actor.controllers
 
     def config(self, option):
-        return self.actor.config.get('slit', option)
+        return self.actor.actorConfig['slit'][option]
 
     def status(self, cmd):
         """Report state, mode, position."""
@@ -81,7 +81,7 @@ class SlitCmd(object):
             coords = self.actor.actorData.loadKey('slit')
             cmd.inform('slitFSM=OFF,SHUTDOWN')
             cmd.inform('slit=%s' % ','.join(['%.5f' % p for p in coords]))
-            cmd.finish('slitPosition=%s' % slitCtrl.slit.slitPosition(coords, config=self.actor.config))
+            cmd.finish('slitPosition=%s' % slitCtrl.slit.slitPosition(coords, config=self.actor.actorConfig['slit']))
 
     @blocking
     def initialise(self, cmd):
@@ -125,9 +125,9 @@ class SlitCmd(object):
         value = cmd.cmd.keywords['focus'].values[0]
         coeff = 0.001 if 'microns' in cmdKeys else 1
         reference = 'absolute' if 'abs' in cmdKeys else 'relative'
-        focus_axis = np.array([float(val) for val in self.config('focus_axis').split(',')], dtype=bool)
+        focus_axis = np.array(self.config('focus_axis'), dtype=bool)
 
-        coords = np.array([c for c in self.controller.coords], dtype=float) if reference == 'absolute' else np.zeros(6)
+        coords = np.array(self.controller.coords, dtype=float) if reference == 'absolute' else np.zeros(6)
         coords[focus_axis] = coeff * value
 
         self.controller.substates.move(cmd, reference=reference, coords=coords)
@@ -136,9 +136,9 @@ class SlitCmd(object):
     @blocking
     def dither(self, cmd):
         """Move wrt dither axis."""
-        ditherXaxis = np.array([float(v) for v in self.config('dither_x_axis').split(',')], dtype=bool)
-        ditherYaxis = np.array([float(v) for v in self.config('dither_y_axis').split(',')], dtype=bool)
-        pix2mm = [float(c) for c in self.config('pix_to_mm').split(',')]
+        ditherXaxis = np.array(self.config('dither_x_axis'), dtype=bool)
+        ditherYaxis = np.array(self.config('dither_y_axis'), dtype=bool)
+        pix2mm = self.config('pix_to_mm')
 
         cmdKeys = cmd.cmd.keywords
         reference = 'absolute' if 'abs' in cmdKeys else 'relative'

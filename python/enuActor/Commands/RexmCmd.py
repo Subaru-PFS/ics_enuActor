@@ -126,7 +126,7 @@ class RexmCmd(object):
     def start(self, cmd):
         """Power on enu rack, wait for rexm host, connect controller."""
         cmdKeys = cmd.cmd.keywords
-        mode = self.actor.config.get('rexm', 'mode')
+        mode =  self.actor.actorConfig['rexm']['mode']
         mode = 'operation' if 'operation' in cmdKeys else mode
         mode = 'simulation' if 'simulation' in cmdKeys else mode
 

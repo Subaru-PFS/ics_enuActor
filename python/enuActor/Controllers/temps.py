@@ -73,7 +73,7 @@ class temps(FSMThread, bufferedSocket.EthComm):
         :type probe: str.
         :raise: Exception if config file is badly formatted.
         """
-        return np.array([float(c) for c in self.actor.config.get('temps', str(probe)).split(',')])
+        return np.array(self.controllerConfig[probe])
 
     def _loadCfg(self, cmd, mode=None):
         """Load temps configuration.
@@ -83,14 +83,14 @@ class temps(FSMThread, bufferedSocket.EthComm):
         :type mode: str.
         :raise: Exception if config file is badly formatted.
         """
-        self.mode = self.actor.config.get('temps', 'mode') if mode is None else mode
+        self.mode = self.controllerConfig['mode'] if mode is None else mode
         bufferedSocket.EthComm.__init__(self,
-                                        host=self.actor.config.get('temps', 'host'),
-                                        port=int(self.actor.config.get('temps', 'port')),
+                                        host=self.controllerConfig['host'],
+                                        port=self.controllerConfig[ 'port'],
                                         EOL='\n')
 
-        self.biaTempLimit = float(self.actor.config.get('temps', 'biaTempLimit'))
-        self.doCalib = self.actor.config.getboolean('temps', 'doCalib')
+        self.biaTempLimit = self.controllerConfig['biaTempLimit']
+        self.doCalib = self.controllerConfig['doCalib']
         self.calib = {1: np.array([self.getProbeCoeff(probe) for probe in range(101, 111)]),
                       2: np.array([self.getProbeCoeff(probe) for probe in range(201, 211)])}
 

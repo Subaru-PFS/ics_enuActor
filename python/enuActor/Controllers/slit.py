@@ -36,7 +36,7 @@ class slit(FSMThread):
             return 'undef'
 
         # eerk
-        [xPixToMm, yPixToMm] = [float(c) for c in config.get('slit', 'pix_to_mm').split(',')]
+        [xPixToMm, yPixToMm] = config['pix_to_mm']
 
         posStr = []
 
@@ -110,14 +110,14 @@ class slit(FSMThread):
         :raise: Exception if config file is badly formatted.
         """
         self.coords = np.nan * np.ones(6)
-        self.mode = self.actor.config.get('slit', 'mode') if mode is None else mode
-        self.host = self.actor.config.get('slit', 'host')
-        self.port = int(self.actor.config.get('slit', 'port'))
-        self.homeHexa = [float(val) for val in self.actor.config.get('slit', 'home').split(',')]
-        self.slit_position = [float(val) for val in self.actor.config.get('slit', 'slit_position').split(',')]
-        self.thicknessCarriage = float(self.actor.config.get('slit', 'thicknessCarriage'))
-        self.lowerBounds = [float(val) for val in self.actor.config.get('slit', 'lowerBounds').split(',')]
-        self.upperBounds = [float(val) for val in self.actor.config.get('slit', 'upperBounds').split(',')]
+        self.mode = self.controllerConfig['mode'] if mode is None else mode
+        self.host = self.controllerConfig['host']
+        self.port = self.controllerConfig['port']
+        self.homeHexa = self.controllerConfig['home']
+        self.slit_position = self.controllerConfig['slit_position']
+        self.thicknessCarriage = self.controllerConfig['thicknessCarriage']
+        self.lowerBounds = self.controllerConfig['lowerBounds']
+        self.upperBounds = self.controllerConfig['upperBounds']
 
         self.workSystem = slit.convertToWorld([sum(i) for i in zip(self.homeHexa[:3],
                                                                    self.slit_position[:3])] + self.homeHexa[3:])
@@ -127,7 +127,7 @@ class slit(FSMThread):
         # Tool z = 21 + z_slit with 21 height of upper carriage
         self.toolSystem = [sum(i) for i in zip(tool, [0, 0, self.thicknessCarriage, 0, 0, 0])]
         try:
-            self.softwareLimitsActivated = self.actor.config.getboolean('slit', 'activateSoftwareLimits')
+            self.softwareLimitsActivated = self.controllerConfig['activateSoftwareLimits']
         except:
             self.softwareLimitsActivated = True
 
@@ -235,7 +235,7 @@ class slit(FSMThread):
         finally:
             genKeys = cmd.inform if np.nan not in self.coords else cmd.warn
             genKeys('slit=%s' % ','.join(['%.5f' % p for p in self.coords]))
-            genKeys('slitPosition=%s' % self.slitPosition(self.coords, config=self.actor.config))
+            genKeys('slitPosition=%s' % self.slitPosition(self.coords, config=self.controllerConfig))
 
     def checkStatus(self, cmd):
         """Get status code and string from hxp100 controller. Generate hxpStatus keyword.

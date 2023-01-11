@@ -55,7 +55,7 @@ class EnuActor(fsmActor.FsmActor):
             """ return serials key, note that yaml keep field order so that is actorkey compliant."""
             return ','.join(map(str, self.actorConfig['serials'].values()))
 
-        cmd.inform(f'instConfig="{self.actorConfig.filepath}"')
+        cmd.inform('instConfig=%08x,"%s"' % (id(self.actorConfig), self.actorConfig.filepath))
         cmd.inform(f"serials={serialKeys()}")
 
     def startController(self, controller, cmd=None, mode=None, fromThread=True):
@@ -63,7 +63,7 @@ class EnuActor(fsmActor.FsmActor):
 
         def getConfig(field):
             """ Retrieve host and port from config file. """
-            return self.config.get(controller, field).strip()
+            return self.actorConfig[controller][field]
 
         cmd = self.bcast if cmd is None else cmd
         mode = getConfig('mode') if mode is None else mode
@@ -85,7 +85,7 @@ class EnuActor(fsmActor.FsmActor):
         def findPduModel():
             """ Find pduModel being used from config file. """
             try:
-                pduModel = self.config.get('iis', 'pduModel').strip()
+                pduModel = self.actorConfig['iis']['pduModel']
             except:
                 raise RuntimeError(f'iis pdu model is not properly described')
 

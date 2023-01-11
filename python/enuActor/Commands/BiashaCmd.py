@@ -80,7 +80,7 @@ class BiashaCmd(object):
         """Switch bia on."""
         cmdKeys = cmd.cmd.keywords
 
-        strobe = 'on' if 'strobe' in cmdKeys else None
+        strobe = True if 'strobe' in cmdKeys else None
         period = cmdKeys['period'].values[0] if 'period' in cmdKeys else None
         duty = cmdKeys['duty'].values[0] if 'duty' in cmdKeys else None
         power = cmdKeys['power'].values[0] if 'power' in cmdKeys else None
@@ -110,7 +110,7 @@ class BiashaCmd(object):
     @threaded
     def strobeOff(self, cmd):
         """Deactivate bia strobe mode. """
-        self.controller.setBiaConfig(cmd, strobe='off')
+        self.controller.setBiaConfig(cmd, strobe=False)
         self.controller.biaStatus(cmd)
         cmd.finish()
 
@@ -191,8 +191,8 @@ class BiashaCmd(object):
         shutter = 'blueshutter' if 'blue' in cmdKeys else 'redshutter'
         cmdStr = cmdKeys['raw'].values[0]
 
-        sock = bufferedSocket.EthComm(host=self.actor.config.get(shutter, 'host'),
-                                      port=int(self.actor.config.get(shutter, 'port')),
+        sock = bufferedSocket.EthComm(host=self.actor.actorConfig[shutter]['host'],
+                                      port=self.actor.actorConfig.get[shutter]['port'],
                                       EOL='\r')
 
         sock.ioBuffer = bufferedSocket.BufferedSocket(shutter + "IO", EOL='c>')
@@ -225,7 +225,7 @@ class BiashaCmd(object):
         """Power on enu rack, wait for biasha host, connect controller."""
         cmdKeys = cmd.cmd.keywords
 
-        mode = self.actor.config.get('biasha', 'mode')
+        mode = self.actor.actorConfig['biasha']['mode']
         mode = 'operation' if 'operation' in cmdKeys else mode
         mode = 'simulation' if 'simulation' in cmdKeys else mode
         self.actor.startController('biasha', cmd=cmd, mode=mode)
