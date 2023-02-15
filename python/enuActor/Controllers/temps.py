@@ -21,6 +21,17 @@ class temps(FSMThread, bufferedSocket.EthComm):
     tempMin, tempMax = -20, 60
     resMin, resMax = 90, 120
 
+    inBench = [4, 5, 7]
+    inBenchSm = dict(enu_sm1=1, enu_sm2=1, enu_sm3=3, enu_sm4=3)
+
+    inCover = [5, 6, 8, 9]
+
+    probeNames1 = ['Motor RDA', 'Motor Shutter B', 'Motor Shutter R', 'BIA Box Top', 'BIA Box Bottom',
+                   'Fiber Unit Hexapod Bottom', 'Fiber Unit Hexapod Top', 'Fiber Unit Fiber Frame Top',
+                   'Collimator Frame Bottom', 'Collimator Frame Top']
+    probeNames2 = ['Bench Left Top', 'Bench Left Botton', 'Bench Right Top', 'Bench Right Bottom', 'Bench Far Top',
+                   'Bench Far Bottom', 'Bench Near Top', 'Bench Near Bottom', 'Bench Central Top', 'Enu Temp 20']
+
     @staticmethod
     def polyval(resistances, calib):
         """Convert resistance to temperature using lab calibration.
@@ -86,7 +97,7 @@ class temps(FSMThread, bufferedSocket.EthComm):
         self.mode = self.controllerConfig['mode'] if mode is None else mode
         bufferedSocket.EthComm.__init__(self,
                                         host=self.controllerConfig['host'],
-                                        port=self.controllerConfig[ 'port'],
+                                        port=self.controllerConfig['port'],
                                         EOL='\n')
 
         self.biaTempLimit = self.controllerConfig['biaTempLimit']
@@ -134,14 +145,38 @@ class temps(FSMThread, bufferedSocket.EthComm):
         """
         self.getTemps(cmd=cmd)
 
+    def getData(self, cmd, retrieveData, **kwargs):
+        """get data from controller, return NaN if communication issue.
+
+        :param cmd: current command.
+        :raise: Exception with warning message.
+        """
+        try:
+            values = retrieveData(cmd, **kwargs)
+        except Exception as e:
+            values = np.ones(10) * np.nan
+            cmd.warn('text=%s' % self.actor.strTraceback(e))
+
+        return values
+
     def getTemps(self, cmd):
         """Generate temps1 and temps2 keywords.
 
         :param cmd: current command.
         :raise: Exception with warning message.
         """
-        self.genKey(cmd, self.calibTemps, key='temps1', slot=1)
-        self.genKey(cmd, self.calibTemps, key='temps2', slot=2)
+        temps1 = self.getData(cmd, self.calibTemps, slot=1)
+        temps2 = self.getData(cmd, self.calibTemps, slot=2)
+
+        iBench = temps.inBench + [temps.inBenchSm[self.actor.name]]
+
+        inCover = np.mean(temps1[temps.inCover])
+        inBench = np.mean(temps2[iBench])
+
+        cmd.inform('meanTemps=%.3f,%.3f,%.3f' % (inBench, inCover, inBench - inCover))
+
+        cmd.inform(f'temps1=%s' % ','.join(map('{:.3f}'.format, temps1)))
+        cmd.inform(f'temps2=%s' % ','.join(map('{:.3f}'.format, temps2)))
 
     def getResistance(self, cmd):
         """Generate resistance keywords.
@@ -151,8 +186,11 @@ class temps(FSMThread, bufferedSocket.EthComm):
         :type slot: int
         :raise: Exception with warning message.
         """
-        self.genKey(cmd, self._fetchResistance, key='res1', slot=1)
-        self.genKey(cmd, self._fetchResistance, key='res2', slot=2)
+        res1 = self.getData(cmd, self._fetchResistance, slot=1)
+        res2 = self.getData(cmd, self._fetchResistance, slot=2)
+
+        cmd.inform(f'res1=%s' % ','.join(map('{:.3f}'.format, res1)))
+        cmd.inform(f'res2=%s' % ','.join(map('{:.3f}'.format, res2)))
 
     def getInfo(self, cmd):
         """Fetch controller info.
@@ -186,20 +224,6 @@ class temps(FSMThread, bufferedSocket.EthComm):
 
         resistances = self._fetchResistance(slot=slot, cmd=cmd)
         return temps.polyval(resistances, calib=self.calib[slot])
-
-    def genKey(self, cmd, retrieveData, key, **kwargs):
-        """Generate key using retrieveData func.
-
-        :param cmd: current command.
-        :raise: Exception with warning message.
-        """
-        values = np.ones(10) * np.nan
-        try:
-            values = retrieveData(cmd, **kwargs)
-        except Exception as e:
-            cmd.warn('text=%s' % self.actor.strTraceback(e))
-
-        cmd.inform('%s=%s' % (key, ','.join(['%.3f' % float(val) for val in values])))
 
     def _fetchTemps(self, cmd, slot):
         """Fetch temperature values for a specified slot.
