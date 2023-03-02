@@ -36,6 +36,13 @@ class BiashaSim(socket.socket):
         self.noStrobeDuty = 100
         self.noStrobePeriod = 1000
 
+        # Exposure variables
+        self.doExposure = False
+        self.openStartedAt = 0
+        self.fullyOpenAt = 0
+        self.closeStartedAt = 0
+        self.fullyClosedAt = 0
+
         self.g_aduty = self.noStrobeDuty
         self.g_aperiod = self.noStrobePeriod
         self.g_sduty = self.g_aduty
@@ -237,6 +244,36 @@ class BiashaSim(socket.socket):
             self.buf.append('%d,%d' % (values[0], values[1]))
             errorCode = 0
 
+        elif cmdStripped == 'start_exp':
+            if not self.doExposure:
+                self.resetExposureParam()
+                self.doExposure = True
+                errorCode = 0
+            else:
+                errorCode = -5
+
+        elif cmdStripped == 'finish_exp':
+            if self.doExposure:
+                if not (self.openStartedAt and self.closeStartedAt):
+                    errorCode = -6
+                else:
+                    # I think returned format is in ms
+                    transientTimeOpening = (self.fullyOpenAt - self.openStartedAt) * 1000
+                    exposureTime = (self.closeStartedAt - self.fullyOpenAt) * 1000
+                    transientTimeClosing = (self.fullyClosedAt - self.closeStartedAt) * 1000
+                    self.buf.append('%d,%d,%d' % (transientTimeOpening, exposureTime, transientTimeClosing))
+                    self.resetExposureParam()
+                    errorCode = 0
+            else:
+                errorCode = -7
+
+        elif cmdStripped == 'cancel_exp':
+            if self.doExposure:
+                self.resetExposureParam()
+                errorCode = 0
+            else:
+                errorCode = -7
+
         else:
             pass
 
@@ -265,6 +302,24 @@ class BiashaSim(socket.socket):
 
         elif blueMotion:
             time.sleep(blueTime)
+
+        nowMs = time.time()
+
+        if self.doExposure:
+            if dst != STATUS_BCRC:
+                self.openStartedAt = motionStart
+                self.fullyOpenAt = nowMs
+            else:
+                self.closeStartedAt = motionStart
+                self.fullyClosedAt = nowMs
+
+    def resetExposureParam(self):
+        # Exposure variables
+        self.doExposure = False
+        self.openStartedAt = 0
+        self.fullyOpenAt = 0
+        self.closeStartedAt = 0
+        self.fullyClosedAt = 0
 
     def recv(self, buffersize, flags=None):
         """Return and remove fake response from buffer."""
