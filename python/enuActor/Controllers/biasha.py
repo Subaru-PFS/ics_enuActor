@@ -6,6 +6,7 @@ from importlib import reload
 import enuActor.Simulators.biasha as simulator
 import ics.utils.tcp.bufferedSocket as bufferedSocket
 import ics.utils.time as pfsTime
+import numpy as np
 from ics.utils.fsm.fsmThread import FSMThread
 
 reload(simulator)
@@ -279,6 +280,9 @@ class biasha(FSMThread, bufferedSocket.EthComm):
             # you just basically bypassed the interlock, for certainly few photons, but still...
             # self.gotoState(cmd=cmd, cmdStr='init')
 
+            # declaring exposure
+            startExp = self._startExposure(shutterMask)
+
             # open shutters.
             integrationStartedAt, openReturnedAt = shutterTransition('open')
             # wait for exposure time.
@@ -286,14 +290,23 @@ class biasha(FSMThread, bufferedSocket.EthComm):
             # close shutters.
             integrationEndedAt, closeReturnedAt = shutterTransition('close')
 
+            transientTime1 = openReturnedAt - integrationStartedAt
+            transientTime2 = closeReturnedAt - integrationEndedAt
+            totalExptime = closeReturnedAt - integrationStartedAt
+
+            transientTime1M, fullyOpenTimeM, transientTime2M = self._finishExposure(startExp)
+            cmd.inform(f'biashaMeasures={transientTime1M},{fullyOpenTimeM},{transientTime2M}')
+            totalExptimeM = fullyOpenTimeM + transientTime1M + transientTime2M
+
+            # using measured values if they are available or stick to actor values.
+            transientTime1 = transientTime1M if transientTime1M else transientTime1
+            totalExptime = totalExptimeM if totalExptimeM else totalExptime
+            transientTime2 = transientTime2M if transientTime2M else transientTime2
+
             if self.abortExposure:
                 raise RuntimeWarning('exposure aborted')
 
-            transientTime1 = openReturnedAt - integrationStartedAt
-            transientTime2 = closeReturnedAt - integrationEndedAt
-
             totalTransient = transientTime1 + transientTime2
-            totalExptime = closeReturnedAt - integrationStartedAt
             exptime = totalExptime - totalTransient / 2
 
             cmd.inform('dateobs=%s' % pfsTime.Time.fromtimestamp(integrationStartedAt).isoformat())
@@ -458,6 +471,42 @@ class biasha(FSMThread, bufferedSocket.EthComm):
 
         if reply:
             raise RuntimeError('error : %s' % reply)
+
+    def _startExposure(self, shutterMask):
+        """Declaring a new exposure."""
+        startExp = False
+
+        if shutterMask:
+            try:
+                reply = self.sendOneCommand('start_exp')
+                if not reply:
+                    startExp = True
+                elif reply == "exposure already declared.":
+                    self.sendOneCommand('cancel_exp')
+            except:
+                # Since we can live without this, I'm not cancelling the exposure, even if this does not work."""
+                pass
+
+        return startExp
+
+    def _finishExposure(self, useBiashaMeasures):
+        """Finish exposure and get exposure measures from biasha board."""
+
+        def msToSecs(ms):
+            """convert milliseconds to seconds."""
+            return float(ms) / 1000
+
+        transientTime1 = fullyOpenTime = transientTime2 = np.NaN
+
+        if useBiashaMeasures:
+            try:
+                reply = self.sendOneCommand('finish_exp')
+                transientTime1, fullyOpenTime, transientTime2 = map(msToSecs, reply.split(','))
+            except:
+                # Since we can live without this, I'm not cancelling the exposure, even if this does not work."""
+                pass
+
+        return transientTime1, fullyOpenTime, transientTime2
 
     def doAbort(self):
         """Abort current exposure."""

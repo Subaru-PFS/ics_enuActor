@@ -5,19 +5,49 @@ import time
 
 import numpy as np
 
+STATUS_BCRC = 0x52  # Both shutters closed no error
+STATUS_BCRO = 0x54  # Blue CLOSED Red OPEN no error
+STATUS_BORC = 0x62  # Blue OPEN Red CLOSED no error
+STATUS_BORO = 0x64  # Blue OPEN Red OPEN no error
+
+ERROR_STR = {-1: "unrecognized command:",
+             -2: "shutter switch timeout.",
+             -3: "transition not allowed.",
+             -4: "value out of range",
+             -5: "exposure already declared.",
+             -6: "exposure not yet completed.",
+             -7: "no exposure declared.",
+             }
+
+STATE_CMD = ["bia_on", "bia_off",
+             "shut_open", "shut_close",
+             "blue_open", "blue_close",
+             "red_open", "red_close",
+             "init"]
+
 
 class BiashaSim(socket.socket):
-    statword = {0: 82, 10: 82, 20: 100, 30: 98, 40: 84}
+    statword = {0: STATUS_BCRC, 10: STATUS_BCRC, 20: STATUS_BORO, 30: STATUS_BORC, 40: STATUS_BCRO}
+    version = "0.1.5"
 
     def __init__(self):
         """Fake biasha tcp server."""
         socket.socket.__init__(self, socket.AF_INET, socket.SOCK_STREAM)
         self.noStrobeDuty = 100
         self.noStrobePeriod = 1000
+
+        # Exposure variables
+        self.doExposure = False
+        self.openStartedAt = 0
+        self.fullyOpenAt = 0
+        self.closeStartedAt = 0
+        self.fullyClosedAt = 0
+
         self.g_aduty = self.noStrobeDuty
         self.g_aperiod = self.noStrobePeriod
         self.g_sduty = self.g_aduty
         self.g_speriod = self.g_aperiod
+
         self.g_apower = 0
         self.bia_mode = 0
         self.statword = BiashaSim.statword[self.bia_mode]
@@ -40,180 +70,256 @@ class BiashaSim(socket.socket):
     def sendall(self, cmdStr, flags=None):
         """Send fake packets, append fake response to buffer."""
         time.sleep(0.005)
-        transient = 0
-        # redTime = np.random.normal(0.397, 0.0006)
-        # blueTime = np.random.normal(0.317, 0.0006)
-        # closeOffset = 0.005
-        redTime = 0.40
-        blueTime = 0.3
-        closeOffset = 0
-        cmdOk = False
+
+        # not recognized command
+        errorCode = -1
+
         cmdStr = cmdStr.decode()
+        cmdStripped, __ = cmdStr.split('\r\n')
 
         bia_mode = self.bia_mode
         self.statword = BiashaSim.statword[bia_mode]
 
         if bia_mode == 0:  # IDLE STATE
-            if cmdStr == 'bia_on\r\n':
+            if cmdStripped == 'bia_on':
                 bia_mode = 10
-                cmdOk = True
-            elif cmdStr == 'shut_open\r\n':
+                errorCode = 0
+            elif cmdStripped == 'shut_open':
                 bia_mode = 20
-                transient = redTime
-                cmdOk = True
-            elif cmdStr == 'blue_open\r\n':
+                errorCode = 0
+            elif cmdStripped == 'blue_open':
                 bia_mode = 30
-                transient = blueTime
-                cmdOk = True
-            elif cmdStr == 'red_open\r\n':
+                errorCode = 0
+            elif cmdStripped == 'red_open':
                 bia_mode = 40
-                transient = redTime
-                cmdOk = True
-            elif cmdStr == 'init\r\n':
+                errorCode = 0
+            elif cmdStripped == 'init':
                 bia_mode = 0
-                cmdOk = True
+                errorCode = 0
+            elif cmdStripped in STATE_CMD:
+                # transition not allowed.
+                errorCode = -3
 
         elif bia_mode == 10:  # BIA IS ON
-            if cmdStr == 'bia_off\r\n':
+            if cmdStripped == 'bia_off':
                 bia_mode = 0
-                cmdOk = True
-            elif cmdStr == 'init\r\n':
+                errorCode = 0
+            elif cmdStripped == 'init':
                 bia_mode = 0
-                cmdOk = True
+                errorCode = 0
+            elif cmdStripped in STATE_CMD:
+                # transition not allowed.
+                errorCode = -3
 
         elif bia_mode == 20:  # SHUTTERS OPEN
-            if cmdStr == 'shut_close\r\n':
+            if cmdStripped == 'shut_close':
                 bia_mode = 0
-                transient = redTime - closeOffset
-                cmdOk = True
-            elif cmdStr == 'blue_close\r\n':
+                errorCode = 0
+            elif cmdStripped == 'blue_close':
                 bia_mode = 40
-                transient = blueTime - closeOffset
-                cmdOk = True
-            elif cmdStr == 'red_close\r\n':
+                errorCode = 0
+            elif cmdStripped == 'red_close':
                 bia_mode = 30
-                transient = redTime - closeOffset
-                cmdOk = True
-            elif cmdStr == 'init\r\n':
+                errorCode = 0
+            elif cmdStripped == 'init':
                 bia_mode = 0
-                transient = redTime - closeOffset
-                cmdOk = True
+                errorCode = 0
+            elif cmdStripped in STATE_CMD:
+                # transition not allowed.
+                errorCode = -3
 
         elif bia_mode == 30:  # BLUE SHUTTER OPEN
-            if cmdStr == 'shut_open\r\n':
+            if cmdStripped == 'shut_open':
                 bia_mode = 20
-                transient = redTime
-                cmdOk = True
-            elif cmdStr == 'shut_close\r\n':
+                errorCode = 0
+            elif cmdStripped == 'shut_close':
                 bia_mode = 0
-                transient = blueTime - closeOffset
-                cmdOk = True
-            elif cmdStr == 'red_open\r\n':
+                errorCode = 0
+            elif cmdStripped == 'red_open':
                 bia_mode = 20
-                transient = redTime
-                cmdOk = True
-            elif cmdStr == 'blue_close\r\n':
+                errorCode = 0
+            elif cmdStripped == 'blue_close':
                 bia_mode = 0
-                transient = blueTime - closeOffset
-                cmdOk = True
-            elif cmdStr == 'init\r\n':
+                errorCode = 0
+            elif cmdStripped == 'init':
                 bia_mode = 0
-                transient = blueTime - closeOffset
-                cmdOk = True
+                errorCode = 0
+            elif cmdStripped in STATE_CMD:
+                # transition not allowed.
+                errorCode = -3
 
         elif bia_mode == 40:  # RED SHUTTER OPEN
-            if cmdStr == 'shut_open\r\n':
+            if cmdStripped == 'shut_open':
                 bia_mode = 20
-                transient = blueTime
-                cmdOk = True
-            elif cmdStr == 'shut_close\r\n':
+                errorCode = 0
+            elif cmdStripped == 'shut_close':
                 bia_mode = 0
-                transient = redTime - closeOffset
-                cmdOk = True
-            elif cmdStr == 'blue_open\r\n':
+                errorCode = 0
+            elif cmdStripped == 'blue_open':
                 bia_mode = 20
-                transient = blueTime
-                cmdOk = True
-            elif cmdStr == 'red_close\r\n':
+                errorCode = 0
+            elif cmdStripped == 'red_close':
                 bia_mode = 0
-                transient = redTime - closeOffset
-                cmdOk = True
-            elif cmdStr == 'init\r\n':
+                errorCode = 0
+            elif cmdStripped == 'init':
                 bia_mode = 0
-                transient = redTime - closeOffset
-                cmdOk = True
+                errorCode = 0
+            elif cmdStripped in STATE_CMD:
+                # transition not allowed.
+                errorCode = -3
 
         if bia_mode != self.bia_mode:
-            if self.bia_mode != 10:
-                time.sleep(transient)
+            self.waitForCompletion(BiashaSim.statword[bia_mode])
             self.bia_mode = bia_mode
 
-        if cmdStr == 'statword\r\n':
+        if cmdStripped == 'statword':
             self.buf.append(self.statword)
-            cmdOk = True
+            errorCode = 0
 
-        elif cmdStr == 'status\r\n':
+        elif cmdStripped == 'status':
             self.buf.append(self.bia_mode)
-            cmdOk = True
+            errorCode = 0
 
         elif cmdStr[:10] == 'set_period':
             g_aperiod = int(cmdStr[10:])
-            self.setBiaParameters(self.g_sduty, g_aperiod)
-            self.g_speriod = g_aperiod
-            cmdOk = True
+            if 0 < g_aperiod <= 65535:
+                self.setBiaParameters(self.g_sduty, g_aperiod)
+                self.g_speriod = g_aperiod
+                errorCode = 0
+            else:
+                errorCode = -4
 
         elif cmdStr[:8] == 'set_duty':
             g_aduty = int(cmdStr[8:])
-            self.setBiaParameters(g_aduty, self.g_speriod)
-            self.g_sduty = g_aduty
-            cmdOk = True
+            if 0 < g_aduty <= 100:
+                self.setBiaParameters(g_aduty, self.g_speriod)
+                self.g_sduty = g_aduty
+                errorCode = 0
+            else:
+                errorCode = - 4
 
         elif cmdStr[:9] == 'set_power':
-            self.g_apower = int(cmdStr[9:])
-            cmdOk = True
+            g_apower = int(cmdStr[9:])
+            if 0 < g_apower <= 255:
+                self.g_apower = g_apower
+                errorCode = 0
+            else:
+                errorCode = -4
 
-        elif cmdStr == 'get_period\r\n':
+        elif cmdStripped == 'get_period':
             self.buf.append(self.g_aperiod)
-            cmdOk = True
+            errorCode = 0
 
-        elif cmdStr == 'get_duty\r\n':
+        elif cmdStripped == 'get_duty':
             self.buf.append(self.g_aduty)
-            cmdOk = True
+            errorCode = 0
 
-        elif cmdStr == 'get_power\r\n':
+        elif cmdStripped == 'get_power':
             self.buf.append(self.g_apower)
-            cmdOk = True
+            errorCode = 0
 
-        elif cmdStr == 'get_param\r\n':
+        elif cmdStripped == 'get_param':
             self.buf.append('%d,%d,%d' % (self.g_aduty, self.g_aperiod, self.g_apower))
-            cmdOk = True
+            errorCode = 0
 
-        elif cmdStr == 'pulse_on\r\n':
+        elif cmdStripped == 'get_version':
+            self.buf.append(BiashaSim.version)
+            errorCode = 0
+
+        elif cmdStripped == 'pulse_on':
             self.setBiaParameters(self.g_sduty, self.g_speriod)
-            cmdOk = True
+            errorCode = 0
 
-        elif cmdStr == 'pulse_off\r\n':
+        elif cmdStripped == 'pulse_off':
             self.g_aduty = self.noStrobeDuty
             self.g_aperiod = self.noStrobePeriod
-            cmdOk = True
+            errorCode = 0
 
-        elif cmdStr == 'read_phr\r\n':
+        elif cmdStripped == 'read_phr':
             if self.bia_mode == 10:
                 values = np.random.normal(845, 5), np.random.normal(845, 5)
             else:
                 values = np.random.normal(10, 2), np.random.normal(10, 2)
 
             self.buf.append('%d,%d' % (values[0], values[1]))
-            cmdOk = True
+            errorCode = 0
+
+        elif cmdStripped == 'start_exp':
+            if not self.doExposure:
+                self.resetExposureParam()
+                self.doExposure = True
+                errorCode = 0
+            else:
+                errorCode = -5
+
+        elif cmdStripped == 'finish_exp':
+            if self.doExposure:
+                if not (self.openStartedAt and self.closeStartedAt):
+                    errorCode = -6
+                else:
+                    # I think returned format is in ms
+                    transientTimeOpening = (self.fullyOpenAt - self.openStartedAt) * 1000
+                    exposureTime = (self.closeStartedAt - self.fullyOpenAt) * 1000
+                    transientTimeClosing = (self.fullyClosedAt - self.closeStartedAt) * 1000
+                    self.buf.append('%d,%d,%d' % (transientTimeOpening, exposureTime, transientTimeClosing))
+                    self.resetExposureParam()
+                    errorCode = 0
+            else:
+                errorCode = -7
+
+        elif cmdStripped == 'cancel_exp':
+            if self.doExposure:
+                self.resetExposureParam()
+                errorCode = 0
+            else:
+                errorCode = -7
 
         else:
             pass
 
-        if cmdOk:
+        if not errorCode:
             self.buf.append('ok\r\n')
-
         else:
+            self.buf.append(f'{ERROR_STR[errorCode]}')
             self.buf.append('nok\r\n')
+
+    def waitForCompletion(self, dst):
+        # redTime = np.random.normal(0.397, 0.0006)
+        # blueTime = np.random.normal(0.317, 0.0006)
+        # closeOffset = 0.005
+        redTime = 0.4
+        blueTime = 0.3
+        closeOffset = 0
+
+        motionStart = nowMs = time.time()
+        now = BiashaSim.statword[self.bia_mode]
+
+        blueMotion = bin(now)[-6:][0] != bin(dst)[-6:][0]
+        redMotion = bin(now)[-6:][3] != bin(dst)[-6:][3]
+
+        if redMotion:
+            time.sleep(redTime)
+
+        elif blueMotion:
+            time.sleep(blueTime)
+
+        nowMs = time.time()
+
+        if self.doExposure:
+            if dst != STATUS_BCRC:
+                self.openStartedAt = motionStart
+                self.fullyOpenAt = nowMs
+            else:
+                self.closeStartedAt = motionStart
+                self.fullyClosedAt = nowMs
+
+    def resetExposureParam(self):
+        # Exposure variables
+        self.doExposure = False
+        self.openStartedAt = 0
+        self.fullyOpenAt = 0
+        self.closeStartedAt = 0
+        self.fullyClosedAt = 0
 
     def recv(self, buffersize, flags=None):
         """Return and remove fake response from buffer."""
