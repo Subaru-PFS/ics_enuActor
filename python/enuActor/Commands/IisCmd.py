@@ -18,9 +18,8 @@ class IisCmd(LampsCmd.LampsCmd):
             ('iis', 'stop', self.stop),
             ('iis', 'start [@(operation|simulation)]', self.start),
 
-            ('iis', 'abort', self.abort),
             ('iis', 'prepare [<halogen>] [<argon>] [<neon>] [<krypton>] [<xenon>] [<hgar>] [<hgcd>]', self.prepare),
+            ('iis', 'go [<delay>] [@noWait]', self.go),
+            ('iis', 'abort', self.abort),
             ('iis', 'waitForReadySignal', self.waitForReadySignal),
-            ('iis', 'go [<delay>]', self.timedGoSequence),
-            ('iis', 'go noWait [<delay>]', self.goNoWait),
         ]
