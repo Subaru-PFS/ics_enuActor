@@ -193,7 +193,7 @@ class biasha(FSMThread, bufferedSocket.EthComm):
 
         self.substates.trigger(cmdStr)
 
-    def expose(self, cmd, exptime, shutterMask):
+    def expose(self, cmd, exptime, shutterMask, visit=-1):
         """exposure routine with given exptime and shutter. Generate dateobs, transientTime and exptime keywords.
 
         :param cmd: current command.
@@ -299,9 +299,9 @@ class biasha(FSMThread, bufferedSocket.EthComm):
             totalExptimeM = fullyOpenTimeM + transientTime1M + transientTime2M
 
             # using measured values if they are available or stick to actor values.
-            transientTime1 = transientTime1M if transientTime1M else transientTime1
-            totalExptime = totalExptimeM if totalExptimeM else totalExptime
-            transientTime2 = transientTime2M if transientTime2M else transientTime2
+            transientTime1 = transientTime1 if np.isnan(transientTime1M) else transientTime1M
+            totalExptime = totalExptime if np.isnan(totalExptimeM) else totalExptimeM
+            transientTime2 = transientTime2 if np.isnan(transientTime2M) else transientTime2M
 
             if self.abortExposure:
                 raise RuntimeWarning('exposure aborted')
@@ -313,7 +313,11 @@ class biasha(FSMThread, bufferedSocket.EthComm):
             cmd.inform('transientTime=%.3f' % (transientTime1 + transientTime2))
             cmd.inform('exptime=%.3f' % exptime)
             cmd.inform('shutterMask=0x%01x' % shutterMask)
-
+            cmd.inform('shutterTimings=%d,%s,%s,%s,%s' % (visit,
+                                                          pfsTime.Time.fromtimestamp(integrationStartedAt).isoformat(),
+                                                          pfsTime.Time.fromtimestamp(openReturnedAt).isoformat(),
+                                                          pfsTime.Time.fromtimestamp(integrationEndedAt).isoformat(),
+                                                          pfsTime.Time.fromtimestamp(closeReturnedAt).isoformat()))
         except:
             cmd.warn('exptime=nan')
             raise

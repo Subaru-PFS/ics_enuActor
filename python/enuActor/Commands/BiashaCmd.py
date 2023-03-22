@@ -31,7 +31,7 @@ class BiashaCmd(object):
             ('bia', 'status', self.biaStatus),
             ('shutters', '@(open|close) [blue|red]', self.shutterSwitch),
             ('shutters', 'status', self.shutterStatus),
-            ('shutters', '@(expose) <exptime> [blue|red|none] [<shutterMask>]', self.expose),
+            ('shutters', '@(expose) <exptime> [blue|red|none] [<shutterMask>] [<visit>]', self.expose),
             ('shutters', '@(blue|red) <raw>', self.shutterRaw),
             ('exposure', 'abort', self.abortExposure),
             ('exposure', 'finish', self.finishExposure),
@@ -49,6 +49,7 @@ class BiashaCmd(object):
                                         keys.Key('raw', types.String(), help='raw command'),
                                         keys.Key('exptime', types.Float(), help='exposure time'),
                                         keys.Key('shutterMask', types.Long(), help='shutterMask'),
+                                        keys.Key('visit', types.Int(), help='pfsVisit'),
                                         )
 
     @property
@@ -145,6 +146,7 @@ class BiashaCmd(object):
         cmdKeys = cmd.cmd.keywords
 
         exptime = cmdKeys["exptime"].values[0]
+        visit = cmdKeys["visit"].values[0] if 'visit' in cmdKeys else -1
 
         # open both shutters by default
         shutterMask = self.controller.shutterToMask['shut']
@@ -161,7 +163,8 @@ class BiashaCmd(object):
 
         self.controller.expose(cmd=cmd,
                                exptime=exptime,
-                               shutterMask=shutterMask)
+                               shutterMask=shutterMask,
+                               visit=visit)
 
         self.controller.generate(cmd)
 
