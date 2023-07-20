@@ -35,6 +35,7 @@ class SlitCmd(object):
             ('slit', '<focus> [@(microns)] [abs]', self.focus),
             ('slit', 'dither [<X>] [<Y>] [@(pixels|microns)] [abs]', self.dither),
             ('slit', '@softwareLimits @(on|off) [@force]', self.hxpSoftwareLimits),
+            ('slit', 'linearVerticalMove <expTime> [<pixelRange>]', self.linearVerticalMove),
 
             ('slit', 'convert <X> <Y> <Z> <U> <V> <W>', self.convert),
             ('slit', 'stop', self.stop),
@@ -51,7 +52,10 @@ class SlitCmd(object):
                                         keys.Key('W', types.Float(), help='W coordinate'),
                                         keys.Key('focus', types.Float(), help='move along focus axis'),
                                         keys.Key('dither', types.Float(), help='move along dither axis'),
-                                        keys.Key('shift', types.Float(), help='move along shift axis')
+                                        keys.Key('shift', types.Float(), help='move along shift axis'),
+                                        keys.Key('expTime', types.Float(), help='expTime'),
+                                        keys.Key('pixelRange', types.Float() * (1, 2),
+                                                 help='pixels array(start, stop )')
                                         )
 
     @property
@@ -231,6 +235,36 @@ class SlitCmd(object):
                 cmd.warn('text="NOT deactivating hexapod software limits, add force argument to proceed..')
 
         self.controller.generate(cmd)
+
+    @blocking
+    def linearVerticalMove(self, cmd):
+        """Move wrt focus axis."""
+        cmdKeys = cmd.cmd.keywords
+
+        expTime = cmdKeys['expTime'].values[0]
+        pixMin, pixMax = cmdKeys['pixelRange'].values if 'pixelRange' in cmdKeys else [-6, 6]
+        ditherXaxis = np.array(self.config('dither_x_axis'), dtype=bool)
+        coeffX, coeffY = self.config('pix_to_mm')
+
+        startPosition, endPosition = coeffX * pixMin, coeffX * pixMax
+        # moving to start position first.
+        coords = np.zeros(6)
+        coords[ditherXaxis] = startPosition
+        # calculating speed in mm/s.
+        totalMotion = endPosition - startPosition
+        speed = totalMotion / expTime
+
+        self.controller.substates.move(cmd, reference='absolute', coords=coords)
+        self.controller.generate(cmd, doFinish=False)
+
+        try:
+            # temporary increasing timeout.
+            self.controller.myxps.hangLimit = expTime + 10
+            self.controller.substates.slide(cmd, speed=speed, totalMotion=totalMotion)
+            self.controller.generate(cmd)
+        finally:
+            self.controller.myxps.hangLimit = 45
+
 
     def abort(self, cmd):
         """Stop current motion."""
