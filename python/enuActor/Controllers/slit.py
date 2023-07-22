@@ -16,7 +16,8 @@ reload(simulator)
 
 class slit(FSMThread):
     timeout = 2
-    positionTolerance = 0.005
+    positionTolerance = 0.005  # mm
+    slidingOverHead = 0.5  # seconds
 
     @staticmethod
     def convertToWorld(array):
@@ -64,16 +65,18 @@ class slit(FSMThread):
         :param name: controller name.
         :type name: str
         """
-        substates = ['IDLE', 'MOVING', 'SHUTDOWN', 'FAILED']
+        substates = ['IDLE', 'MOVING', 'SLIDING', 'SHUTDOWN', 'FAILED']
         events = [{'name': 'move', 'src': 'IDLE', 'dst': 'MOVING'},
-                  {'name': 'idle', 'src': ['MOVING', 'SHUTDOWN'], 'dst': 'IDLE'},
-                  {'name': 'fail', 'src': ['MOVING', 'SHUTDOWN'], 'dst': 'FAILED'},
+                  {'name': 'slide', 'src': 'IDLE', 'dst': 'SLIDING'},
+                  {'name': 'idle', 'src': ['MOVING', 'SLIDING', 'SHUTDOWN'], 'dst': 'IDLE'},
+                  {'name': 'fail', 'src': ['MOVING', 'SLIDING', 'SHUTDOWN'], 'dst': 'FAILED'},
                   {'name': 'shutdown', 'src': ['IDLE'], 'dst': 'SHUTDOWN'},
                   ]
 
         FSMThread.__init__(self, actor, name, events=events, substates=substates)
 
         self.addStateCB('MOVING', self.moving)
+        self.addStateCB('SLIDING', self.sliding)
 
         self.sim = simulator.SlitSim()
 
@@ -273,6 +276,20 @@ class slit(FSMThread):
         except UserWarning:
             self.doPersist = False
             raise
+
+    def sliding(self, cmd, speed, totalMotion):
+        """Move to coords in the reference.
+        :param cmd: current command.
+        :param speed: mm/s
+        :param totalMotion:
+        :raise: Exception with warning message.
+        """
+        coords = np.zeros(6)
+        ditherXaxis = np.array(self.controllerConfig['dither_x_axis'], dtype=bool)
+        mmOverhead = slit.slidingOverHead * speed  # add small overhead.
+        coords[ditherXaxis] = totalMotion + mmOverhead
+
+        return self._HexapodMoveIncrementalControlWithTargetVelocity(*coords[:3], abs(speed))
 
     def shutdown(self, cmd):
         """Save current controller position and kill connection.
@@ -544,6 +561,13 @@ class slit(FSMThread):
         :return: ''.
         """
         return self.errorChecker(self.myxps.TCLScriptExecuteAndWait, fileName, taskName, parametersList)
+
+    def _HexapodMoveIncrementalControlWithTargetVelocity(self, dX, dY, dZ, Velocity):
+        """Linear trajectory in work coordinate system.
+        :raise: RuntimeError if an error is raised by errorChecker.
+        """
+        return self.errorChecker(self.myxps.HexapodMoveIncrementalControlWithTargetVelocity,
+                                 self.groupName, 'Work', 'Line', dX, dY, dZ, Velocity)
 
     def _abort(self):
         """Abort current motion.
