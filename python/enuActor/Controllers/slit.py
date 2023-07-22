@@ -16,7 +16,8 @@ reload(simulator)
 
 class slit(FSMThread):
     timeout = 2
-    positionTolerance = 0.005
+    positionTolerance = 0.005  # mm
+    slidingOverHead = 0.5  # seconds
 
     @staticmethod
     def convertToWorld(array):
@@ -285,8 +286,10 @@ class slit(FSMThread):
         """
         coords = np.zeros(6)
         ditherXaxis = np.array(self.controllerConfig['dither_x_axis'], dtype=bool)
-        coords[ditherXaxis] = totalMotion
-        return self._HexapodMoveIncrementalControlWithTargetVelocity(*coords[:3], speed)
+        mmOverhead = slit.slidingOverHead * speed  # add small overhead.
+        coords[ditherXaxis] = totalMotion + mmOverhead
+
+        return self._HexapodMoveIncrementalControlWithTargetVelocity(*coords[:3], abs(speed))
 
     def shutdown(self, cmd):
         """Save current controller position and kill connection.
