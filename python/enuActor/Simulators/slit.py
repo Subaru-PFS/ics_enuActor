@@ -1,4 +1,5 @@
 __author__ = 'alefur'
+
 import socket
 import time
 from random import randint
@@ -160,5 +161,16 @@ class SlitSim(object):
             self.intStatus = 7
         elif TCLFileName == 'InitializeFromRegistration.tcl':
             self.intStatus = 12
+
+        return [0, '']
+
+    def HexapodMoveIncrementalControlWithTargetVelocity(self, socketId, GroupName, CoordinateSystem,
+                                                        HexapodTrajectoryType, dX, dY, dZ, Velocity):
+
+        waitTime = abs(dZ / Velocity)
+        start = time.time()
+
+        while time.time() - start < waitTime:
+            time.sleep(0.1)
 
         return [0, '']
