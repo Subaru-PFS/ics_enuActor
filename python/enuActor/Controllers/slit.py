@@ -10,6 +10,7 @@ import ics.utils.time as pfsTime
 import numpy as np
 from enuActor.drivers import hxp_drivers
 from ics.utils.fsm.fsmThread import FSMThread
+from twisted.internet import reactor
 
 reload(simulator)
 
@@ -17,7 +18,8 @@ reload(simulator)
 class slit(FSMThread):
     timeout = 2
     positionTolerance = 0.005  # mm
-    slidingOverHead = 0.5  # seconds
+    slidingOvershoot = 0.5  # seconds
+    slitAtSpeedAfter = 1  # seconds
 
     @staticmethod
     def convertToWorld(array):
@@ -277,19 +279,23 @@ class slit(FSMThread):
             self.doPersist = False
             raise
 
-    def sliding(self, cmd, speed, totalMotion):
+    def sliding(self, cmd, speed, coords):
         """Move to coords in the reference.
         :param cmd: current command.
         :param speed: mm/s
         :param totalMotion:
         :raise: Exception with warning message.
         """
-        coords = np.zeros(6)
-        ditherXaxis = np.array(self.controllerConfig['dither_x_axis'], dtype=bool)
-        mmOverhead = slit.slidingOverHead * speed  # add small overhead.
-        coords[ditherXaxis] = totalMotion + mmOverhead
 
-        return self._HexapodMoveIncrementalControlWithTargetVelocity(*coords[:3], abs(speed))
+        def genSlitAtSpeed():
+            if self.substates.current == 'SLIDING':
+                cmd.inform('slitAtSpeed=True')
+
+        reactor.callLater(self.slitAtSpeedAfter, genSlitAtSpeed)
+        ret = self._HexapodMoveIncrementalControlWithTargetVelocity(*coords[:3], abs(speed))
+        cmd.inform('slitAtSpeed=False')
+
+        return ret
 
     def shutdown(self, cmd):
         """Save current controller position and kill connection.

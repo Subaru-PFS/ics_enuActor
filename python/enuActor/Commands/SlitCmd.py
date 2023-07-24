@@ -247,20 +247,26 @@ class SlitCmd(object):
         coeffX, coeffY = self.config('pix_to_mm')
 
         startPosition, endPosition = coeffX * pixMin, coeffX * pixMax
-        # moving to start position first.
-        coords = np.zeros(6)
-        coords[ditherXaxis] = startPosition
+
         # calculating speed in mm/s.
         totalMotion = endPosition - startPosition
         speed = totalMotion / expTime
 
-        self.controller.substates.move(cmd, reference='absolute', coords=coords)
+        # Making start coordinates taking in account acceleration.
+        startCoords = np.zeros(6)
+        startCoords[ditherXaxis] = startPosition - self.controller.slitAtSpeedAfter * speed
+        # Making start coordinates taking in account acceleration.
+        endCoords = np.zeros(6)
+        endCoords[ditherXaxis] = totalMotion + self.controller.slidingOvershoot * speed
+
+        # moving to start position first.
+        self.controller.substates.move(cmd, reference='absolute', coords=startCoords)
         self.controller.generate(cmd, doFinish=False)
 
         try:
             # temporary increasing timeout.
             self.controller.myxps.hangLimit = expTime + 10
-            self.controller.substates.slide(cmd, speed=speed, totalMotion=totalMotion)
+            self.controller.substates.slide(cmd, speed=speed, coords=endCoords)
             self.controller.generate(cmd)
         finally:
             self.controller.myxps.hangLimit = 45
