@@ -195,7 +195,7 @@ class BiashaCmd(object):
         cmdStr = cmdKeys['raw'].values[0]
 
         sock = bufferedSocket.EthComm(host=self.actor.actorConfig[shutter]['host'],
-                                      port=self.actor.actorConfig.get[shutter]['port'],
+                                      port=self.actor.actorConfig[shutter]['port'],
                                       EOL='\r')
 
         sock.ioBuffer = bufferedSocket.BufferedSocket(shutter + "IO", EOL='c>')
