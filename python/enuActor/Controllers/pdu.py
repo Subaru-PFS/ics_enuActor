@@ -27,7 +27,10 @@ class pdu(aten.aten):
 
         try:
             temps, humidity, NA = self.sendOneCommand('read sensor o01 simple', cmd=cmd).split('\r\n')
-        except:
+            temps = float(temps)
+            humidity = float(humidity)
+        except Exception as e:
+            self.logger.warning(self.actor.cmdTraceback(e))
             temps, humidity = 'nan', 'nan'
 
         cmd.inform(f'rackSensor={float(temps):.2f},{float(humidity):.2f}')
