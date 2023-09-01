@@ -30,7 +30,7 @@ class pdu(aten.aten):
             temps = float(temps)
             humidity = float(humidity)
         except Exception as e:
-            self.logger.warning(self.actor.cmdTraceback(e))
+            cmd.warn('text=%s' % self.actor.strTraceback(e))
             temps, humidity = 'nan', 'nan'
 
         cmd.inform(f'rackSensor={float(temps):.2f},{float(humidity):.2f}')
