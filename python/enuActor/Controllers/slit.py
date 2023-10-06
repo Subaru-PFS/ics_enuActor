@@ -20,6 +20,7 @@ class slit(FSMThread):
     positionTolerance = 0.005  # mm
     slidingOvershoot = 0.5  # seconds
     slitAtSpeedAfter = 1  # seconds
+    hysteresisCorrection = np.array([0, 0, -0.05, 0, 0, 0])  # mm, 50 microns against gravity.
 
     @staticmethod
     def convertToWorld(array):
@@ -261,20 +262,18 @@ class slit(FSMThread):
         :type coords: list
         :raise: Exception with warning message.
         """
-        coords = np.array(coords)
         self.doPersist = True
         try:
             if reference == 'absolute':
-                hysteresisCorrection = np.array([0, 0, -0.5, 0, 0, 0])
-                try:
-                    ret = self._hexapodMoveAbsolute(coords + hysteresisCorrection)
-                except UserWarning as e:
-                    cmd.fail('text=%s' % self.actor.strTraceback(e))
-
+                # First check if desired position is within range.
+                self._checkHexaLimits(coords)
+                # Then move to the desired position + the hysteresis correction.
+                self._hexapodMoveAbsolute(np.array(coords) + self.hysteresisCorrection)
                 self.checkPosition(cmd)
-                ret = self._hexapodMoveAbsolute(coords)
+                # then move to the desired position.
+                return self._hexapodMoveAbsolute(coords)
             else:
-                ret = self._hexapodMoveIncremental('Work', coords)
+                return self._hexapodMoveIncremental('Work', coords)
         except UserWarning:
             self.doPersist = False
             raise
