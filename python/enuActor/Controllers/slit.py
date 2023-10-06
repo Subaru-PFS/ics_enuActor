@@ -621,6 +621,8 @@ class slit(FSMThread):
                 [errorCode, errorString] = self.myxps.ErrorStringGet(socketId, buf[0])
                 if buf[0] == -17:
                     raise UserWarning('[X, Y, Z, U, V, W] exceed : %s' % errorString)
+                elif buf[0] == -76:
+                    raise UserWarning('HexapodMoveIncrementalControlWithTargetVelocity(target velocity out of range)')
                 elif buf[0] == -21:
                     self.logger.debug('Hxp controller in initialization...')
                     # just wait a bit, the controller should soon be ready, erk.
