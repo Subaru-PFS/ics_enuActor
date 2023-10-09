@@ -262,7 +262,7 @@ class SlitCmd(object):
         startCoords[ditherXaxis] = realStartPosition
 
         # RELATIVE MOVE so total motion *MUST* include the overshoots on both sides.
-        totalMotion = realStartPosition - realEndPosition
+        totalMotion = realEndPosition - realStartPosition
         endCoords[ditherXaxis] = totalMotion
 
         # moving to start position first.
