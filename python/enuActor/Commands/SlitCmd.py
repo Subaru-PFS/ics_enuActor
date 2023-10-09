@@ -252,13 +252,17 @@ class SlitCmd(object):
         desiredMotion = endPosition - startPosition
         speed = desiredMotion / expTime
 
-        # Making start coordinates taking in account acceleration.
+        # Making start and end coordinates taking in account acceleration and deceleration.
         startCoords = np.zeros(6)
-        startCoords[ditherXaxis] = startPosition - self.controller.slitAtSpeedAfter * speed
-        # Making start coordinates taking in account acceleration.
         endCoords = np.zeros(6)
-        # total motion *MUST* include the overshoots on both sides.
-        totalMotion = startCoords[ditherXaxis] - (endPosition + self.controller.slidingOvershoot * speed)
+
+        realStartPosition = startPosition - self.controller.slitAtSpeedAfter * speed
+        realEndPosition = endPosition + self.controller.slidingOvershoot * speed
+
+        startCoords[ditherXaxis] = realStartPosition
+
+        # RELATIVE MOVE so total motion *MUST* include the overshoots on both sides.
+        totalMotion = realStartPosition - realEndPosition
         endCoords[ditherXaxis] = totalMotion
 
         # moving to start position first.
@@ -267,12 +271,11 @@ class SlitCmd(object):
 
         try:
             # temporary increasing timeout.
-            self.controller.myxps.hangLimit = round(totalMotion/speed) + 10
+            self.controller.myxps.hangLimit = round(totalMotion / speed) + 10
             self.controller.substates.slide(cmd, speed=speed, coords=endCoords)
             self.controller.generate(cmd)
         finally:
             self.controller.myxps.hangLimit = 45
-
 
     def abort(self, cmd):
         """Stop current motion."""
