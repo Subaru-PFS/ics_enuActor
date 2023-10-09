@@ -18,8 +18,8 @@ reload(simulator)
 class slit(FSMThread):
     timeout = 2
     positionTolerance = 0.005  # mm
-    slidingOvershoot = 0.5  # seconds
-    slitAtSpeedAfter = 1  # seconds
+    slidingOvershoot = 5  # seconds
+    slitAtSpeedAfter = 5  # seconds
     hysteresisCorrection = np.array([0, 0, -0.05, 0, 0, 0])  # mm, 50 microns against gravity.
 
     @staticmethod
