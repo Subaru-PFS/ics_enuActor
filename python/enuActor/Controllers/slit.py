@@ -17,10 +17,6 @@ reload(simulator)
 
 class slit(FSMThread):
     timeout = 2
-    positionTolerance = 0.005  # mm
-    slidingOvershoot = 5  # seconds
-    slitAtSpeedAfter = 5  # seconds
-    hysteresisCorrection = np.array([0, 0, -0.05, 0, 0, 0])  # mm, 50 microns against gravity.
 
     @staticmethod
     def convertToWorld(array):
@@ -36,7 +32,7 @@ class slit(FSMThread):
     def slitPosition(coords, config):
         """Interpret slit position from current coordinates."""
         # consider any nans or angle out of tolerance as undef.
-        if any(np.isnan(coords)) or np.max(np.abs(coords[3:])) > slit.positionTolerance:
+        if any(np.isnan(coords)) or np.max(np.abs(coords[3:])) > config['positionTolerance']:
             return 'undef'
 
         # eerk
@@ -45,13 +41,13 @@ class slit(FSMThread):
         posStr = []
 
         [focus, ditherY, ditherX, _, _, _] = coords
-        if abs(focus) > slit.positionTolerance:
+        if abs(focus) > config['positionTolerance']:
             sign = '+' if focus > 0 else '-'
             posStr.append(f'focus{sign}{round(abs(focus), 2)}mm')
-        if abs(ditherX) > slit.positionTolerance:
+        if abs(ditherX) > config['positionTolerance']:
             sign = '+' if ditherX > 0 else '-'
             posStr.append(f'ditherFib{sign}{round(abs(ditherX) / xPixToMm, 1)}pix')
-        if abs(ditherY) > slit.positionTolerance:
+        if abs(ditherY) > config['positionTolerance']:
             sign = '+' if ditherY > 0 else '-'
             posStr.append(f'ditherWav{sign}{round(abs(ditherY) / yPixToMm, 1)}pix')
 
@@ -132,6 +128,8 @@ class slit(FSMThread):
         tool = slit.convertToWorld(tool)[:3] + self.slit_position[3:]
         # Tool z = 21 + z_slit with 21 height of upper carriage
         self.toolSystem = [sum(i) for i in zip(tool, [0, 0, self.thicknessCarriage, 0, 0, 0])]
+        self.hysteresisCorrection = np.array(self.controllerConfig['hysteresisCorrection'])
+        # activate software limits by defaults.
         try:
             self.softwareLimitsActivated = self.controllerConfig['activateSoftwareLimits']
         except:
@@ -278,7 +276,7 @@ class slit(FSMThread):
             self.doPersist = False
             raise
 
-    def sliding(self, cmd, speed, coords):
+    def sliding(self, cmd, speed, slitAtSpeedAfter, coords):
         """Move to coords in the reference.
         :param cmd: current command.
         :param speed: mm/s
@@ -290,7 +288,7 @@ class slit(FSMThread):
             if self.substates.current == 'SLIDING':
                 cmd.inform('slitAtSpeed=True')
 
-        reactor.callLater(self.slitAtSpeedAfter, genSlitAtSpeed)
+        reactor.callLater(slitAtSpeedAfter, genSlitAtSpeed)
         ret = self._HexapodMoveIncrementalControlWithTargetVelocity(*coords[:3], abs(speed))
         cmd.inform('slitAtSpeed=False')
 
