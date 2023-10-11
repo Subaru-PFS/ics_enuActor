@@ -245,6 +245,7 @@ class SlitCmd(object):
         pixMin, pixMax = cmdKeys['pixelRange'].values if 'pixelRange' in cmdKeys else [-6, 6]
         ditherXaxis = np.array(self.config('dither_x_axis'), dtype=bool)
         coeffX, coeffY = self.config('pix_to_mm')
+        accelerationFraction = self.config('accelerationFraction')
 
         startPosition, endPosition = coeffX * pixMin, coeffX * pixMax
 
@@ -252,18 +253,31 @@ class SlitCmd(object):
         desiredMotion = endPosition - startPosition
         speed = desiredMotion / expTime
 
+        if speed > 1:
+            raise ValueError(f'calculated speed:{speed:.3f} above limit(1mm/s)')
+
         # Making start and end coordinates taking in account acceleration and deceleration.
         startCoords = np.zeros(6)
         endCoords = np.zeros(6)
 
-        realStartPosition = startPosition - self.controller.slitAtSpeedAfter * speed
-        realEndPosition = endPosition + self.controller.slidingOvershoot * speed
+        realStartPosition = startPosition - accelerationFraction * desiredMotion
+        realEndPosition = endPosition + accelerationFraction * desiredMotion
 
         startCoords[ditherXaxis] = realStartPosition
 
         # RELATIVE MOVE so total motion *MUST* include the overshoots on both sides.
         totalMotion = realEndPosition - realStartPosition
         endCoords[ditherXaxis] = totalMotion
+
+        # rough estimation of the acceleration.
+        jerkTime = 0.05
+        slitAtSpeedAfter = (accelerationFraction * desiredMotion) / (0.5 * speed)
+        meanAcceleration = speed / slitAtSpeedAfter
+        maxAcceleration = speed / (slitAtSpeedAfter - 2 * jerkTime)
+
+        cmd.inform(f'slitMotion=%.1f,%.1f,%.1f,%.1f,%.3f,%.3f' % (realStartPosition / coeffX, realEndPosition / coeffX,
+                                                                  slitAtSpeedAfter, speed / coeffX,
+                                                                  meanAcceleration / coeffX, maxAcceleration / coeffX))
 
         # moving to start position first.
         self.controller.substates.move(cmd, reference='absolute', coords=startCoords)
@@ -272,7 +286,7 @@ class SlitCmd(object):
         try:
             # temporary increasing timeout.
             self.controller.myxps.hangLimit = round(totalMotion / speed) + 10
-            self.controller.substates.slide(cmd, speed=speed, coords=endCoords)
+            self.controller.substates.slide(cmd, speed=speed, slitAtSpeedAfter=slitAtSpeedAfter, coords=endCoords)
             self.controller.generate(cmd)
         finally:
             self.controller.myxps.hangLimit = 45
