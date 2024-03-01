@@ -251,7 +251,8 @@ class SlitCmd(object):
 
         # calculating speed in mm/s.
         desiredMotion = endPosition - startPosition
-        targetSpeed = desiredMotion / expTime
+        # adding 1s to expTime to take shutter motion in account.
+        targetSpeed = desiredMotion / (expTime + 1)
 
         if targetSpeed > 1:
             raise ValueError(f'calculated speed:{targetSpeed:.3f} above limit(1mm/s)')
