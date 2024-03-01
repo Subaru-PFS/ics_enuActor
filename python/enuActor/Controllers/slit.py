@@ -300,6 +300,7 @@ class slit(FSMThread):
 
             cmd.inform('slitAtSpeed=True')
             cmd.inform('slit=%s' % ','.join(['%.5f' % p for p in self.coords]))
+            cmd.inform('slitPosition=%s' % self.slitPosition(self.coords, config=self.controllerConfig))
 
             self.closeSock(sockName='slitPosition')
 
