@@ -286,16 +286,19 @@ class slit(FSMThread):
         """
 
         def waitToReachStartPosition():
+            if not self.substates.current == 'SLIDING':
+                return
+
             [x, y, z, u, v, w] = self.errorChecker(self.myxps.GroupPositionCurrentGet, self.groupName, 6,
                                                    sockName='slitPosition')
             direction = 1 if speed > 0 else -1
-            
+
             # wait until you reach desired startPosition
             while direction * (z - startPosition) < 0:
                 [x, y, z, u, v, w] = self.errorChecker(self.myxps.GroupPositionCurrentGet, self.groupName, 6,
                                                        sockName='slitPosition')
                 time.sleep(0.01)
-                
+
             self.coords = [x, y, z, u, v, w]
 
             cmd.inform('slitAtSpeed=True')
