@@ -83,7 +83,8 @@ class slit(FSMThread):
         self.groupName = 'HEXAPOD'
         self.myxps = None
         self.socks = {'main': -1,
-                      'emergency': -1}
+                      'emergency': -1,
+                      'slitPosition': -1}
 
         self.logger = logging.getLogger(self.name)
         self.logger.setLevel(loglevel)
@@ -276,7 +277,7 @@ class slit(FSMThread):
             self.doPersist = False
             raise
 
-    def sliding(self, cmd, speed, slitAtSpeedAfter, coords):
+    def sliding(self, cmd, speed, startPosition, coords):
         """Move to coords in the reference.
         :param cmd: current command.
         :param speed: mm/s
@@ -284,11 +285,30 @@ class slit(FSMThread):
         :raise: Exception with warning message.
         """
 
-        def genSlitAtSpeed():
-            if self.substates.current == 'SLIDING':
-                cmd.inform('slitAtSpeed=True')
+        def waitToReachStartPosition():
+            if not self.substates.current == 'SLIDING':
+                return
 
-        reactor.callLater(slitAtSpeedAfter, genSlitAtSpeed)
+            [x, y, z, u, v, w] = self.errorChecker(self.myxps.GroupPositionCurrentGet, self.groupName, 6,
+                                                   sockName='slitPosition')
+            direction = 1 if speed > 0 else -1
+
+            # wait until you reach desired startPosition
+            while direction * (z - startPosition) < 0:
+                [x, y, z, u, v, w] = self.errorChecker(self.myxps.GroupPositionCurrentGet, self.groupName, 6,
+                                                       sockName='slitPosition')
+                time.sleep(0.01)
+
+            self.coords = [x, y, z, u, v, w]
+
+            cmd.inform('slitAtSpeed=True')
+            cmd.inform('slit=%s' % ','.join(['%.5f' % p for p in self.coords]))
+            cmd.inform('slitPosition=%s' % self.slitPosition(self.coords, config=self.controllerConfig))
+
+            self.closeSock(sockName='slitPosition')
+
+        reactor.callLater(1, waitToReachStartPosition)
+
         ret = self._HexapodMoveIncrementalControlWithTargetVelocity(*coords[:3], abs(speed))
         cmd.inform('slitAtSpeed=False')
 
