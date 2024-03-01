@@ -303,7 +303,7 @@ class slit(FSMThread):
 
             self.closeSock(sockName='slitPosition')
 
-        reactor.callLater(waitToReachStartPosition)
+        reactor.callLater(1, waitToReachStartPosition)
 
         ret = self._HexapodMoveIncrementalControlWithTargetVelocity(*coords[:3], abs(speed))
         cmd.inform('slitAtSpeed=False')
