@@ -36,11 +36,17 @@ def makeFullJerkArray(targetAcceleration, timeAtConstantAcceleration, jerkTime, 
     x = np.concatenate([x1, x2, x3])
     y = np.concatenate([y1, y2, y3])
 
+    # Extending modeling to 1s.
+    xExtended = np.arange(x[-1], 1, step) + step
+    yExtended = np.zeros(len(xExtended))
+    x = np.append(x, xExtended)
+    y = np.append(y, yExtended)
+
     return x, y
 
 
 def getMaxSpeed(targetAcceleration, timeAtConstantAcceleration, jerkTime, step):
-    """Calculate maximum speed given targetAcceleration amd timeAtConstantAcceleration."""
+    """Calculate maximum speed given targetAcceleration amd timeAtConstantAcceleration. """
     x, y = makeFullJerkArray(targetAcceleration, timeAtConstantAcceleration, jerkTime=jerkTime, step=step)
     acceleration = np.cumsum(step * y)
     speed = np.cumsum(step * acceleration)
@@ -63,9 +69,26 @@ def makeJerkProfile(targetSpeed, maxAcceleration=5, jerkTime=0.05):
     maxSpeed = getMaxSpeed(maxAcceleration, timeAtConstantAcceleration, jerkTime=jerkTime, step=step)
 
     if maxSpeed > targetSpeed:
-        targetAcceleration = minimize(findTargetAcceleration, x0=(maxAcceleration * targetSpeed / maxSpeed)).x[0]
+        targetAcceleration = \
+            minimize(findTargetAcceleration, x0=(maxAcceleration * targetSpeed / maxSpeed), method='Nelder-Mead').x[0]
     else:
         timeAtConstantAcceleration = \
-            minimize(findTimeAtConstantAcceleration, x0=((targetSpeed - maxSpeed) / maxAcceleration)).x[0]
+            minimize(findTimeAtConstantAcceleration, x0=((targetSpeed - maxSpeed) / maxAcceleration),
+                     method='Nelder-Mead').x[0]
 
     return makeFullJerkArray(targetAcceleration, timeAtConstantAcceleration, jerkTime=jerkTime, step=step)
+
+
+def calculateDistanceBeforeAtSpeed(targetSpeed, safetyFactor=2):
+    """Calculate distance before reaching targetSpeed."""
+    # simulate dataset
+    x, y = makeJerkProfile(targetSpeed, maxAcceleration=targetSpeed * 4, jerkTime=0.05)
+    step = np.diff(x).mean()
+    acceleration = np.cumsum(step * y)
+    speed = np.cumsum(step * acceleration)
+    position = np.cumsum(step * speed)
+    # finding how much distance to reach targetSpeed.
+    iAtSpeed = np.argmin(abs(speed - targetSpeed))
+    distance = position[iAtSpeed]
+    # simulation is quite accurate but let's be safe and take a factor 2
+    return distance * safetyFactor
