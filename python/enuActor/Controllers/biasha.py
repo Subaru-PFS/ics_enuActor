@@ -73,6 +73,7 @@ class biasha(FSMThread, bufferedSocket.EthComm):
 
         self.finishExposure = False
         self.abortExposure = False
+        self.redResolution = None
         self.sim = simulator.BiashaSim()
 
         self.logger = logging.getLogger(self.name)
@@ -204,6 +205,7 @@ class biasha(FSMThread, bufferedSocket.EthComm):
         """
         self.finishExposure = False
         self.abortExposure = False
+        self.redResolution = None
 
         # translate shutterMask to commanded shutters.
         cmdShutter = biasha.cmdShutter[shutterMask]
@@ -282,7 +284,8 @@ class biasha(FSMThread, bufferedSocket.EthComm):
 
             # declaring exposure
             startExp = self._startExposure(shutterMask)
-
+            # hanging on red resolution now.
+            self.redResolution = self.actor.controllers['rexm'].position
             # open shutters.
             integrationStartedAt, openReturnedAt = shutterTransition('open')
             # wait for exposure time.
@@ -318,6 +321,8 @@ class biasha(FSMThread, bufferedSocket.EthComm):
                                                           pfsTime.Time.fromtimestamp(openReturnedAt).isoformat(),
                                                           pfsTime.Time.fromtimestamp(integrationEndedAt).isoformat(),
                                                           pfsTime.Time.fromtimestamp(closeReturnedAt).isoformat()))
+            # latching a red resolution keyword for headers.
+            cmd.inform(f"redResolution={visit},{self.redResolution}")
         except:
             cmd.warn('exptime=nan')
             raise
