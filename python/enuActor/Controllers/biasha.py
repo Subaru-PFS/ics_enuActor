@@ -284,8 +284,14 @@ class biasha(FSMThread, bufferedSocket.EthComm):
 
             # declaring exposure
             startExp = self._startExposure(shutterMask)
+
             # hanging on red resolution now.
-            self.redResolution = self.actor.controllers['rexm'].position
+            try:
+                self.redResolution = self.actor.controllers['rexm'].position
+            except KeyError:
+                cmd.warn('text="rexm controller not connected, redResolution set to undef for this exposure..."')
+                self.redResolution = 'undef'
+
             # open shutters.
             integrationStartedAt, openReturnedAt = shutterTransition('open')
             # wait for exposure time.
