@@ -242,13 +242,24 @@ class slit(FSMThread):
             genKeys('slit=%s' % ','.join(['%.5f' % p for p in self.coords]))
             genKeys('slitPosition=%s' % self.slitPosition(self.coords, config=self.controllerConfig))
 
-    def checkStatus(self, cmd):
-        """Get status code and string from hxp100 controller. Generate hxpStatus keyword.
-
-        :param cmd: current command.
+    def checkStatus(self, cmd, sockName='main'):
         """
-        hxpStatus = self._getHxpStatus()
-        cmd.inform('hxpStatus=%d,"%s' % (int(hxpStatus), self._getHxpStatusString(hxpStatus)))
+        Retrieve and report the current status of the hexapod controller.
+
+        This method:
+        - Queries the hexapod status code and interprets it as a human-readable string.
+        - Sends this information to the commander via `cmd.inform()`.
+        - Also informs the current software limits state.
+
+        Parameters
+        ----------
+        cmd :
+            Command object used to report status back to the user.
+        sockName : str, optional
+            Socket name to use for communication with the controller (default: 'main').
+        """
+        hxpStatus = self._getHxpStatus(sockName=sockName)
+        cmd.inform('hxpStatus=%d,"%s"' % (int(hxpStatus), self._getHxpStatusString(hxpStatus, sockName=sockName)))
         cmd.inform(f'hxpSoftwareLimits={self.hxpSoftwareLimits}')
 
     def moving(self, cmd, reference, coords):
@@ -414,10 +425,24 @@ class slit(FSMThread):
         cmd.inform(f'hexapodMoved={now:0.6f}')
 
     def doAbort(self, cmd):
-        """Aborting current move.
+        """
+        Execute an abort sequence to stop the hexapod and check its status.
 
-        :param cmd: current command.
-        :raise: RuntimeError if an error is raised by errorChecker.
+        This function:
+        - Informs the user that motion is being aborted.
+        - Attempts to call `_abort()` to stop motion.
+        - Catches and reports any exception raised during the abort.
+        - Finally checks and reports the hexapod status and waits for the FSM to clear.
+
+        Parameters
+        ----------
+        cmd :
+            Command object used to report status and errors to the user.
+
+        Raises
+        ------
+        RuntimeError
+            If `_abort()` or the status check fails.
         """
         cmd.inform('text="aborting motion..."')
         try:
@@ -425,7 +450,10 @@ class slit(FSMThread):
         except Exception as e:
             cmd.warn('text=%s' % self.actor.strTraceback(e))
 
-        # see ics.utils.fsm.fsmThread.LockedThread
+        # Check status after abort
+        self.checkStatus(cmd, sockName='emergency')
+
+        # Wait for command to fully terminate (FSM integration)
         self.waitForCommandToFinish()
 
     def leaveCleanly(self, cmd):
@@ -456,24 +484,52 @@ class slit(FSMThread):
         """
         return self.errorChecker(self.myxps.GroupPositionCurrentGet, self.groupName, 6)
 
-    def _getHxpStatus(self):
-        """Get hexapod status as an integer.
-
-        :return: error code.
-        :rtype: int
-        :raise: RuntimeError if an error is raised by errorChecker.
+    def _getHxpStatus(self, sockName='main'):
         """
-        return self.errorChecker(self.myxps.GroupStatusGet, self.groupName)
+        Query the raw numeric status code of the hexapod controller.
 
-    def _getHxpStatusString(self, code):
-        """Get hexapod status interpreted as a string.
+        This value is useful for programmatic checks of hexapod state, such as whether it's moving,
+        homed, or in an error condition.
 
-        :param code: error code.
-        :return: status_string.
-        :rtype: str
-        :raise: RuntimeError if an error is raised by errorChecker.
+        Parameters
+        ----------
+        sockName : str, optional
+            Socket name to use for communication (default: 'main').
+
+        Returns
+        -------
+        int
+            Numeric status code returned by the controller.
+
+        Raises
+        ------
+        RuntimeError
+            If the controller returns an error or if communication fails.
         """
-        return self.errorChecker(self.myxps.GroupStatusStringGet, code)
+        return self.errorChecker(self.myxps.GroupStatusGet, self.groupName, sockName=sockName)
+
+    def _getHxpStatusString(self, code, sockName='main'):
+        """
+        Translate a numeric hexapod status code into a descriptive string.
+
+        Parameters
+        ----------
+        code : int
+            Numeric status code returned by the controller (e.g. 11, 12).
+        sockName : str, optional
+            Socket name to use for communication (default: 'main').
+
+        Returns
+        -------
+        str
+            Human-readable description of the hexapod status.
+
+        Raises
+        ------
+        RuntimeError
+            If the controller returns an error or if communication fails.
+        """
+        return self.errorChecker(self.myxps.GroupStatusStringGet, code, sockName=sockName)
 
     def _kill(self):
         """Kill socket.
@@ -593,12 +649,22 @@ class slit(FSMThread):
                                  self.groupName, 'Work', 'Line', dX, dY, dZ, Velocity)
 
     def _abort(self):
-        """Abort current motion.
-
-        :return: ''
-        :raise: RuntimeError if an error is raised by errorChecker.
         """
-        return self.errorChecker(self.myxps.GroupMoveAbort, self.groupName, sockName='emergency')
+        Abort the current hexapod motion immediately.
+
+        This sends a GroupMoveAbort command to the hexapod controller over the emergency socket.
+        If the hexapod was not moving, an informational message is logged instead of raising an error.
+
+        Raises
+        ------
+        RuntimeError
+            If the controller returns an error or if communication fails.
+        """
+        ret = self.errorChecker(self.myxps.GroupMoveAbort, self.groupName, sockName='emergency',
+                                handleDeviceError=False)
+
+        if ret == -22:
+            self.logger.info("Hexapod was not moving — no need to stop (Error -22: Not allowed action).")
 
     def _checkHexaLimits(self, futureCoords):
         """Check hexapod future coordinates.
@@ -612,45 +678,128 @@ class slit(FSMThread):
             if not lim_inf <= coord <= lim_sup:
                 raise UserWarning("[X, Y, Z, U, V, W] exceed : %.5f not permitted" % coord)
 
-    def errorChecker(self, func, *args, sockName='main'):
-        """Decorator for slit lower level functions.
+    def errorChecker(self, func, *args, sockName='main', handleDeviceError=True):
+        """
+        Execute a driver-level function with structured error handling for Newport HXP100Meca controllers.
 
-        :param func: function to check.
-        :param args: function arguments.
-        :returns: ret
-        :rtype: str
-        :raise: RuntimeError if an error is returned by hxp drivers.
+        This method:
+        - Connects to the specified socket.
+        - Executes the provided function with arguments.
+        - Handles known controller initialization delays.
+        - Detects and raises exceptions for common network or device-level errors.
+        - Optionally skips device error decoding based on the `handleDeviceError` flag.
+
+        Parameters
+        ----------
+        func : callable
+            The low-level controller function to invoke. Must return a response buffer
+            where the first element is an error code (0 if no error).
+        *args : tuple
+            Arguments passed directly to `func`.
+        sockName : str, optional
+            Name of the controller socket to use (default: 'main').
+        handleDeviceError : bool, optional
+            Whether to decode and raise detailed device-level errors (default: True).
+
+        Returns
+        -------
+        Any
+            The result from the function call (excluding the error code), either a scalar or a tuple.
+
+        Raises
+        ------
+        RuntimeError
+            For unrecoverable communication or device errors.
+        UserWarning
+            For expected device limits or user-level constraints (e.g., motion bounds exceeded).
         """
         socketId = self.connectSock(sockName)
-
         buf = func(socketId, *args)
 
-        if buf[0] != 0:
-            if buf[0] == -2:
-                self.closeSock(sockName)
-                raise RuntimeError(func.__name__ + 'TCP timeout')
+        errorCode = buf[0]
 
-            elif buf[0] == -108:
-                self.closeSock(sockName)
-                raise RuntimeError(func.__name__ + 'TCP/IP connection was closed by an admin')
+        # no error are reported, just return the buffer.
+        if not errorCode:
+            return buf[1:] if len(buf) > 2 else buf[1]
 
-            else:
-                [errorCode, errorString] = self.myxps.ErrorStringGet(socketId, buf[0])
-                if buf[0] == -17:
-                    raise UserWarning('[X, Y, Z, U, V, W] exceed : %s' % errorString)
-                elif buf[0] == -76:
-                    raise UserWarning('HexapodMoveIncrementalControlWithTargetVelocity(target velocity out of range)')
-                elif buf[0] == -21:
-                    self.logger.debug('Hxp controller in initialization...')
-                    # just wait a bit, the controller should soon be ready, erk.
-                    time.sleep(2)
-                    return self.errorChecker(func, *args, sockName=sockName)
-                elif errorCode != 0:
-                    raise RuntimeError(func.__name__ + ' : ERROR ' + str(errorCode))
-                else:
-                    raise RuntimeError(func.__name__ + ' : ' + errorString)
+        # Retry if controller still initializing
+        if errorCode == -21:
+            self.logger.debug('Hxp controller in initialization...')
+            time.sleep(2)
+            return self.errorChecker(func, *args, sockName=sockName)
 
-        return buf[1:] if len(buf) > 2 else buf[1]
+        # checking for network error.
+        self._handleNetworkErrors(errorCode, sockName, func.__name__)
+
+        if handleDeviceError:
+            self._handleDeviceErrors(errorCode, socketId, func.__name__)
+
+        return errorCode
+
+    def _handleNetworkErrors(self, errorCode, sockName, funcName):
+        """
+        Handle low-level network-related errors from the hexapod controller.
+
+        This method handles cases such as TCP timeout or closed connections
+        and raises appropriate exceptions. It also ensures the associated socket is closed.
+
+        Parameters
+        ----------
+        errorCode : int
+            Error code returned from the driver function.
+        sockName : str
+            Identifier of the socket connection (e.g., 'main').
+        funcName : str
+            Name of the function being executed (for error context).
+
+        Raises
+        ------
+        RuntimeError
+            Raised with a descriptive message for known network error codes.
+        """
+        if errorCode == -2:
+            self.closeSock(sockName)
+            raise RuntimeError(f"{funcName}: TCP timeout")
+        elif errorCode == -108:
+            self.closeSock(sockName)
+            raise RuntimeError(f"{funcName}: TCP/IP connection was closed by an admin")
+
+    def _handleDeviceErrors(self, errorCode, socketId, funcName):
+        """
+        Handle device-level errors returned by the hexapod controller.
+
+        This method interprets known hardware-related error codes, retrieves
+        the corresponding error message using `ErrorStringGet`, and raises
+        appropriate exceptions with detailed context.
+
+        Parameters
+        ----------
+        errorCode : int
+            Error code returned by the hardware function.
+        socketId : int
+            Socket ID used to communicate with the controller.
+        funcName : str
+            Name of the function being checked (for clearer error messages).
+
+        Raises
+        ------
+        UserWarning
+            For recoverable or expected hardware limits (e.g., motion bounds or velocity limits).
+        RuntimeError
+            For unexpected or generic device-level errors.
+        """
+        errorStatus, errorStr = self.myxps.ErrorStringGet(socketId, errorCode)
+
+        if errorCode == -17:
+            raise UserWarning(f'{funcName}: [X, Y, Z, U, V, W] exceed — {errorStr}')
+        elif errorCode == -76:
+            raise UserWarning(f'{funcName}: Target velocity out of range')
+        elif errorCode == -27:
+            raise UserWarning(f'{funcName}: Error -27 : Move Aborted')
+        elif errorStatus != 0:
+            raise RuntimeError(f"{funcName}: failed with code {errorCode}")
+        else:
+            raise RuntimeError(f"{funcName}: {errorStr}")
 
     def connectSock(self, sockName):
         """Connect socket using hexapod drivers.
