@@ -215,7 +215,7 @@ class slit(FSMThread):
             raise RuntimeError('hexapod not in ready state, going home aborted ...')
 
         cmd.inform('text="going to home ..."')
-        self._hexapodMoveAbsolute([0, 0, 0, 0, 0, 0])
+        self._hexapodMoveAbsolute([-660, 0, 0, 0, 0, 0])
         self.doPersist = True
 
     def getStatus(self, cmd):
