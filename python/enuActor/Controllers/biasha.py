@@ -511,7 +511,7 @@ class biasha(FSMThread, bufferedSocket.EthComm):
             """convert milliseconds to seconds."""
             return float(ms) / 1000
 
-        transientTime1 = fullyOpenTime = transientTime2 = np.NaN
+        transientTime1 = fullyOpenTime = transientTime2 = np.nan
 
         if useBiashaMeasures:
             try:
