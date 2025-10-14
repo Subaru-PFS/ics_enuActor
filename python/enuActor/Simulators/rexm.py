@@ -22,6 +22,7 @@ class recvFake(object):
 
 class sendFake(object):
     def __init__(self, cmd, data, fmtRet='>BBBBIB', status=100):
+        data = np.int32(data) if data<0 else data
         data = np.uint32(data) if fmtRet == '>BBBBIB' else np.int32(data)
         self.replyAddress = 2
         self.moduleAddress = 1
@@ -123,7 +124,7 @@ class RexmSim(socket.socket):
                 self.buf.append(sendFake(cmd=TMCM.TMCL_GAP, data=self.motorConfig[packet.ctype]))
 
         elif packet.cmd == TMCM.TMCL_MVP:
-            self.MVP(distance=np.int32(packet.data))
+            self.MVP(distance=np.int32(np.uint32(packet.data)))
             self.buf.append(sendFake(cmd=TMCM.TMCL_MVP, data=packet.data))
 
         elif packet.cmd == TMCM.TMCL_GGP:
