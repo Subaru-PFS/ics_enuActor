@@ -141,9 +141,13 @@ class SlitCmd(object):
     @blocking
     def dither(self, cmd):
         """Move wrt dither axis."""
+        focusAxis = np.array(self.config('focus_axis'), dtype=bool)
         ditherXaxis = np.array(self.config('dither_x_axis'), dtype=bool)
         ditherYaxis = np.array(self.config('dither_y_axis'), dtype=bool)
+
         pix2mm = self.config('pix_to_mm')
+        pixToV = self.config('dither_xpix_to_v_angle')
+        radius = self.config('radius')
 
         cmdKeys = cmd.cmd.keywords
         reference = 'absolute' if 'abs' in cmdKeys else 'relative'
@@ -158,6 +162,20 @@ class SlitCmd(object):
         coords = np.array([c for c in self.controller.coords], dtype=float) if reference == 'absolute' else np.zeros(6)
         coords[ditherXaxis] = coeffX * cmdKeys['X'].values[0] if 'X' in cmdKeys else coords[ditherXaxis]
         coords[ditherYaxis] = coeffY * cmdKeys['Y'].values[0] if 'Y' in cmdKeys else coords[ditherYaxis]
+
+        # overriding  with the new method (INSTRM-2575).
+        if 'pixels' in cmdKeys and 'X' in cmdKeys:
+            pixels = cmdKeys['X'].values[0]
+            V = pixels * pixToV
+
+            phi = np.deg2rad(-V)
+            X = radius * (np.cos(phi) - 1.0)
+            Z = radius * np.sin(phi)
+
+            # overriding coords.
+            coords[focusAxis] = X
+            coords[ditherXaxis] = Z
+            coords[4] = V
 
         self.controller.substates.move(cmd, reference=reference, coords=coords)
         self.controller.generate(cmd)
