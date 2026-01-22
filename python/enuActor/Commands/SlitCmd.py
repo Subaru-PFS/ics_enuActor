@@ -34,7 +34,7 @@ class SlitCmd(object):
             ('slit', 'move absolute [<X>] [<Y>] [<Z>] [<U>] [<V>] [<W>]', self.moveAbs),
             ('slit', 'move relative [<X>] [<Y>] [<Z>] [<U>] [<V>] [<W>]', self.moveRel),
             ('slit', '<focus> [@(microns)] [abs]', self.focus),
-            ('slit', 'dither [<X>] [<Y>] [@(pixels|microns)] [abs]', self.dither),
+            ('slit', 'dither [<X>] [<Y>] [<focus>] [@(pixels|microns)] [abs]', self.dither),
             ('slit', '@softwareLimits @(on|off) [@force]', self.hxpSoftwareLimits),
             ('slit', 'linearVerticalMove <expTime> [<pixelRange>]', self.linearVerticalMove),
 
@@ -52,8 +52,6 @@ class SlitCmd(object):
                                         keys.Key('V', types.Float(), help='V coordinate'),
                                         keys.Key('W', types.Float(), help='W coordinate'),
                                         keys.Key('focus', types.Float(), help='move along focus axis'),
-                                        keys.Key('dither', types.Float(), help='move along dither axis'),
-                                        keys.Key('shift', types.Float(), help='move along shift axis'),
                                         keys.Key('expTime', types.Float(), help='expTime'),
                                         keys.Key('pixelRange', types.Float() * (1, 2),
                                                  help='pixels array(start, stop )')
@@ -171,6 +169,12 @@ class SlitCmd(object):
             phi = np.deg2rad(-V)
             X = radius * (np.cos(phi) - 1.0)
             Z = radius * np.sin(phi)
+
+            # adding focus motion on top of it (INSTRM-2853).
+            focus = cmdKeys['focus'].values[0] if 'focus' in cmdKeys else 0.0
+            unit = 1000 if 'microns' in cmdKeys else 1
+
+            X += focus * unit
 
             # overriding coords.
             coords[focusAxis] = X
