@@ -67,6 +67,11 @@ class SlitSim(object):
 
     def GroupPositionCurrentGet(self, socketId, GroupName, nbElement):
         time.sleep(0.5)
+        # Individual strut query: GroupName is e.g. "HEXAPOD.1" .. "HEXAPOD.6"
+        parts = GroupName.split('.')
+        if len(parts) == 2 and parts[-1].isdigit():
+            strut_index = int(parts[-1]) - 1
+            return [0, self.pos[strut_index]]
         res = [0]
         res.extend(self.pos)
         return res
