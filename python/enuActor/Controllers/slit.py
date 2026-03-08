@@ -227,20 +227,23 @@ class slit(FSMThread):
         self.checkStatus(cmd=cmd)
 
     def checkPosition(self, cmd):
-        """Get 6-tuple current coordinates, generate slit and slitPosition keywords.
+        """Get 6-tuple current coordinates, generate slit, slitPosition and slitActuators keywords.
 
         :param cmd: current command.
         """
         self.coords = [np.nan] * 6
+        actuators = [np.nan] * 6
 
         try:
             self.coords = self._getCurrentPosition()
+            actuators = self._getActuatorPositions()
             self.declareNewHexapodPosition(cmd)
 
         finally:
             genKeys = cmd.inform if np.nan not in self.coords else cmd.warn
             genKeys('slit=%s' % ','.join(['%.5f' % p for p in self.coords]))
             genKeys('slitPosition=%s' % self.slitPosition(self.coords, config=self.controllerConfig))
+            genKeys('slitActuators=%s' % ','.join(['%.5f' % p for p in actuators]))
 
     def checkStatus(self, cmd, sockName='main'):
         """
@@ -483,6 +486,16 @@ class slit(FSMThread):
         :raise: RuntimeError if an error is raised by errorChecker.
         """
         return self.errorChecker(self.myxps.GroupPositionCurrentGet, self.groupName, 6)
+
+    def _getActuatorPositions(self):
+        """Get raw positions of each of the 6 hexapod struts.
+
+        :return: list of 6 strut positions [a1, a2, a3, a4, a5, a6] in mm.
+        :rtype: list
+        :raise: RuntimeError if an error is raised by errorChecker.
+        """
+        return [self.errorChecker(self.myxps.GroupPositionCurrentGet, f'{self.groupName}.{i}', 1)
+                for i in range(1, 7)]
 
     def _getHxpStatus(self, sockName='main'):
         """
