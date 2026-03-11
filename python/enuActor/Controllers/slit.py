@@ -214,8 +214,11 @@ class slit(FSMThread):
         if int(self._getHxpStatus()) not in [10, 11, 12, 13, 14, 15, 16, 17, 18]:
             raise RuntimeError('hexapod not in ready state, going home aborted ...')
 
+        cmd.inform(f'text="going to home + hysteresisCorrection ({self.hysteresisCorrection})"')
+        coords = [0, 0, 0, 0, 0, 0]
+        self._hexapodMoveAbsolute(np.array(coords) + self.hysteresisCorrection)
         cmd.inform('text="going to home ..."')
-        self._hexapodMoveAbsolute([0, 0, 0, 0, 0, 0])
+        self._hexapodMoveAbsolute(coords)
         self.doPersist = True
 
     def getStatus(self, cmd):
