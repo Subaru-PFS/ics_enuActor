@@ -160,7 +160,7 @@ class slit(FSMThread):
         :param cmd: current command.
         :raise: Exception if the communication has failed with the controller.
         """
-        self.checkPosition(cmd)
+        self.getStatus(cmd)
 
     def _init(self, cmd, doHome=True):
         """Initialise hexapod:
@@ -180,7 +180,7 @@ class slit(FSMThread):
         # There are many failures out of the loop, so declare now.
         self.declareNewHexapodPosition(cmd, invalid=True)
 
-        hxpStatus = int(self._getHxpStatus())
+        hxpStatus = self.getStatus(cmd)
         if doHome:
             cmd.inform('text="killing existing socket..."')
             self._kill()
@@ -211,7 +211,9 @@ class slit(FSMThread):
         self._hexapodCoordinateSysSet('Tool', self.toolSystem)
         self.getSystem(cmd, 'Tool')
 
-        if int(self._getHxpStatus()) not in [10, 11, 12, 13, 14, 15, 16, 17, 18]:
+        hxpStatus = self.getStatus(cmd)
+
+        if hxpStatus not in [10, 11, 12, 13, 14, 15, 16, 17, 18]:
             raise RuntimeError('hexapod not in ready state, going home aborted ...')
 
         cmd.inform(f'text="going to home + hysteresisCorrection ({self.hysteresisCorrection})"')
@@ -225,9 +227,10 @@ class slit(FSMThread):
         """Get status and generates slit keywords.
 
         :param cmd: current command.
+        :return: hexapod status code (int), as returned by checkStatus.
         """
         self.checkPosition(cmd=cmd)
-        self.checkStatus(cmd=cmd)
+        return self.checkStatus(cmd=cmd)
 
     def checkPosition(self, cmd):
         """Get 6-tuple current coordinates, generate slit, slitPosition and slitActuators keywords.
@@ -263,10 +266,16 @@ class slit(FSMThread):
             Command object used to report status back to the user.
         sockName : str, optional
             Socket name to use for communication with the controller (default: 'main').
+
+        Returns
+        -------
+        int
+            Numeric hexapod status code.
         """
         hxpStatus = self._getHxpStatus(sockName=sockName)
-        cmd.inform('hxpStatus=%d,"%s"' % (int(hxpStatus), self._getHxpStatusString(hxpStatus, sockName=sockName)))
+        cmd.inform('hxpStatus=%d,"%s"' % (hxpStatus, self._getHxpStatusString(hxpStatus, sockName=sockName)))
         cmd.inform(f'hxpSoftwareLimits={self.hxpSoftwareLimits}')
+        return hxpStatus
 
     def moving(self, cmd, reference, coords):
         """Move to coords in the reference.
@@ -522,7 +531,7 @@ class slit(FSMThread):
         RuntimeError
             If the controller returns an error or if communication fails.
         """
-        return self.errorChecker(self.myxps.GroupStatusGet, self.groupName, sockName=sockName)
+        return int(self.errorChecker(self.myxps.GroupStatusGet, self.groupName, sockName=sockName))
 
     def _getHxpStatusString(self, code, sockName='main'):
         """
