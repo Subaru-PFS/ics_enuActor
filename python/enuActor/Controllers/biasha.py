@@ -41,6 +41,10 @@ class biasha(FSMThread, bufferedSocket.EthComm):
     maintainConnectionMargin = 5
     genElapsedTimeRate = 2
 
+    # photoresistances sum above which the bia LED is considered lit, and how long to wait for it.
+    biaLightThreshold = 100
+    biaLightTimeout = 5
+
     def __init__(self, actor, name, loglevel=logging.DEBUG):
         """This sets up the connections to/from the hub, the logger, and the twisted reactor.
 
@@ -118,6 +122,9 @@ class biasha(FSMThread, bufferedSocket.EthComm):
                                      power=self.controllerConfig['bia_power'],
                                      strobe=self.controllerConfig['bia_strobe'])
 
+        self.biaLightThreshold = self.controllerConfig.get('biaLightThreshold', biasha.biaLightThreshold)
+        self.biaLightTimeout = self.controllerConfig.get('biaLightTimeout', biasha.biaLightTimeout)
+
     def _openComm(self, cmd):
         """Open socket with biasha board or simulate it.
 
@@ -193,6 +200,47 @@ class biasha(FSMThread, bufferedSocket.EthComm):
                 raise
 
         self.substates.trigger(cmdStr)
+
+    def switchBiaOn(self, cmd):
+        """Switch bia on and make sure the LED is actually emitting light.
+
+        :param cmd: current command.
+        :raise: RuntimeError if no light is detected, bia is switched back off in that case.
+        """
+        if self.substates.current == 'BIA':
+            cmd.inform('text="bia already on, not forwarding to biasha board...."')
+        else:
+            self.gotoState(cmd, cmdStr='bia_on')
+
+        try:
+            self.waitForBiaLight(cmd)
+        except:
+            cmd.warn('text="no light detected on photoresistances, switching bia back off..."')
+            self.gotoState(cmd, cmdStr='bia_off')
+            raise
+
+    def waitForBiaLight(self, cmd):
+        """Poll photoresistances until they actually see the bia light.
+
+        Note that in strobe mode a single read can well land in the off phase, hence the polling.
+
+        :param cmd: current command.
+        :raise: RuntimeError if photoresistances stay below threshold until timeout.
+        """
+        start = pfsTime.timestamp()
+
+        while True:
+            phr1, phr2 = self._photores(cmd)
+
+            if phr1 + phr2 > self.biaLightThreshold:
+                cmd.inform('photores=%d,%d' % (phr1, phr2))
+                return phr1, phr2
+
+            if pfsTime.timestamp() - start > self.biaLightTimeout:
+                raise RuntimeError(f'bia light not detected after {self.biaLightTimeout}s, '
+                                   f'photores({phr1},{phr2}) sum below {self.biaLightThreshold} threshold')
+
+            pfsTime.sleep.millisec(100)
 
     def expose(self, cmd, exptime, shutterMask, visit=-1):
         """exposure routine with given exptime and shutter. Generate dateobs, transientTime and exptime keywords.

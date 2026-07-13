@@ -89,11 +89,8 @@ class BiashaCmd(object):
         power = cmdKeys['power'].values[0] if 'power' in cmdKeys else None
 
         self.controller.setBiaConfig(cmd, strobe=strobe, period=period, duty=duty, power=power)
-
-        if self.controller.substates.current == 'BIA':
-            cmd.inform('text="bia already on, not forwarding to biasha board....')
-        else:
-            self.controller.gotoState(cmd, cmdStr='bia_on')
+        # only returning when the photoresistances actually see the bia light.
+        self.controller.switchBiaOn(cmd)
 
         self.controller.biaStatus(cmd)
         cmd.finish()
