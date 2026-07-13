@@ -29,8 +29,6 @@ class BiashaCmd(object):
             ('bia', '@strobe @off', self.strobeOff),
             ('bia', '[<period>] [<duty>] [<power>]', self.biaConfig),
             ('bia', 'status', self.biaStatus),
-            ('bia', '@callbackOn [strobe] [<period>] [<duty>] [<power>]', self.biaCallbackOn),
-            ('bia', '@callbackOff', self.biaCallbackOff),
             ('shutters', '@(open|close) [blue|red]', self.shutterSwitch),
             ('shutters', 'status', self.shutterStatus),
             ('shutters', '@(expose) <exptime> [blue|red|none] [<shutterMask>] [<visit>]', self.expose),
@@ -112,25 +110,6 @@ class BiashaCmd(object):
         """Deactivate bia strobe mode. """
         self.controller.setBiaConfig(cmd, strobe=False)
         self.controller.biaStatus(cmd)
-        cmd.finish()
-
-    @singleShot
-    def biaCallbackOn(self, cmd):
-        """Arm flash mode: bia is driven by mcs.exposureState transitions."""
-        cmdKeys = cmd.cmd.keywords
-
-        strobe = True if 'strobe' in cmdKeys else None
-        period = cmdKeys['period'].values[0] if 'period' in cmdKeys else None
-        duty = cmdKeys['duty'].values[0] if 'duty' in cmdKeys else None
-        power = cmdKeys['power'].values[0] if 'power' in cmdKeys else None
-
-        self.actor.biaCallback.arm(cmd, strobe=strobe, period=period, duty=duty, power=power)
-        cmd.finish()
-
-    @singleShot
-    def biaCallbackOff(self, cmd):
-        """Disarm flash mode and turn bia off."""
-        self.actor.biaCallback.disarm(cmd)
         cmd.finish()
 
     @threaded
