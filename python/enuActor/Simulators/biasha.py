@@ -239,7 +239,10 @@ class BiashaSim(socket.socket):
             if self.bia_mode == 10:
                 values = np.random.normal(845, 5), np.random.normal(845, 5)
             else:
-                values = np.random.normal(10, 2), np.random.normal(10, 2)
+                # bia off, photoresistances are basically in the dark.
+                values = np.random.normal(2, 1), np.random.normal(2, 1)
+
+            values = [max(0, round(value)) for value in values]
 
             self.buf.append('%d,%d' % (values[0], values[1]))
             errorCode = 0
