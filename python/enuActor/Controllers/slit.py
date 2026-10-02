@@ -30,17 +30,33 @@ class slit(FSMThread):
 
     @staticmethod
     def slitPosition(coords, config):
-        """Interpret slit position from current coordinates."""
-        # consider any nans or angle out of tolerance as undef.
-        if any(np.isnan(coords)) or np.max(np.abs(coords[3:])) > config['positionTolerance']:
+        """Interpret slit position from current coordinates.
+
+        V is either zero (pure translation) or the rotation which keeps the slit on its curvature for a
+        fiber dither of Z, in which case the curvature term is removed from X before reporting focus.
+        Lengths are compared to `positionTolerance` (mm), angles to `angleTolerance` (deg).
+        """
+        if any(np.isnan(coords)):
             return 'undef'
+
+        [focus, ditherY, ditherX, U, V, W] = coords
+        angleTolerance = config['angleTolerance']
+
+        if max(abs(U), abs(W)) > angleTolerance:
+            return 'undef'
+
+        if abs(V) > angleTolerance:
+            radius = config['radius']
+            phi = np.arcsin(ditherX / radius)
+            if abs(V + np.rad2deg(phi)) > angleTolerance:
+                return 'undef'
+            focus -= radius * (np.cos(phi) - 1.0)
 
         # eerk
         [xPixToMm, yPixToMm] = config['pix_to_mm']
 
         posStr = []
 
-        [focus, ditherY, ditherX, _, _, _] = coords
         if abs(focus) > config['positionTolerance']:
             sign = '+' if focus > 0 else '-'
             posStr.append(f'focus{sign}{round(abs(focus), 2)}mm')
@@ -295,8 +311,10 @@ class slit(FSMThread):
                 # Then move to the desired position + the hysteresis correction.
                 self._hexapodMoveAbsolute(np.array(coords) + self.hysteresisCorrection)
                 self.checkPosition(cmd)
-                # then move to the desired position.
-                return self._hexapodMoveAbsolute(coords)
+                # then move to the desired position, checkPosition has persisted the intermediate one.
+                ret = self._hexapodMoveAbsolute(coords)
+                self.doPersist = True
+                return ret
             else:
                 return self._hexapodMoveIncremental('Work', coords)
         except UserWarning:

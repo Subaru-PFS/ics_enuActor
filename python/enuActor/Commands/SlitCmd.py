@@ -172,7 +172,7 @@ class SlitCmd(object):
 
             # adding focus motion on top of it (INSTRM-2853).
             focus = cmdKeys['focus'].values[0] if 'focus' in cmdKeys else 0.0
-            unit = 1000 if 'microns' in cmdKeys else 1
+            unit = 0.001 if 'microns' in cmdKeys else 1
 
             X += focus * unit
 
