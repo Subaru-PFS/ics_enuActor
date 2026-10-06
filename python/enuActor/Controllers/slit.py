@@ -198,6 +198,8 @@ class slit(FSMThread):
 
         hxpStatus = self.getStatus(cmd)
         if doHome:
+            self.declareRegistration(cmd, registered=False)
+
             cmd.inform('text="killing existing socket..."')
             self._kill()
 
@@ -209,6 +211,10 @@ class slit(FSMThread):
 
         else:
             if hxpStatus in [0, 7]:
+                if not self.isRegistered:
+                    raise RuntimeError('saved hexapod position is not from a slit stop, slit start fullInit required')
+
+                self.declareRegistration(cmd, registered=False)
                 cmd.inform('text="initializing from saved position..."')
                 self._initializeFromRegistration()
 
@@ -359,18 +365,66 @@ class slit(FSMThread):
         return ret
 
     def shutdown(self, cmd):
-        """Save current controller position and kill connection.
+        """Persist current slit position, then kill the hexapod group and save its strut positions.
+
+        Once killed, the controller reports raw strut positions, which still include the backlash compensation,
+        so the slit position has to be read before the kill.
 
         :param cmd: current command.
         :raise: Exception with warning message.
         """
         self.doPersist = True
+        self.checkPosition(cmd)
 
         cmd.inform('text="Kill and save hexapod position..."')
         self._TCLScriptExecute('KillWithRegistration.tcl')
 
         # the script actually return immediately, so we need to wait, pretty ugly but has been proven to work...
         time.sleep(10)
+
+        # 7: Not initialized state due to a GroupKill, the script went past its kill.
+        if self._getHxpStatus() == 7:
+            self.declareRegistration(cmd, registered=True)
+
+    @property
+    def isRegistered(self):
+        """Whether the strut positions saved on the controller are the ones of the last slit stop.
+
+        False when never declared.
+        """
+        try:
+            registered, = self.actor.actorData.loadKey('hexapodRegistered')
+        except Exception:
+            registered = False
+
+        return bool(registered)
+
+    def declareRegistration(self, cmd, registered):
+        """Persist whether the strut positions saved on the controller can be restored by a start without homing.
+
+        :param cmd: current command.
+        :param registered: True once KillWithRegistration has run, False once anything else re-initialises the
+                           hexapod.
+        :type registered: bool
+        """
+        self.actor.actorData.persistKey('hexapodRegistered', registered, cmd=cmd)
+
+    def reportStatusAfterKill(self, cmd):
+        """Generate slitActuators and controller status once the hexapod group is killed.
+
+        The slit position is not regenerated, it is the one read by `shutdown` before the kill.
+
+        :param cmd: current command.
+        :return: hexapod status code (int), as returned by checkStatus.
+        """
+        actuators = [np.nan] * 6
+        try:
+            actuators = self._getActuatorPositions()
+        finally:
+            genKeys = cmd.inform if np.nan not in actuators else cmd.warn
+            genKeys('slitActuators=%s' % ','.join(['%.5f' % p for p in actuators]))
+
+        return self.checkStatus(cmd)
 
     def getSystem(self, cmd, system):
         """Get system from the controller and update the actor's current value.
@@ -490,7 +544,7 @@ class slit(FSMThread):
         self.waitForCommandToFinish()
 
     def leaveCleanly(self, cmd):
-        """Aborting current move.
+        """Abort current move, shut the hexapod down if requested, report status and close communication.
 
         :param cmd: current command.
         :raise: RuntimeError if an error is raised by errorChecker.
@@ -498,11 +552,14 @@ class slit(FSMThread):
         self.monitor = 0
         self.doAbort(cmd)
 
+        reportStatus = self.getStatus
+
         if self.substates.current == 'SHUTDOWN':
             self.shutdown(cmd)
+            reportStatus = self.reportStatusAfterKill
 
         try:
-            self.getStatus(cmd)
+            reportStatus(cmd)
         except Exception as e:
             cmd.warn('text=%s' % self.actor.strTraceback(e))
 
