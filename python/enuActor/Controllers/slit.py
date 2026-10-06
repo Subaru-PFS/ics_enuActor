@@ -198,6 +198,8 @@ class slit(FSMThread):
 
         hxpStatus = self.getStatus(cmd)
         if doHome:
+            self.declareRegistration(cmd, registered=False)
+
             cmd.inform('text="killing existing socket..."')
             self._kill()
 
@@ -209,6 +211,10 @@ class slit(FSMThread):
 
         else:
             if hxpStatus in [0, 7]:
+                if not self.isRegistered:
+                    raise RuntimeError('saved hexapod position is not from a slit stop, slit start fullInit required')
+
+                self.declareRegistration(cmd, registered=False)
                 cmd.inform('text="initializing from saved position..."')
                 self._initializeFromRegistration()
 
@@ -375,6 +381,33 @@ class slit(FSMThread):
 
         # the script actually return immediately, so we need to wait, pretty ugly but has been proven to work...
         time.sleep(10)
+
+        # 7: Not initialized state due to a GroupKill, the script went past its kill.
+        if self._getHxpStatus() == 7:
+            self.declareRegistration(cmd, registered=True)
+
+    @property
+    def isRegistered(self):
+        """Whether the strut positions saved on the controller are the ones of the last slit stop.
+
+        False when never declared.
+        """
+        try:
+            registered, = self.actor.actorData.loadKey('hexapodRegistered')
+        except Exception:
+            registered = False
+
+        return bool(registered)
+
+    def declareRegistration(self, cmd, registered):
+        """Persist whether the strut positions saved on the controller can be restored by a start without homing.
+
+        :param cmd: current command.
+        :param registered: True once KillWithRegistration has run, False once anything else re-initialises the
+                           hexapod.
+        :type registered: bool
+        """
+        self.actor.actorData.persistKey('hexapodRegistered', registered, cmd=cmd)
 
     def reportStatusAfterKill(self, cmd):
         """Generate slitActuators and controller status once the hexapod group is killed.
