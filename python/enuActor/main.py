@@ -72,10 +72,11 @@ class EnuActor(fsmActor.FsmActor):
         # for iis and pdu there is no outlet per se, actually it might change for iis.
         outlet = EnuActor.outletConfig[controller]
 
-        if mode == 'operation' and not tcpUtils.serverIsUp(host, port) and outlet is not None:
+        if not tcpUtils.serverIsUp(host, port) and outlet is not None:
             # most devices can be power cycled, so try it.
             self.powerSwitch(outlet, 'on', cmd=cmd, fromThread=fromThread)
-            tcpUtils.waitForTcpServer(host, port, cmd=cmd)
+            if mode == 'operation':
+                tcpUtils.waitForTcpServer(host, port, cmd=cmd)
 
         self.connect(controller, cmd=cmd, mode=mode)
 
