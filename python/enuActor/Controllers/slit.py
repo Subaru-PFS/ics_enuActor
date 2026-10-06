@@ -359,18 +359,39 @@ class slit(FSMThread):
         return ret
 
     def shutdown(self, cmd):
-        """Save current controller position and kill connection.
+        """Persist current slit position, then kill the hexapod group and save its strut positions.
+
+        Once killed, the controller reports raw strut positions, which still include the backlash compensation,
+        so the slit position has to be read before the kill.
 
         :param cmd: current command.
         :raise: Exception with warning message.
         """
         self.doPersist = True
+        self.checkPosition(cmd)
 
         cmd.inform('text="Kill and save hexapod position..."')
         self._TCLScriptExecute('KillWithRegistration.tcl')
 
         # the script actually return immediately, so we need to wait, pretty ugly but has been proven to work...
         time.sleep(10)
+
+    def reportStatusAfterKill(self, cmd):
+        """Generate slitActuators and controller status once the hexapod group is killed.
+
+        The slit position is not regenerated, it is the one read by `shutdown` before the kill.
+
+        :param cmd: current command.
+        :return: hexapod status code (int), as returned by checkStatus.
+        """
+        actuators = [np.nan] * 6
+        try:
+            actuators = self._getActuatorPositions()
+        finally:
+            genKeys = cmd.inform if np.nan not in actuators else cmd.warn
+            genKeys('slitActuators=%s' % ','.join(['%.5f' % p for p in actuators]))
+
+        return self.checkStatus(cmd)
 
     def getSystem(self, cmd, system):
         """Get system from the controller and update the actor's current value.
@@ -490,7 +511,7 @@ class slit(FSMThread):
         self.waitForCommandToFinish()
 
     def leaveCleanly(self, cmd):
-        """Aborting current move.
+        """Abort current move, shut the hexapod down if requested, report status and close communication.
 
         :param cmd: current command.
         :raise: RuntimeError if an error is raised by errorChecker.
@@ -498,11 +519,14 @@ class slit(FSMThread):
         self.monitor = 0
         self.doAbort(cmd)
 
+        reportStatus = self.getStatus
+
         if self.substates.current == 'SHUTDOWN':
             self.shutdown(cmd)
+            reportStatus = self.reportStatusAfterKill
 
         try:
-            self.getStatus(cmd)
+            reportStatus(cmd)
         except Exception as e:
             cmd.warn('text=%s' % self.actor.strTraceback(e))
 
