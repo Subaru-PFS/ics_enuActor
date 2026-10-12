@@ -17,6 +17,7 @@ reload(simulator)
 
 class slit(FSMThread):
     timeout = 2
+    hxpReadyStates = [10, 11, 12, 13, 14, 15, 16, 17, 18]
 
     @staticmethod
     def convertToWorld(array):
@@ -199,6 +200,7 @@ class slit(FSMThread):
         hxpStatus = self.getStatus(cmd)
         if doHome:
             self.declareRegistration(cmd, registered=False)
+            self.declareHomed(cmd, homed=False)
 
             cmd.inform('text="killing existing socket..."')
             self._kill()
@@ -208,6 +210,7 @@ class slit(FSMThread):
 
             cmd.inform('text="seeking home ..."')
             self._homeSearch()
+            self.declareHomed(cmd, homed=True)
 
         else:
             if hxpStatus in [0, 7]:
@@ -215,10 +218,11 @@ class slit(FSMThread):
                     raise RuntimeError('saved hexapod position is not from a slit stop, slit start fullInit required')
 
                 self.declareRegistration(cmd, registered=False)
+                self.declareHomed(cmd, homed=False)
                 cmd.inform('text="initializing from saved position..."')
                 self._initializeFromRegistration()
 
-            elif hxpStatus in [10, 11, 12, 13, 14, 15, 16, 17, 18]:
+            elif hxpStatus in slit.hxpReadyStates:
                 cmd.inform('text="hxp is ready..."')
 
             elif hxpStatus == 20:
@@ -235,7 +239,7 @@ class slit(FSMThread):
 
         hxpStatus = self.getStatus(cmd)
 
-        if hxpStatus not in [10, 11, 12, 13, 14, 15, 16, 17, 18]:
+        if hxpStatus not in slit.hxpReadyStates:
             raise RuntimeError('hexapod not in ready state, going home aborted ...')
 
         cmd.inform(f'text="going to home + hysteresisCorrection ({self.hysteresisCorrection})"')
@@ -385,19 +389,31 @@ class slit(FSMThread):
         # 7: Not initialized state due to a GroupKill, the script went past its kill.
         if self._getHxpStatus() == 7:
             self.declareRegistration(cmd, registered=True)
+            self.declareHomed(cmd, homed=False)
+
+    def loadFlag(self, keyName):
+        """Persisted boolean `keyName`, False when never declared."""
+        try:
+            value, = self.actor.actorData.loadKey(keyName)
+        except Exception:
+            value = False
+
+        return bool(value)
 
     @property
     def isRegistered(self):
-        """Whether the strut positions saved on the controller are the ones of the last slit stop.
+        """Whether the strut positions saved on the controller are the ones of the last slit stop."""
+        return self.loadFlag('hexapodRegistered')
 
-        False when never declared.
-        """
-        try:
-            registered, = self.actor.actorData.loadKey('hexapodRegistered')
-        except Exception:
-            registered = False
+    @property
+    def isHomed(self):
+        """Whether the hexapod has been initialised with a home search since it was last started."""
+        return self.loadFlag('hexapodHomed')
 
-        return bool(registered)
+    @property
+    def isReady(self):
+        """Whether the hexapod group is in a ready state."""
+        return self._getHxpStatus() in slit.hxpReadyStates
 
     def declareRegistration(self, cmd, registered):
         """Persist whether the strut positions saved on the controller can be restored by a start without homing.
@@ -408,6 +424,16 @@ class slit(FSMThread):
         :type registered: bool
         """
         self.actor.actorData.persistKey('hexapodRegistered', registered, cmd=cmd)
+
+    def declareHomed(self, cmd, homed):
+        """Persist whether the hexapod has been initialised with a home search since it was last started.
+
+        :param cmd: current command.
+        :param homed: True once the home search is done, False once the hexapod is started from its saved position or
+                      stopped.
+        :type homed: bool
+        """
+        self.actor.actorData.persistKey('hexapodHomed', homed, cmd=cmd)
 
     def reportStatusAfterKill(self, cmd):
         """Generate slitActuators and controller status once the hexapod group is killed.

@@ -91,6 +91,10 @@ class SlitCmd(object):
         """Initialise slit, reload from saved position if skipHoming."""
         doHome = 'skipHoming' not in cmd.cmd.keywords
 
+        # init is only allowed in the LOADED state.
+        if self.controller.states.current == 'ONLINE' and self.controller.substates.current == 'IDLE':
+            self.controller.states.toLoaded()
+
         self.controller.substates.init(cmd, doHome=doHome)
         self.controller.generate(cmd)
 
@@ -333,7 +337,11 @@ class SlitCmd(object):
 
     @singleShot
     def start(self, cmd):
-        """Power on hxp controller, connect slit controller, and init."""
+        """Power on hxp controller, connect slit controller, and init.
+
+        An ONLINE slit is left as it is, unless fullInit is requested and the hexapod was not homed since it was last
+        started. A controller found ready from a homed session is not homed again.
+        """
         cmdKeys = cmd.cmd.keywords
 
         host, port = self.config('host'), int(self.config('port'))
@@ -348,8 +356,13 @@ class SlitCmd(object):
         if (mode == 'operation' and not tcpUtils.serverIsUp(host, port)) or not self.connected:
             self.actor.startController('slit', cmd=cmd, mode=mode)
 
-        # init is required if LOADED state or if fullInit is specified.
-        if self.controller.states.current == 'LOADED' or doHome:
+        # init is only allowed in the LOADED state.
+        if self.controller.states.current == 'ONLINE' and self.controller.substates.current == 'IDLE' and \
+                doHome and not self.controller.isHomed:
+            self.controller.states.toLoaded()
+
+        if self.controller.states.current == 'LOADED':
+            doHome = doHome and not (self.controller.isHomed and self.controller.isReady)
             self.controller.substates.init(cmd, doHome=doHome)
 
         self.controller.generate(cmd)
