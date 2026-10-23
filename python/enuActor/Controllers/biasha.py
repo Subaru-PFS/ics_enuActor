@@ -333,6 +333,10 @@ class biasha(FSMThread, bufferedSocket.EthComm):
             # you just basically bypassed the interlock, for certainly few photons, but still...
             # self.gotoState(cmd=cmd, cmdStr='init')
 
+            # the board must not be left with an exposure declared that the shutters cannot open for.
+            if shutterMask and not self.substates.can(f'{cmdShutter}_open'):
+                raise RuntimeError(f'cannot {cmdShutter}_open in {self.substates.current} state')
+
             # declaring exposure
             startExp = self._startExposure(shutterMask, cmd)
 
