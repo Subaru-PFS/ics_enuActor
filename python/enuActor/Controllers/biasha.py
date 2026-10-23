@@ -8,6 +8,7 @@ import ics.utils.tcp.bufferedSocket as bufferedSocket
 import ics.utils.time as pfsTime
 import numpy as np
 from ics.utils.fsm.fsmThread import FSMThread
+from opscore.utility.qstr import qstr
 
 reload(simulator)
 
@@ -323,6 +324,8 @@ class biasha(FSMThread, bufferedSocket.EthComm):
                 pfsTime.sleep.millisec()
                 now = pfsTime.timestamp()
 
+        startExp = False
+
         try:
             # OK, kind of scary to do that. if bia is on, the actor stateMachine does not reject the exposure command.
             # and the init turn off the bia really quickly so the arduino state machine also allows it, but
@@ -331,7 +334,7 @@ class biasha(FSMThread, bufferedSocket.EthComm):
             # self.gotoState(cmd=cmd, cmdStr='init')
 
             # declaring exposure
-            startExp = self._startExposure(shutterMask)
+            startExp = self._startExposure(shutterMask, cmd)
 
             # hanging on red resolution now.
             try:
@@ -351,7 +354,9 @@ class biasha(FSMThread, bufferedSocket.EthComm):
             transientTime2 = closeReturnedAt - integrationEndedAt
             totalExptime = closeReturnedAt - integrationStartedAt
 
-            transientTime1M, fullyOpenTimeM, transientTime2M = self._finishExposure(startExp)
+            transientTime1M, fullyOpenTimeM, transientTime2M = self._finishExposure(startExp, cmd)
+            # _finishExposure has collected the measures or attempted a cancel.
+            startExp = False
             cmd.inform(f'biashaMeasures={transientTime1M},{fullyOpenTimeM},{transientTime2M}')
             totalExptimeM = fullyOpenTimeM + transientTime1M + transientTime2M
 
@@ -379,6 +384,11 @@ class biasha(FSMThread, bufferedSocket.EthComm):
             cmd.inform(f"redResolution={visit},{self.redResolution}")
         except:
             cmd.warn('exptime=nan')
+            # do not leave the exposure declared, the board would refuse to measure the next one.
+            # the failed exchange may have left a late reply, which must not answer cancel_exp.
+            if startExp:
+                self._resetComm(cmd)
+                self._cancelExposure(cmd)
             raise
 
     def shutterStatus(self, cmd, state=None):
@@ -535,39 +545,107 @@ class biasha(FSMThread, bufferedSocket.EthComm):
         if reply:
             raise RuntimeError('error : %s' % reply)
 
-    def _startExposure(self, shutterMask):
-        """Declaring a new exposure."""
-        startExp = False
+    def sendExposureCommand(self, cmdStr, cmd):
+        """Send an exposure command (start_exp, finish_exp, cancel_exp) to the biasha board.
 
-        if shutterMask:
-            try:
-                reply = self.sendOneCommand('start_exp')
-                if not reply:
-                    startExp = True
-                elif reply == "exposure already declared.":
-                    self.sendOneCommand('cancel_exp')
-            except:
-                # Since we can live without this, I'm not cancelling the exposure, even if this does not work."""
-                pass
+        Without a reply, the socket is closed and the buffered input dropped, so that a late reply cannot answer the
+        next command.
 
-        return startExp
+        :param cmdStr: command string.
+        :param cmd: current command.
+        :return: (ok, reply) with reply the board answer if ok, its error message otherwise.
+        :raise: IOError if the board does not reply, or replies with neither ok nor nok.
+        """
+        try:
+            ret = bufferedSocket.EthComm.sendOneCommand(self, cmdStr=cmdStr, cmd=cmd)
+        except Exception:
+            self._resetComm(cmd)
+            raise
 
-    def _finishExposure(self, useBiashaMeasures):
-        """Finish exposure and get exposure measures from biasha board."""
+        if not ret:
+            self._resetComm(cmd)
+            raise IOError(f'no reply from biasha to {cmdStr}')
 
-        def msToSecs(ms):
-            """convert milliseconds to seconds."""
-            return float(ms) / 1000
+        if ret.endswith('nok'):
+            return False, ret[:-len('nok')]
+        if ret.endswith('ok'):
+            return True, ret[:-len('ok')]
 
+        raise IOError(f'unexpected return from biasha {cmdStr}: {ret}')
+
+    def _resetComm(self, cmd):
+        """Close the socket and drop the buffered input.
+
+        :param cmd: current command.
+        """
+        self._closeComm(cmd)
+        self.ioBuffer.buffer = ''
+
+    def _cancelExposure(self, cmd):
+        """Clear the exposure declared on the biasha board, if any, warning if that fails.
+
+        :param cmd: current command.
+        :return: True if an exposure was declared and has been cancelled.
+        """
+        try:
+            ok, reply = self.sendExposureCommand('cancel_exp', cmd)
+        except Exception as e:
+            ok, reply = False, str(e)
+
+        if not ok and reply != 'no exposure declared.':
+            cmd.warn('text=%s' % qstr(f'biasha cancel_exp failed: {reply}'))
+
+        return ok
+
+    def _startExposure(self, shutterMask, cmd):
+        """Declare a new exposure to the biasha board, which then measures the shutter transitions.
+
+        Any exposure left declared on the board is cancelled first.
+
+        :param shutterMask: shutters to open, no exposure is declared if none.
+        :param cmd: current command.
+        :return: True if the board measures this exposure.
+        """
+        if not shutterMask:
+            return False
+
+        if self._cancelExposure(cmd):
+            cmd.warn('text="biasha had an exposure left declared, cancelled it"')
+
+        try:
+            ok, reply = self.sendExposureCommand('start_exp', cmd)
+        except Exception as e:
+            ok, reply = False, str(e)
+
+        if not ok:
+            cmd.warn('text=%s' % qstr(f'biasha start_exp failed: {reply}, no shutter measures for this exposure'))
+
+        return ok
+
+    def _finishExposure(self, useBiashaMeasures, cmd):
+        """Finish the exposure declared to the biasha board and get its measures.
+
+        The exposure is cancelled if the board does not return its measures.
+
+        :param useBiashaMeasures: whether an exposure was declared to the board.
+        :param cmd: current command.
+        :return: transient time opening, time fully open, transient time closing, in seconds, NaN if not measured.
+        """
         transientTime1 = fullyOpenTime = transientTime2 = np.nan
 
-        if useBiashaMeasures:
-            try:
-                reply = self.sendOneCommand('finish_exp')
-                transientTime1, fullyOpenTime, transientTime2 = map(msToSecs, reply.split(','))
-            except:
-                # Since we can live without this, I'm not cancelling the exposure, even if this does not work."""
-                pass
+        if not useBiashaMeasures:
+            return transientTime1, fullyOpenTime, transientTime2
+
+        try:
+            ok, reply = self.sendExposureCommand('finish_exp', cmd)
+            if ok:
+                transientTime1, fullyOpenTime, transientTime2 = [float(ms) / 1000 for ms in reply.split(',')]
+        except Exception as e:
+            ok, reply = False, str(e)
+
+        if not ok:
+            cmd.warn('text=%s' % qstr(f'biasha finish_exp failed: {reply}, no shutter measures for this exposure'))
+            self._cancelExposure(cmd)
 
         return transientTime1, fullyOpenTime, transientTime2
 
