@@ -7,6 +7,7 @@ import enuActor.Simulators.biasha as simulator
 import ics.utils.tcp.bufferedSocket as bufferedSocket
 import ics.utils.time as pfsTime
 import numpy as np
+from actorcore.QThread import QMsg
 from ics.utils.fsm.fsmThread import FSMThread
 from opscore.utility.qstr import qstr
 
@@ -45,6 +46,10 @@ class biasha(FSMThread, bufferedSocket.EthComm):
     # photoresistances sum above which the bia LED is considered lit, and how long to wait for it.
     biaLightThreshold = 100
     biaLightTimeout = 5
+    # photoresistances sum at or below which the bia LED is considered off, how long and how often to watch for it.
+    biaDarkThreshold = 10
+    biaDarkTimeout = 30
+    biaDarkPollPeriod = 0.5
 
     def __init__(self, actor, name, loglevel=logging.DEBUG):
         """This sets up the connections to/from the hub, the logger, and the twisted reactor.
@@ -79,6 +84,7 @@ class biasha(FSMThread, bufferedSocket.EthComm):
         self.finishExposure = False
         self.abortExposure = False
         self.redResolution = None
+        self.biaDarkWatch = 0
         self.sim = simulator.BiashaSim()
 
         self.logger = logging.getLogger(self.name)
@@ -125,6 +131,9 @@ class biasha(FSMThread, bufferedSocket.EthComm):
 
         self.biaLightThreshold = self.controllerConfig.get('biaLightThreshold', biasha.biaLightThreshold)
         self.biaLightTimeout = self.controllerConfig.get('biaLightTimeout', biasha.biaLightTimeout)
+        self.biaDarkThreshold = self.controllerConfig.get('biaDarkThreshold', biasha.biaDarkThreshold)
+        self.biaDarkTimeout = self.controllerConfig.get('biaDarkTimeout', biasha.biaDarkTimeout)
+        self.biaDarkPollPeriod = self.controllerConfig.get('biaDarkPollPeriod', biasha.biaDarkPollPeriod)
 
     def _openComm(self, cmd):
         """Open socket with biasha board or simulate it.
@@ -242,6 +251,55 @@ class biasha(FSMThread, bufferedSocket.EthComm):
                                    f'photores({phr1},{phr2}) sum below {self.biaLightThreshold} threshold')
 
             pfsTime.sleep.millisec(100)
+
+    def watchBiaDark(self):
+        """Watch the photoresistances in the background until they see no more bia light, see `checkBiaDark`.
+
+        A watch already running is superseded by this one.
+        """
+        self.biaDarkWatch += 1
+        self.sendLater(QMsg(self.checkBiaDark, watch=self.biaDarkWatch, start=pfsTime.timestamp(), previous=0),
+                       self.biaDarkPollPeriod)
+
+    def checkBiaDark(self, watch, start, previous):
+        """Read the photoresistances once, from the controller thread, for the bia dark watch `watch`.
+
+        Generate photores once the bia light is gone, with the decay time bracketed by this read and the previous one,
+        or once biaDarkTimeout has elapsed with a warning; read again after biaDarkPollPeriod otherwise.
+        A superseded watch, or one finding the controller not ONLINE or not IDLE, e.g. bia back on or shutters open,
+        stops silently.
+
+        :param watch: watch number, as set by `watchBiaDark`.
+        :param start: timestamp at which the watch started.
+        :param previous: seconds from start to the previous read, 0 for the first one.
+        """
+        if watch != self.biaDarkWatch or self.exitASAP:
+            return
+
+        if self.states.current != 'ONLINE' or self.substates.current != 'IDLE':
+            return
+
+        cmd = self.actor.bcast
+
+        try:
+            phr1, phr2 = self._photores(cmd)
+        except Exception as e:
+            # the failed read may have left a late reply, which must not answer the next command.
+            self._resetComm(cmd)
+            cmd.warn('text=%s' % qstr(f'bia dark watch stopped, photoresistances not readable: {e}'))
+            return
+
+        elapsed = pfsTime.timestamp() - start
+
+        if phr1 + phr2 <= self.biaDarkThreshold:
+            cmd.inform('photores=%d,%d' % (phr1, phr2))
+            cmd.inform('text=%s' % qstr(f'bia light gone between {previous:.1f}s and {elapsed:.1f}s after bia off'))
+        elif elapsed > self.biaDarkTimeout:
+            cmd.inform('photores=%d,%d' % (phr1, phr2))
+            cmd.warn('text=%s' % qstr(f'bia light still seen {elapsed:.0f}s after bia off'))
+        else:
+            self.sendLater(QMsg(self.checkBiaDark, watch=watch, start=start, previous=elapsed),
+                           self.biaDarkPollPeriod)
 
     def expose(self, cmd, exptime, shutterMask, visit=-1):
         """exposure routine with given exptime and shutter. Generate dateobs, transientTime and exptime keywords.

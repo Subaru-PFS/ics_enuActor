@@ -95,12 +95,13 @@ class BiashaCmd(object):
 
     @blocking
     def biaOff(self, cmd):
-        """Switch bia off."""
+        """Switch bia off, the light keeps being watched in the background until it is actually gone."""
 
         if self.controller.substates.current == 'IDLE':
             cmd.inform('text="bia already off, not forwarding to biasha board....')
         else:
             self.controller.gotoState(cmd, cmdStr='bia_off')
+            self.controller.watchBiaDark()
 
         self.controller.biaStatus(cmd)
         cmd.finish()
