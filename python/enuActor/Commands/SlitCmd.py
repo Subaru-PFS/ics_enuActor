@@ -95,6 +95,10 @@ class SlitCmd(object):
         if self.controller.states.current == 'ONLINE' and self.controller.substates.current == 'IDLE':
             self.controller.states.toLoaded()
 
+        # a failed init leaves the FAILED substate, from which init is not allowed.
+        if self.controller.substates.current == 'FAILED':
+            self.controller.substates.acknowledge(cmd)
+
         self.controller.substates.init(cmd, doHome=doHome)
         self.controller.generate(cmd)
 
@@ -362,6 +366,10 @@ class SlitCmd(object):
             self.controller.states.toLoaded()
 
         if self.controller.states.current == 'LOADED':
+            # a failed init leaves the FAILED substate, from which init is not allowed.
+            if self.controller.substates.current == 'FAILED':
+                self.controller.substates.acknowledge(cmd)
+
             doHome = doHome and not (self.controller.isHomed and self.controller.isReady)
             self.controller.substates.init(cmd, doHome=doHome)
 
