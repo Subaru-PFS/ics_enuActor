@@ -43,14 +43,6 @@ class biasha(FSMThread, bufferedSocket.EthComm):
     maintainConnectionMargin = 5
     genElapsedTimeRate = 2
 
-    # photoresistances sum above which the bia LED is considered lit, and how long to wait for it.
-    biaLightThreshold = 100
-    biaLightTimeout = 5
-    # photoresistances sum at or below which the bia LED is considered off, how long and how often to watch for it.
-    biaDarkThreshold = 10
-    biaDarkTimeout = 30
-    biaDarkPollPeriod = 0.5
-
     def __init__(self, actor, name, loglevel=logging.DEBUG):
         """This sets up the connections to/from the hub, the logger, and the twisted reactor.
 
@@ -129,11 +121,11 @@ class biasha(FSMThread, bufferedSocket.EthComm):
                                      power=self.controllerConfig['bia_power'],
                                      strobe=self.controllerConfig['bia_strobe'])
 
-        self.biaLightThreshold = self.controllerConfig.get('biaLightThreshold', biasha.biaLightThreshold)
-        self.biaLightTimeout = self.controllerConfig.get('biaLightTimeout', biasha.biaLightTimeout)
-        self.biaDarkThreshold = self.controllerConfig.get('biaDarkThreshold', biasha.biaDarkThreshold)
-        self.biaDarkTimeout = self.controllerConfig.get('biaDarkTimeout', biasha.biaDarkTimeout)
-        self.biaDarkPollPeriod = self.controllerConfig.get('biaDarkPollPeriod', biasha.biaDarkPollPeriod)
+        self.biaLightThreshold = self.controllerConfig['biaLightThreshold']
+        self.biaLightTimeout = self.controllerConfig['biaLightTimeout']
+        self.biaDarkThreshold = self.controllerConfig['biaDarkThreshold']
+        self.biaDarkTimeout = self.controllerConfig['biaDarkTimeout']
+        self.biaDarkPollPeriod = self.controllerConfig['biaDarkPollPeriod']
 
     def _openComm(self, cmd):
         """Open socket with biasha board or simulate it.
